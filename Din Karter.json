@@ -1,0 +1,298 @@
+{
+  "name": "Din Karter",
+  "classLevel": "Ranger 6",
+  "background": "",
+  "playerName": "Kfir Kotler",
+  "race": "",
+  "alignment": "",
+  "xp": "",
+  "inspiration": false,
+  "profBonus": 3,
+  "classId": "ranger",
+  "level": 6,
+  "raceId": "shadarkai",
+  "subraceId": "",
+  "flexBonus": [
+    "",
+    ""
+  ],
+  "asi": {
+    "4": {
+      "choice": "asi",
+      "a": "dex",
+      "b": "",
+      "feat": ""
+    }
+  },
+  "abilities": {
+    "str": 14,
+    "dex": 16,
+    "con": 13,
+    "int": 10,
+    "wis": 14,
+    "cha": 14
+  },
+  "saveProf": {
+    "str": true,
+    "dex": true,
+    "con": false,
+    "int": false,
+    "wis": false,
+    "cha": false
+  },
+  "skills": {
+    "acrobatics": 0,
+    "animal": 0,
+    "arcana": 0,
+    "athletics": 0,
+    "deception": 0,
+    "history": 0,
+    "insight": 1,
+    "intimidation": 0,
+    "investigation": 0,
+    "medicine": 0,
+    "nature": 0,
+    "perception": 1,
+    "performance": 0,
+    "persuasion": 0,
+    "religion": 0,
+    "sleight": 0,
+    "stealth": 1,
+    "survival": 0
+  },
+  "ac": 16,
+  "initiativeMisc": 0,
+  "speed": "30 ft.",
+  "vision": "90FT",
+  "hpMax": 65,
+  "hpCurrent": 65,
+  "hpTemp": 0,
+  "hdTotal": "6d10",
+  "hd": "",
+  "hdUsed": 0,
+  "deathS": [
+    false,
+    false,
+    false
+  ],
+  "deathF": [
+    false,
+    false,
+    false
+  ],
+  "attacks": [],
+  "atkNotes": "",
+  "equip": {
+    "armor": "breastplate",
+    "armorMagic": 0,
+    "shield": false,
+    "shieldMagic": 0,
+    "acAuto": true,
+    "head": "",
+    "neck": "",
+    "cloak": "",
+    "hands": "",
+    "ring1": "",
+    "ring2": "",
+    "boots": "",
+    "mainhand": "",
+    "offhand": ""
+  },
+  "money": {
+    "cp": 0,
+    "sp": 30,
+    "ep": 0,
+    "gp": 4968,
+    "pp": 0
+  },
+  "equipment": [
+    {
+      "qty": "",
+      "name": ""
+    }
+  ],
+  "treasure": "",
+  "features": [
+    {
+      "title": "Natural Explorer",
+      "desc": "In favored terrain: double proficiency on INT/WIS checks, no difficult-terrain slowdown, can't get lost, always alert.",
+      "fx": [
+        {
+          "t": "note",
+          "skills": [
+            "perception",
+            "stealth"
+          ],
+          "kind": "dprof",
+          "cond": "City and desert"
+        }
+      ]
+    },
+    {
+      "title": "Favored Enemy",
+      "desc": "Advantage on Survival to track and INT checks to recall info about your favored enemies.",
+      "fx": [
+        {
+          "t": "note",
+          "skills": [
+            "arcana",
+            "history",
+            "investigation",
+            "nature",
+            "religion",
+            "survival"
+          ],
+          "kind": "adv",
+          "cond": "tracking your favored enemies, ORCs Humanoids"
+        }
+      ],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0
+    },
+    {
+      "title": "Fighting Style (Ranger)",
+      "desc": "Pick a style:  Two-Weapon. \nTwo-Weapon Fighting. When you engage in two-weapon fighting, you can add your ability modifier to the damage of the second attack.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0
+    },
+    {
+      "title": "Blessing of the Raven Queen",
+      "desc": "Bonus action: teleport up to 30 ft. to an unoccupied space you can see; until the end of the turn you have resistance to all damage. 1/short or long rest.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 3,
+      "usesPer": "long",
+      "usesUsed": 1,
+      "usesScale": "prof"
+    },
+    {
+      "title": "Darkvision",
+      "desc": "See in dim light within 60 ft. as if bright, and in darkness as if dim (no color).",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": ""
+    },
+    {
+      "title": "Necrotic Resistance",
+      "desc": "Resistance to necrotic damage.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": ""
+    },
+    {
+      "title": "Fey Ancestry",
+      "desc": "Advantage on saving throws against being charmed; magic can't put you to sleep.",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": ""
+    }
+  ],
+  "profLang": "",
+  "languages": [
+    "Hebrew",
+    "Common",
+    "Orc"
+  ],
+  "featuresLocked": true,
+  "spellClass": "Ranger",
+  "spellAbility": "wis",
+  "spellLevels": [
+    {
+      "total": 0,
+      "used": 0,
+      "spells": [
+        {
+          "name": "Hunter's Mark",
+          "prep": false
+        }
+      ]
+    },
+    {
+      "total": 4,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 2,
+      "used": 0,
+      "spells": [
+        {
+          "name": "",
+          "prep": false
+        }
+      ]
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    }
+  ],
+  "age": "25",
+  "height": "1.85",
+  "weight": "",
+  "eyes": "",
+  "skin": "",
+  "hair": "",
+  "personality": "",
+  "ideals": "",
+  "bonds": "",
+  "flaws": "",
+  "allies": "",
+  "factionName": "",
+  "backstory": "",
+  "notes": [
+    {
+      "title": "Session notes",
+      "body": ""
+    },
+    {
+      "title": "TEST",
+      "body": "cfafafewafwa"
+    }
+  ]
+}

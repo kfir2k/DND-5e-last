@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D&D 5e Character Binder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <div class="title-block">
+    <input id="charNameHeader" data-bind="name" placeholder="Character Name" autocomplete="off">
+    <div class="subtitle">
+      <input data-bind="classLevel" placeholder="Class &amp; Level" size="14">
+      <input data-bind="race" placeholder="Race" size="10">
+      <input data-bind="background" placeholder="Background" size="10">
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="saveStatus">saved</span>
+    <button class="icon-btn" id="settingsBtn">⚙ Settings</button>
+  </div>
+</header>
+
+<div class="rest-bar">
+  <span class="stat-label" style="margin:0">Rest</span>
+  <button class="icon-btn sm" id="shortRestBtn">🌙 Short</button>
+  <button class="icon-btn sm" id="longRestBtn">☀ Long</button>
+  <span class="prep-note" id="restNote" style="margin:0;flex:1 1 220px">Short rest: spend hit dice to heal; Warlock pact slots return. Long rest: full HP, all slots, half your hit dice back.</span>
+</div>
+
+<nav id="tabs"></nav>
+
+<main id="pages"></main>
+
+<div class="modal-bg" id="settingsModal">
+  <div class="modal">
+    <button class="close-x" id="settingsClose">✕</button>
+    <h2>Settings</h2>
+    <p>Your character auto-saves in this browser. Use export to back up or move between devices.</p>
+    <button class="icon-btn" id="exportBtn">Export character (JSON)</button>
+    <button class="icon-btn" id="importBtn">Import character (JSON)</button>
+    <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+    <button class="icon-btn danger" id="resetBtn">Reset all data</button>
+  </div>
+</div>
+
+<script src="data-classes-races.js"></script>
+<script src="data-spells.js"></script>
+<script src="data-equipment.js"></script>
+<script src="data-libraries.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
