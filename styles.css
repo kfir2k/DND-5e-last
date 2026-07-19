@@ -273,6 +273,156 @@ label.fld span{
 .fx-chip button{background:none;border:none;color:var(--faint);cursor:pointer;font-size:.9em;padding:0}
 .fx-chip button:hover{color:var(--red)}
 .fx-note{display:block;color:var(--green);font-size:.72rem;min-height:.9em}
+/* ===== Combat cockpit ===== */
+.ck-grid{display:grid;grid-template-columns:280px minmax(0,1fr) 260px;gap:10px;align-items:start}
+.ck-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ck-col .panel{margin:0}
+@media(max-width:1100px){.ck-grid{grid-template-columns:270px minmax(0,1fr)}.ck-right{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}.ck-right .panel{flex:1 1 260px}}
+@media(max-width:760px){.ck-grid{grid-template-columns:1fr}.ck-right{flex-direction:column}}
+/* action cards */
+.ck-filters{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
+.ck-filter{
+  background:var(--panel3);border:1px solid var(--border-lt);border-radius:999px;
+  color:var(--muted);padding:4px 11px;font-size:.78rem;cursor:pointer;min-height:30px;
+}
+.ck-filter i{font-style:normal;opacity:.7;font-size:.74rem}
+.ck-filter.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-lt)}
+.ck-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.ck-card{
+  background:var(--panel3);border:1px solid var(--border-lt);border-radius:9px;
+  padding:6px 9px;cursor:pointer;min-width:0;
+}
+.ck-card:hover{border-color:var(--border-strong,var(--muted))}
+.ck-card.open{grid-column:1/-1;background:var(--panel2);border-color:var(--gold-dim)}
+.ck-card.ck-cond{border-color:rgba(232,194,91,.4);background:rgba(232,194,91,.05)}
+.ck-card-head{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.ck-card-name{color:var(--text);font-weight:600;font-size:.92rem;overflow-wrap:anywhere}
+.ck-card-sub{color:var(--muted);font-size:.78rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.ck-card-sub b{color:var(--text)}
+.ck-card-cond{color:#e8c25b;font-size:.76rem;margin-top:3px;font-style:italic}
+.ck-pips{display:inline-flex;gap:3px;vertical-align:middle}
+.ck-body{margin-top:8px;border-top:1px solid var(--border);padding-top:8px;cursor:default}
+.ck-desc{color:var(--text);font-size:.84rem;line-height:1.45;white-space:pre-wrap}
+.ck-note{color:var(--muted);font-size:.76rem;margin-top:5px;font-style:italic}
+.ck-castrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.ck-castlbl{color:var(--muted);font-size:.78rem}
+.ck-cast{
+  background:var(--gold-dim);border:1px solid var(--gold);border-radius:8px;
+  color:var(--gold-lt);padding:6px 14px;font-size:.84rem;cursor:pointer;min-height:36px;
+}
+.ck-gear{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;border-top:1px dashed var(--border);padding-top:8px}
+.ck-gear select,.ck-gear input{font-size:.78rem}
+.ck-gear input{flex:1 1 160px;min-width:0}
+.ck-gear button{
+  background:transparent;border:1px solid var(--border-lt);border-radius:7px;
+  color:var(--muted);padding:4px 10px;font-size:.76rem;cursor:pointer;
+}
+.ck-body input[type=text],.ck-body textarea{width:100%;margin-top:4px}
+.ck-undo{
+  display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--gold-dim);
+  border-radius:8px;padding:6px 10px;margin-bottom:8px;color:var(--text);font-size:.82rem;
+}
+.ck-undo button{background:transparent;border:1px solid var(--border-lt);border-radius:6px;color:var(--gold-lt);padding:3px 10px;cursor:pointer}
+/* turn-plan timeline */
+.ck-plan-wrap{margin-top:4px}
+.ck-plan-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;flex-wrap:wrap;gap:4px}
+.ck-plan-head span{color:var(--muted);font-family:'Cinzel',serif;font-size:.78rem;letter-spacing:1.5px;text-transform:uppercase}
+.ck-plan-head button{background:transparent;border:1px solid var(--border-lt);border-radius:6px;color:var(--muted);padding:2px 10px;font-size:.74rem;cursor:pointer}
+.ck-plan-tabs{display:flex;flex-wrap:wrap;gap:4px;flex:1;margin:0 8px}
+.ck-tpl{
+  display:inline-flex;align-items:center;gap:3px;
+  background:var(--panel3);border:1px solid var(--border-lt);border-radius:999px;
+  color:var(--muted);padding:1px 8px;font-size:.74rem;min-height:24px;
+}
+.ck-tpl>button{background:transparent;border:none;color:inherit;font-size:inherit;cursor:pointer;padding:1px 2px}
+.ck-tpl.on{background:var(--gold-dim);border-color:var(--gold)}
+.ck-tpl.on input{
+  background:transparent;border:none;color:var(--gold-lt);font-size:.76rem;font-weight:600;
+  width:90px;padding:1px 3px;
+}
+.ck-tpl [data-cktpldel]{color:var(--faint)}
+.ck-tpl [data-cktpldel]:hover{color:var(--red)}
+.ck-tpl-add{font-weight:700;cursor:pointer;padding:1px 10px}
+.ck-plan{
+  display:flex;flex-direction:column;gap:5px;min-height:42px;
+  border:1px dashed var(--border-lt);border-radius:9px;padding:6px;
+}
+.ck-plan-empty{color:var(--faint);font-size:.8rem;font-style:italic;line-height:1.45}
+.ck-plan-step{
+  display:flex;align-items:flex-start;gap:8px;cursor:grab;
+  background:var(--panel3);border:1px solid var(--border-lt);border-left-width:3px;border-radius:8px;
+  padding:5px 9px;color:var(--text);
+}
+.ck-plan-step i{
+  font-style:normal;background:var(--gold-dim);color:var(--gold-lt);border-radius:50%;flex-shrink:0;
+  width:19px;height:19px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;margin-top:2px;
+}
+.ck-ps-main{flex:1;min-width:0}
+.ck-ps-head{display:flex;align-items:center;gap:8px}
+.ck-ps-head .sp-pill{margin-left:auto}
+.ck-ps-note{
+  flex:1 1 90px;min-width:70px;background:transparent;border:none;border-bottom:1px dashed transparent;
+  color:#e8c25b;font-size:.76rem;font-style:italic;padding:1px 4px;
+}
+.ck-ps-note::placeholder{color:var(--faint);font-style:italic}
+.ck-ps-note:hover{border-bottom-color:var(--border-lt)}
+.ck-ps-note:focus{border-bottom-color:var(--gold);outline:none;background:var(--ink);border-radius:4px}
+.ck-ps-name{font-weight:600;font-size:.92rem;overflow-wrap:anywhere}
+.ck-ps-sub{color:var(--muted);font-size:.78rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.ck-ps-sub b{color:var(--text)}
+.ck-roll{display:inline-flex;align-items:center;gap:4px;color:var(--muted)}
+.ck-roll input{
+  width:52px;background:var(--ink);border:1px solid var(--border-lt);border-radius:6px;
+  color:var(--text);font-size:.8rem;padding:2px 6px;text-align:center;
+}
+.ck-roll input:focus{border-color:var(--gold);outline:none}
+.ck-roll b[data-atkfinal]{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:.95rem}
+.ck-plan-step.ck-ps-action{border-left-color:#7fd6a4}
+.ck-plan-step.ck-ps-bonus{border-left-color:#e8c25b}
+.ck-plan-step.ck-ps-reaction{border-left-color:#e0876f}
+.ck-plan-step.ck-ps-other{border-left-color:#7db8e8}
+.ck-plan-step.ck-ps-gone{opacity:.6;border-left-color:var(--border-lt)}
+.ck-plan-step.open{background:var(--panel2);border-color:var(--gold-dim);cursor:default}
+.ck-plan-step>[data-plandel]{background:transparent;border:none;color:var(--faint);cursor:pointer;font-size:.85rem;padding:2px 4px;flex-shrink:0}
+.ck-plan-step>[data-plandel]:hover{color:var(--red)}
+.ck-plan-add{
+  background:transparent;border:1px solid var(--border-lt);border-radius:7px;
+  color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px 8px;flex-shrink:0;
+}
+.ck-plan-add:hover{border-color:var(--gold);color:var(--gold-lt)}
+/* hud extras */
+.ck-conc{color:#b9a3ec;font-size:.82rem;display:inline-flex;gap:6px;align-items:center;position:relative}
+.ck-conc b{color:var(--text)}
+.ck-conc button{background:transparent;border:1px solid var(--border-lt);border-radius:6px;color:var(--muted);cursor:pointer;padding:1px 7px}
+.ck-conc-tip{color:var(--faint);font-size:.7rem;flex-basis:100%}
+.ck-topstates{display:inline-flex;gap:5px;flex-wrap:wrap}
+.ck-state{border:1px solid rgba(111,208,196,.45);color:#6fd0c4;border-radius:999px;padding:1px 9px;font-size:.72rem}
+/* reminders + rules */
+.ck-rem{color:var(--gold-lt);font-size:.8rem;padding:4px 0;border-bottom:1px solid var(--border)}
+.ck-rem:last-child{border-bottom:none}
+.ck-rem b{color:var(--text)}
+.ck-rem-cond{display:block;color:var(--muted);font-size:.74rem;font-style:italic}
+.ck-rsec-head{
+  display:block;width:100%;text-align:left;background:transparent;border:none;
+  color:var(--muted);font-size:.84rem;padding:7px 0;cursor:pointer;border-bottom:1px solid var(--border);
+}
+.ck-rsec.open .ck-rsec-head{color:var(--gold-lt)}
+.ck-rsec-body{padding:4px 0 8px}
+.ck-rule{color:var(--muted);font-size:.78rem;line-height:1.45;padding:3px 0}
+.ck-rule b{color:var(--text)}
+/* collapsible panels: death saves + attack editor */
+.ck-death #ckDeathHead,.ck-atk-panel #ckAtkHead{cursor:pointer}
+.ck-death.ck-collapsed .ck-death-body{display:none}
+.ck-death.ck-collapsed h2::after{content:' — hidden while you\'re up (tap to peek)';color:var(--faint);font-size:.7rem;letter-spacing:0;text-transform:none}
+.ck-death.ck-down{border-color:var(--red);box-shadow:0 0 12px rgba(224,75,74,.25)}
+.ck-death.ck-down h2{color:var(--red)}
+.ck-atk-panel .ck-atk-body{display:none}
+.ck-atk-panel.open .ck-atk-body{display:block}
+/* Collapsed = one slim line, not a full panel header */
+.ck-atk-panel:not(.open){padding:7px 14px}
+.ck-atk-panel:not(.open) h2{margin:0;padding:0;border:none;font-size:.8rem;letter-spacing:1.5px}
+.ck-atk-panel:not(.open) h2::after{content:'  ▸ edit';color:var(--faint);font-size:.7rem;letter-spacing:.5px;text-transform:none}
+.ck-atk-panel.open h2::after{content:'  ▾';color:var(--faint)}
 /* ★ Stat reminders on the Overview tiles — same tap-to-open badges as the skill rows */
 .fx-rems{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .fx-rems:empty{display:none}
@@ -616,6 +766,7 @@ label.fld span{
    instead of a border-bottom-separated row sharing one long strip. Same card language as
    .feature-card/.ov-card elsewhere on the sheet, so weapons read as distinct at a glance. */
 .atk-card{
+  position:relative;
   background:var(--panel2);border:1px solid var(--border);border-left:2px solid var(--gold-dim);
   border-radius:10px;padding:10px 14px;margin-bottom:14px;
   transition:transform .15s ease,box-shadow .2s ease;
@@ -626,8 +777,11 @@ label.fld span{
    Hit and Damage, always in that reading order — and buffs tucked into a slim line underneath
    instead of their own full row. */
 .atk-row{
-  display:flex;align-items:flex-start;gap:10px;
+  display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding-right:26px;
 }
+/* The remove button anchors to the card's corner instead of floating at the end of the flex
+   row — in the cockpit's narrower center column the row wraps, and the ✕ used to spill out. */
+.atk-row>.del-btn{position:absolute;top:8px;right:8px}
 .atk-icon{color:var(--gold-dim);font-size:.95rem;padding-top:7px;flex:0 0 auto}
 .atk-id{flex:1.6 1 220px;min-width:180px;position:relative}
 /* One combo field instead of a dropdown + a separate nickname field: type to search built-in

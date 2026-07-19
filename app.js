@@ -24,6 +24,10 @@ function defaultState(){
     // Spells (page 3): level 0 = cantrips
     spellClass:'', spellAbility:'',
     spellLevels:Array.from({length:10},()=>({total:0,used:0,spells:[]})),
+    // Combat cockpit
+    customCards:[], states:[], concentration:null,
+    turnPlans:[{name:'Default',steps:[]}], turnPlanIdx:0,
+    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false},
     // Page 2
     age:'',height:'',weight:'',eyes:'',skin:'',hair:'',
     personality:'', ideals:'', bonds:'', flaws:'',
@@ -249,36 +253,72 @@ combat:`
   <div class="combat-hud">
     <span class="chud-item chud-hp">HP <b data-calc="chudHp">—</b></span>
     <span class="chud-item chud-ac">AC <b data-calc="chudAc">—</b></span>
+    <span class="ck-conc" id="ckConc"></span>
+    <span class="ck-topstates" id="ckTopStates"></span>
   </div>
-  <div class="panel"><h2>Vitals</h2>${vitalsHTML()}</div>
-  <div class="grid g2">
-    <div class="panel"><h2>Hit Points</h2>${hpPanelHTML()}</div>
-    <div class="panel"><h2>Hit Dice &amp; Death Saves</h2>
-      <div class="hd-row">
-        <span class="stat-label">Hit Dice Left</span>
-        <span class="big" data-calc="hd">—</span>
-        <div class="hp-btns">
-          <button class="hp-btn dmg" id="hdSpend">−</button>
-          <button class="hp-btn heal" id="hdRegain">+</button>
+  <div class="ck-grid">
+    <div class="ck-col ck-left">
+      <div class="panel"><h2>Hit Points</h2>${hpPanelHTML()}</div>
+      <div class="panel ck-death" id="ckDeathPanel"><h2 id="ckDeathHead">💀 Death Saves</h2>
+        <div class="ck-death-body">
+          <div class="ds-row"><span>Successes</span><div id="dsS"></div></div>
+          <div class="ds-row"><span>Failures</span><div id="dsF"></div></div>
+          <p class="prep-note" style="margin:8px 0 0">At 0 HP, roll a d20 at the start of each turn: 10+ is a success. 3 successes = stable, 3 failures = dead. Natural 20 = back up with 1 HP; natural 1 = two failures. Taking damage at 0 HP = one failure (critical hit = two).</p>
         </div>
       </div>
-      <p class="prep-note">Spend a hit die on a short rest: roll it, add your CON modifier, heal that much.</p>
-      <div class="ds-row"><span>Successes</span><div id="dsS"></div></div>
-      <div class="ds-row"><span>Failures</span><div id="dsF"></div></div>
+      <div class="panel"><h2>Vitals</h2>${vitalsHTML()}</div>
+      <div class="panel"><h2>Hit Dice</h2>
+        <div class="hd-row">
+          <span class="stat-label">Hit Dice Left</span>
+          <span class="big" data-calc="hd">—</span>
+          <div class="hp-btns">
+            <button class="hp-btn dmg" id="hdSpend">−</button>
+            <button class="hp-btn heal" id="hdRegain">+</button>
+          </div>
+        </div>
+        <p class="prep-note" style="margin:6px 0 0">Spend one on a short rest: roll it, add your CON modifier, heal that much. Rest buttons are in the top bar.</p>
+      </div>
     </div>
-  </div>
-  <div class="panel"><h2>Attacks &amp; Spellcasting</h2>
-    <div id="attackList"></div>
-    <button class="add-btn" data-add="attacks">+ Add attack</button>
-    <label class="fld" style="margin-top:14px"><span>Additional notes</span>
-      <textarea data-bind="atkNotes" placeholder="Ammunition, special attack options, spell attack reminders..."></textarea>
-    </label>
-  </div>
-  <div class="panel" id="combatSlotsPanel"><h2>🔮 Spell Slots</h2>
-    <div id="combatSlots"></div>
-  </div>
-  <div class="panel" id="combatFeaturesPanel"><h2>⚔ Combat Features</h2>
-    <div id="combatFeatureList"></div>
+    <div class="ck-col ck-center">
+      <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
+        <div class="ck-plan-wrap">
+          <div class="ck-plan-head"><span>🗺 Turn plan</span><div class="ck-plan-tabs" id="ckPlanTabs"></div><button id="ckPlanClear" style="display:none">Clear</button></div>
+          <div class="ck-plan" id="ckPlan"></div>
+        </div>
+        <div id="ckUndo"></div>
+        <div class="ck-filters" id="ckFilters" style="margin-top:12px"></div>
+        <div class="ck-cards" id="ckCards"></div>
+        <div class="fx-addrow" style="margin-top:10px">
+          <button class="add-btn" id="ckAddCustom">+ Custom card</button>
+          <button class="add-btn" id="ckSpellsToggle"></button>
+          <button class="add-btn" id="ckHiddenToggle"></button>
+        </div>
+      </div>
+      <div class="panel ck-atk-panel" id="ckAtkPanel"><h2 id="ckAtkHead">⚔ Attacks</h2>
+        <div class="ck-atk-body">
+          <div id="attackList"></div>
+          <button class="add-btn" data-add="attacks">+ Add attack</button>
+          <label class="fld" style="margin-top:14px"><span>Additional notes</span>
+            <textarea data-bind="atkNotes" placeholder="Ammunition, special attack options, spell attack reminders..."></textarea>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="ck-col ck-right">
+      <div class="panel" id="combatSlotsPanel"><h2>🔮 Spell Slots</h2>
+        <div id="combatSlots"></div>
+      </div>
+      <div class="panel"><h2>🏷 States</h2>
+        <div id="ckStates"></div>
+        <div class="fx-addrow" style="margin-top:6px">
+          <input type="text" id="ckStateIn" placeholder="e.g. Raging, Hidden, Blessed" style="flex:1;min-width:0">
+          <button class="add-btn" id="ckStateAdd">+</button>
+        </div>
+        <p class="prep-note" style="margin:6px 0 0">Free-form markers for anything active on you — pure paper, no rules attached.</p>
+      </div>
+      <div class="panel" id="ckRemPanel"><h2>★ Reminders</h2><div id="ckRems"></div></div>
+      <div class="panel"><h2>📖 Rules</h2><div id="ckRules"></div></div>
+    </div>
   </div>`,
 
 skills:`
@@ -1013,54 +1053,446 @@ function wireFeaturesLock(){
 // ⚔ Combat tab panel — pulls in every feature flagged "Show in Combat". Kept deliberately compact:
 // one slim row per feature (name + pips), no card, no always-visible description — tap a row to
 // unfold its text only if you need the reminder, tap a pip to track a use. Nothing to skim past.
-function renderCombatFeatures(){
-  const list=$('#combatFeatureList'); if(!list) return; // Combat tab may not be built yet on first boot
-  const panel=$('#combatFeaturesPanel');
-  const feats=S.features.map((f,gi)=>({f,gi})).filter(x=>x.f.combat);
-  if(panel) panel.classList.toggle('panel-compact',!feats.length);
-  if(!feats.length){
-    list.innerHTML='<p class="prep-note" style="margin:0">No features flagged yet — check "⚔ Show in Combat tab" on a feature in the Features tab.</p>';
-    return;
-  }
-  const rowHTML=({f,gi})=>{
-    const max=num(f.usesMax), used=Math.min(num(f.usesUsed),max);
-    const pips = max>0
-      ? `<span class="cf-count" title="Remaining / total">${max-used}/${max}</span><div class="pips" title="Recharges on ${f.usesPer==='long'?'long':'short'} rest">${Array.from({length:max},(_,k)=>
-          `<button class="pip ${k<used?'used':''}" data-cfuse="${gi}.${k}"></button>`).join('')}</div>`
-      : `<span class="cf-tag">passive</span>`;
-    return `
-    <div class="cf-row" ${f.desc?`data-cfrow="${gi}"`:''}>
-      <span class="cf-name">${f.desc?'<span class="cf-chevron">▸</span>':''}${esc(f.title||'Feature')}</span>
-      <div class="cf-uses">${pips}</div>
-    </div>
-    ${f.desc?`<div class="cf-desc">${esc(f.desc)}</div>`:''}`;
-  };
-  // Limited-use features (pips, recharge on a rest) are what you actually need to scan for
-  // mid-fight; passives are just reference. Split them so the two never blur into one list.
-  const limited=feats.filter(x=>num(x.f.usesMax)>0);
-  const passive=feats.filter(x=>num(x.f.usesMax)<=0);
-  list.innerHTML =
-    (limited.length?`<div class="cf-section">Limited Uses</div>${limited.map(rowHTML).join('')}`:'') +
-    (limited.length&&passive.length?`<div class="cf-section">Passive</div>`:'') +
-    passive.map(rowHTML).join('');
+// ========== Combat cockpit ==========
+// One-screen combat dashboard. The "Do Something" grid is a VIEW over data that already lives
+// elsewhere (attacks, spellbook, combat-flagged features) plus free-form custom cards. Paper
+// rule: every derived field is overridable per card (action type, condition), every card can be
+// pinned/hidden, and nothing is enforced — the cockpit reminds and tracks, the player decides.
+const CK_TYPES=[['action','Action'],['bonus','Bonus Action'],['reaction','Reaction'],['other','Other']];
+const CK_TYPE_ORDER={action:0,bonus:1,reaction:2,other:3};
+const CK_PILL={action:'pill-action',bonus:'pill-bonus',reaction:'pill-react',other:'pill-cast'};
+let CK_FILTER='all', CK_SHOWHIDDEN=false, CK_UNDO=null;
+const CK_OPEN=new Set(), CK_RULES_OPEN=new Set();
+// Older saves may lack the cockpit fields entirely — normalize on every access.
+function ck(){
+  S.cockpit=S.cockpit||{};
+  const c=S.cockpit;
+  c.hidden=c.hidden||[]; c.pins=c.pins||[];
+  S.customCards=S.customCards||[]; S.states=S.states||[];
+  // Plan templates: named step lists for different situations (boss fight, defensive...).
+  // Saves from the single-plan era get their old steps folded into a "Default" template.
+  if(!Array.isArray(S.turnPlans)||!S.turnPlans.length)
+    S.turnPlans=[{name:'Default',steps:Array.isArray(S.turnPlan)?S.turnPlan:[]}];
+  S.turnPlans.forEach(p=>{ p.steps=p.steps||[]; });
+  S.turnPlanIdx=Math.max(0,Math.min(num(S.turnPlanIdx),S.turnPlans.length-1));
+  return c;
 }
-function wireCombatFeatures(){
-  $('#combatFeatureList').addEventListener('click',e=>{
-    const pip=e.target.closest('[data-cfuse]');
-    if(pip){
-      const [gi,k]=pip.dataset.cfuse.split('.').map(Number);
-      const f=S.features[gi]; if(!f) return;
-      f.usesUsed = (k<num(f.usesUsed)) ? k : k+1;
-      renderCombatFeatures(); save();
-      return;
-    }
-    // A tap that lands in the gap between pips (missing the small circle itself) used to fall
-    // through and silently toggle the row open/closed instead — confusing on a tablet where
-    // that's an easy miss. Anywhere inside the pip cluster should never open the row.
-    if(e.target.closest('.pips')) return;
-    const row=e.target.closest('[data-cfrow]');
-    if(row) row.classList.toggle('open');
+function ckPlan(){ ck(); return S.turnPlans[S.turnPlanIdx]; }
+// Resolve a card key ("atk:0" / "sp:1.2" / "ft:5" / "cc:0") back to its state object.
+function ckRef(key){
+  const [kind,rest]=key.split(':');
+  if(kind==='atk') return S.attacks[+rest];
+  if(kind==='ft') return S.features[+rest];
+  if(kind==='cc') return S.customCards[+rest];
+  if(kind==='sp'){ const [L,i]=rest.split('.').map(Number); return (S.spellLevels[L]||{spells:[]}).spells[i]; }
+  return null;
+}
+// Action type for a spell: explicit override > cast-time code from the index > guess from the
+// editable meta line (custom spells) > 'other'.
+function spellActionType(sp){
+  if(sp.actionType) return sp.actionType;
+  const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
+  if(db){
+    const b=db.t.endsWith('r')?db.t.slice(0,-1):db.t;
+    return b==='A'?'action':b==='B'?'bonus':b==='R'?'reaction':'other';
+  }
+  const m=(sp.meta||'').toLowerCase();
+  return m.startsWith('bonus')?'bonus':m.startsWith('reaction')?'reaction':m.includes('action')?'action':'other';
+}
+function spellIsConc(sp){
+  const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
+  if(db) return (SP_DUR[db.du]||'').startsWith('Conc');
+  return (sp.meta||'').toLowerCase().includes('conc');
+}
+// Assemble every card the grid can show, from all four sources.
+function cockpitCards(){
+  const c=ck(), cards=[];
+  (S.attacks||[]).forEach((a,i)=>{
+    if(!(a.name||'').trim()) return;
+    cards.push({key:'atk:'+i,kind:'atk',i,name:a.name,type:a.actionType||'action',cond:a.cond||''});
   });
+  const anyPrep=S.spellLevels.some((lv,L)=>L>0&&lv.spells.some(s=>s.prep));
+  S.spellLevels.forEach((lv,L)=>lv.spells.forEach((sp,i)=>{
+    if(!(sp.name||'').trim()) return;
+    if(L>0&&anyPrep&&!c.showAllSpells&&!sp.prep) return;
+    cards.push({key:`sp:${L}.${i}`,kind:'sp',L,i,name:sp.name,type:spellActionType(sp),cond:sp.cond||'',conc:spellIsConc(sp)});
+  }));
+  S.features.forEach((f,gi)=>{
+    if(!f.combat) return;
+    cards.push({key:'ft:'+gi,kind:'ft',gi,name:f.title||'Feature',
+      type:f.actionType||(num(f.usesMax)>0?'action':'other'),cond:f.cond||''});
+  });
+  S.customCards.forEach((cc,i)=>{
+    cards.push({key:'cc:'+i,kind:'cc',i,name:cc.title||'Custom',type:cc.type||'action',cond:cc.cond||''});
+  });
+  cards.forEach(x=>{ x.pin=c.pins.includes(x.key); x.hidden=c.hidden.includes(x.key); });
+  return cards;
+}
+function ckSlotPips(L){
+  const lv=S.spellLevels[L]; if(!lv||!lv.total) return '';
+  return `<span class="pips ck-pips">${Array.from({length:lv.total},(_,k)=>
+    `<button class="pip ${k<lv.used?'used':''}" data-ckslot="${L}.${k}"></button>`).join('')}</span>`;
+}
+function ckGearRow(card){
+  const obj=ckRef(card.key); if(!obj) return '';
+  return `<div class="ck-gear">
+    <select data-cktype="${card.key}">${CK_TYPES.map(([v,l])=>`<option value="${v}" ${card.type===v?'selected':''}>${l}</option>`).join('')}</select>
+    <input type="text" value="${esc(obj.cond||'')}" data-ckcond="${card.key}" placeholder="Condition — e.g. first turn of combat, once per turn">
+    <button data-ckpin="${card.key}">${card.pin?'📌 Unpin':'📌 Pin'}</button>
+    <button data-ckhide="${card.key}">${card.hidden?'👁 Unhide':'✕ Hide'}</button>
+  </div>`;
+}
+function ckCardOpenHTML(card){
+  const g=ckGearRow(card);
+  if(card.kind==='atk'){
+    const i=card.i, cSum=atkSummary(S.attacks[i]);
+    return `<div class="ck-body">
+      <div class="ck-desc">${esc(cSum.breakdown)} · damage ${esc(cSum.dmgBreakdown||cSum.dmg)}</div>
+      <p class="prep-note" style="margin:4px 0 0">Full editing (buffs, magic, dice) in the Attacks panel below.</p>${g}</div>`;
+  }
+  if(card.kind==='sp'){
+    const sp=ckRef(card.key), L=card.L;
+    const castable=[];
+    if(L>0) S.spellLevels.forEach((lv,k)=>{ if(k>=L&&lv.total>lv.used) castable.push(k); });
+    const castRow = L===0
+      ? `<span class="cf-tag">at will</span>`
+      : castable.length
+        ? `<span class="ck-castlbl">Cast with slot:</span>`+castable.map(k=>`<button class="ck-cast" data-ckcast="${card.key}:${k}">${ordinalLevel(k)}</button>`).join('')
+        : `<span class="prep-note" style="margin:0">No free slots of ${ordinalLevel(L)}+</span>`;
+    return `<div class="ck-body">
+      ${sp.desc?`<div class="ck-desc">${esc(sp.desc)}</div>`:''}
+      ${card.conc?`<div class="ck-note">◉ Concentration — casting this drops anything you're already concentrating on.</div>`:''}
+      <div class="ck-castrow">${castRow}</div>${g}</div>`;
+  }
+  if(card.kind==='ft'){
+    const f=ckRef(card.key);
+    return `<div class="ck-body">
+      ${f.desc?`<div class="ck-desc">${esc(f.desc)}</div>`:''}
+      ${num(f.usesMax)>0?`<div class="ck-note">Recharges on a ${f.usesPer==='long'?'long':'short'} rest.</div>`:''}${g}</div>`;
+  }
+  if(card.kind==='cc'){
+    const i=card.i, cc=S.customCards[i];
+    return `<div class="ck-body">
+      <input type="text" value="${esc(cc.title)}" data-cct="${i}" placeholder="Card name">
+      <textarea data-ccb="${i}" placeholder="Anything — a maneuver, an item, a pact boon...">${esc(cc.body||'')}</textarea>
+      <div class="fx-addrow" style="margin-top:4px">
+        <span class="prep-note" style="margin:0">Uses</span>
+        <input type="number" min="0" style="width:56px" value="${num(cc.usesMax)}" data-ccu="${i}" title="0 = not tracked">
+        <button class="del-btn" data-ccdel="${i}" title="Delete card">✕</button>
+      </div>${g}</div>`;
+  }
+  return g;
+}
+// The one-line "what you need to know" strip for a card — shared by the grid cards and the
+// turn-plan steps, so both always show the same live numbers and pips.
+function ckSubHTML(card,withRoll){
+  if(card.kind==='atk'){
+    const i=card.i, a=S.attacks[i], cSum=atkSummary(a);
+    // withRoll (plan steps): type what the damage dice showed, the total auto-calcs live —
+    // same S.attacks[i].rolled the attack editor uses, so the two stay in sync.
+    const roll=withRoll?` <span class="ck-roll">🎲<input type="number" value="${esc(a.rolled)}" data-ckroll="${i}" placeholder="${esc(cSum.die||'roll')}" title="What the damage dice showed — total adds your modifiers and active buffs">= <b data-atkfinal="${i}">${cSum.finalDamage!=null?cSum.finalDamage:'—'}</b></span>`:'';
+    return `Hit <b data-atkview="${i}">${esc(cSum.bonus)}</b> · <span data-atkdmg="${i}">${esc(cSum.dmg)}</span>${roll}`;
+  }
+  if(card.kind==='sp'){
+    const sp=ckRef(card.key);
+    return `${card.L===0?'Cantrip':ordinalLevel(card.L)+' level'}${sp.meta?' · '+esc(sp.meta):''}${card.L>0?' '+ckSlotPips(card.L):''}`;
+  }
+  if(card.kind==='ft'){
+    const f=ckRef(card.key), max=num(f.usesMax), used=Math.min(num(f.usesUsed),max);
+    return max>0
+      ? `<span class="cf-count">${max-used}/${max}</span> <span class="pips ck-pips">${Array.from({length:max},(_,k)=>
+          `<button class="pip ${k<used?'used':''}" data-ckuse="${card.gi}.${k}"></button>`).join('')}</span>`
+      : `<span class="cf-tag">passive</span>`;
+  }
+  if(card.kind==='cc'){
+    const cc=S.customCards[card.i], max=num(cc.usesMax), used=Math.min(num(cc.usesUsed),max);
+    return (cc.body?esc(cc.body.split('\n')[0]):'')+(max>0?` <span class="pips ck-pips">${Array.from({length:max},(_,k)=>
+      `<button class="pip ${k<used?'used':''}" data-ccpip="${card.i}.${k}"></button>`).join('')}</span>`:'');
+  }
+  return '';
+}
+function ckCardHTML(card){
+  const open=CK_OPEN.has(card.key);
+  const sub=ckSubHTML(card);
+  const tl=Object.fromEntries(CK_TYPES);
+  return `<div class="ck-card ${card.cond?'ck-cond':''} ${open?'open':''}" data-ckopen="${card.key}" draggable="true" data-ckdrag="${card.key}">
+    <div class="ck-card-head">
+      <span class="ck-card-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</span>
+      <span class="sp-pill ${CK_PILL[card.type]||'pill-cast'}">${tl[card.type]||'Other'}</span>
+      <button class="ck-plan-add" data-ckplan="${card.key}" title="Add to turn plan (or drag the card onto the plan)">⤵</button>
+    </div>
+    ${sub?`<div class="ck-card-sub">${sub}</div>`:''}
+    ${card.cond?`<div class="ck-card-cond">⏱ ${esc(card.cond)}</div>`:''}
+    ${open?ckCardOpenHTML(card):''}
+  </div>`;
+}
+function renderCockpitCards(){
+  const box=$('#ckCards'); if(!box) return;
+  const c=ck();
+  let cards=cockpitCards();
+  const hiddenCount=cards.filter(x=>x.hidden).length;
+  if(!CK_SHOWHIDDEN) cards=cards.filter(x=>!x.hidden);
+  const counts={all:cards.length};
+  CK_TYPES.forEach(([v])=>counts[v]=cards.filter(x=>x.type===v).length);
+  if(CK_FILTER!=='all') cards=cards.filter(x=>x.type===CK_FILTER);
+  cards.sort((a,b)=>(b.pin-a.pin)||(CK_TYPE_ORDER[a.type]-CK_TYPE_ORDER[b.type])||((a.cond?1:0)-(b.cond?1:0))||a.name.localeCompare(b.name));
+  $('#ckFilters').innerHTML=[['all','All'],...CK_TYPES].map(([v,l])=>
+    `<button class="ck-filter ${CK_FILTER===v?'on':''}" data-ckfilter="${v}">${l}${counts[v]?` <i>${counts[v]}</i>`:''}</button>`).join('');
+  box.innerHTML = cards.length
+    ? cards.map(ckCardHTML).join('')
+    : '<p class="prep-note" style="margin:0">Nothing here yet — add attacks below, pick spells on the Spells tab, flag features with ⚔ on the Features tab, or add a custom card.</p>';
+  $('#ckUndo').innerHTML = CK_UNDO
+    ? `<div class="ck-undo">${esc(CK_UNDO.msg)} <button data-ckundo>Undo</button><button data-ckundox>✕</button></div>` : '';
+  const anyPrep=S.spellLevels.some((lv,L)=>L>0&&lv.spells.some(s=>s.prep));
+  const st=$('#ckSpellsToggle');
+  st.style.display=anyPrep?'':'none';
+  st.textContent=c.showAllSpells?'Showing all spells — tap for prepared only':'Prepared spells only — tap for all';
+  const ht=$('#ckHiddenToggle');
+  ht.style.display=hiddenCount||CK_SHOWHIDDEN?'':'none';
+  ht.textContent=CK_SHOWHIDDEN?'Hide hidden cards again':`Show ${hiddenCount} hidden card${hiddenCount>1?'s':''}`;
+  renderCockpitPlan();
+}
+// The turn-plan timeline — the cockpit's main stage. Each step is a full-information row:
+// name, action-type pill, the same live sub-line as its grid card (hit/damage, slot pips, use
+// dots), and a tap-to-expand body with the description and cast/use controls right there — no
+// jumping back to the card grid mid-fight. Steps are snapshots {key,name}: the name survives
+// even if the source card is later deleted, like pencil on paper.
+const CK_PLAN_OPEN=new Set();
+function renderCockpitPlan(){
+  const box=$('#ckPlan'); if(!box) return;
+  const cur=ckPlan();
+  // Template tabs: one plan per situation — "Default", "Boss fight", "Defensive"... The active
+  // tab's name is directly editable; ✕ deletes it (never the last one); + starts a new one.
+  const canDel=S.turnPlans.length>1;
+  $('#ckPlanTabs').innerHTML=S.turnPlans.map((p,i)=> i===num(S.turnPlanIdx)
+    ? `<span class="ck-tpl on"><input type="text" value="${esc(p.name)}" data-cktplname maxlength="24" title="Template name — e.g. Boss fight, Defensive">${canDel?`<button data-cktpldel="${i}" title="Delete this plan">✕</button>`:''}</span>`
+    : `<span class="ck-tpl"><button data-cktpl="${i}">${esc(p.name)||'Plan '+(i+1)}</button>${canDel?`<button data-cktpldel="${i}" title="Delete this plan">✕</button>`:''}</span>`
+  ).join('')+`<button class="ck-tpl ck-tpl-add" data-cktpladd title="New plan">+</button>`;
+  const all=cockpitCards();
+  const tl=Object.fromEntries(CK_TYPES);
+  box.innerHTML = cur.steps.length
+    ? cur.steps.map((p,i)=>{
+        const card=all.find(x=>x.key===p.key);
+        const open=CK_PLAN_OPEN.has(i);
+        const noteIn=`<input type="text" class="ck-ps-note" value="${esc(p.note||'')}" data-plannote="${i}" placeholder="✎ quick note…" title="Free text for this step — e.g. 'only if he saves', 'target the caster'">`;
+        if(!card) return `<div class="ck-plan-step ck-ps-gone" data-planstep="${i}" draggable="true">
+          <i>${i+1}</i>
+          <div class="ck-ps-main"><span class="ck-ps-name">${esc(p.name)}</span>
+          ${noteIn}
+          <span class="ck-ps-sub">source card was removed — step kept as a note</span></div>
+          <button data-plandel="${i}" title="Remove step">✕</button></div>`;
+        return `<div class="ck-plan-step ck-ps-${card.type} ${open?'open':''}" data-planstep="${i}" draggable="true">
+          <i>${i+1}</i>
+          <div class="ck-ps-main">
+            <div class="ck-ps-head">
+              <span class="ck-ps-name">${card.conc?'◉ ':''}${esc(card.name)}</span>
+              ${noteIn}
+              <span class="sp-pill ${CK_PILL[card.type]||'pill-cast'}">${tl[card.type]||'Other'}</span>
+            </div>
+            <div class="ck-ps-sub">${ckSubHTML(card,true)}</div>
+            ${card.cond?`<div class="ck-card-cond">⏱ ${esc(card.cond)}</div>`:''}
+            ${open?ckCardOpenHTML(card):''}
+          </div>
+          <button data-plandel="${i}" title="Remove step">✕</button>
+        </div>`;
+      }).join('')
+    : '<div class="ck-plan-empty">Script your ideal turn: drag cards up here, or tap ⤵ on a card — e.g. Dread Ambusher → Shortsword → Hunter\'s Mark. Tap a step for its full info and cast/use buttons. Make templates (+) for different situations: boss fight, defensive, stealth...</div>';
+  const clr=$('#ckPlanClear');
+  if(clr) clr.style.display=cur.steps.length?'':'none';
+}
+// Concentration banner, state chips, ★ reminders feed, rules drawer.
+function renderCockpitExtras(){
+  if(!$('#ckConc')) return;
+  ck();
+  $('#ckConc').innerHTML = S.concentration
+    ? `◉ Concentrating: <b>${esc(S.concentration.name)}</b> <button data-ckconcdrop title="Drop concentration">✕</button><span class="ck-conc-tip">CON save when you take damage — DC 10 or half the damage, whichever is higher</span>`
+    : '';
+  $('#ckTopStates').innerHTML=S.states.map(s=>`<span class="ck-state">${esc(s)}</span>`).join('');
+  $('#ckStates').innerHTML = S.states.length
+    ? S.states.map((s,i)=>`<span class="fx-chip">${esc(s)}<button data-stdel="${i}">✕</button></span>`).join('')
+    : '<p class="prep-note" style="margin:0">Nothing active.</p>';
+  const rems=allFx().filter(x=>x.t==='statnote');
+  $('#ckRems').innerHTML = rems.length
+    ? rems.map(r=>{
+        const amt=(r.n!=null&&String(r.n).trim()!=='')?` <b>${fmt(fxAmount(r.n))}</b>`:'';
+        return `<div class="ck-rem">★ ${esc(r.src)} — ${FX_STATS[r.stat]||r.stat}${amt}${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
+      }).join('')
+    : '<p class="prep-note" style="margin:0">★ Stat reminders you add on the Features tab show up here and on their stat.</p>';
+  const rulesBox=$('#ckRules');
+  if(rulesBox && typeof RULES_DB!=='undefined'){
+    rulesBox.innerHTML=RULES_DB.map((sec,si)=>{
+      const open=CK_RULES_OPEN.has(si);
+      return `<div class="ck-rsec ${open?'open':''}">
+        <button class="ck-rsec-head" data-ckrsec="${si}">${open?'▾':'▸'} ${esc(sec.s)}</button>
+        ${open?`<div class="ck-rsec-body">${sec.items.map(([n,d])=>`<div class="ck-rule"><b>${esc(n)}.</b> ${esc(d)}</div>`).join('')}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+}
+// Kept name: every existing call site (rests, fxRefresh, tab switch, level-up) now refreshes
+// the whole cockpit through this.
+function renderCombatFeatures(){ renderCockpitCards(); renderCockpitExtras(); }
+function wireCombatFeatures(){
+  const box=$('#ckCards'); if(!box) return;
+  const refresh=()=>{ renderCombatFeatures(); save(); };
+  $('#page-combat').addEventListener('click',e=>{
+    const t=e.target;
+    const slot=t.closest('[data-ckslot]');
+    if(slot){ const [L,k]=slot.dataset.ckslot.split('.').map(Number);
+      const lv=S.spellLevels[L]; lv.used=(k<lv.used)?k:k+1;
+      renderSpellLevels(); save(); return; }
+    const use=t.closest('[data-ckuse]');
+    if(use){ const [gi,k]=use.dataset.ckuse.split('.').map(Number);
+      const f=S.features[gi]; if(!f) return;
+      f.usesUsed=(k<num(f.usesUsed))?k:k+1; refresh(); return; }
+    const cpip=t.closest('[data-ccpip]');
+    if(cpip){ const [i,k]=cpip.dataset.ccpip.split('.').map(Number);
+      const cc=S.customCards[i]; cc.usesUsed=(k<num(cc.usesUsed))?k:k+1; refresh(); return; }
+    const cast=t.closest('[data-ckcast]');
+    if(cast){ const raw=cast.dataset.ckcast; // "sp:L.i:k"
+      const cut=raw.lastIndexOf(':');
+      const fullKey=raw.slice(0,cut), k=+raw.slice(cut+1);
+      const sp=ckRef(fullKey); if(!sp) return;
+      S.spellLevels[k].used=Math.min(S.spellLevels[k].total,S.spellLevels[k].used+1);
+      const prevConc=S.concentration;
+      if(spellIsConc(sp)) S.concentration={name:sp.name};
+      CK_UNDO={msg:`Cast ${sp.name} — spent a ${ordinalLevel(k)}-level slot.`,slot:k,prevConc};
+      renderSpellLevels(); renderCombatFeatures(); save(); return; }
+    if(t.closest('[data-ckundo]')){
+      if(CK_UNDO){ const lv=S.spellLevels[CK_UNDO.slot]; lv.used=Math.max(0,lv.used-1);
+        S.concentration=CK_UNDO.prevConc||null; CK_UNDO=null;
+        renderSpellLevels(); renderCombatFeatures(); save(); } return; }
+    if(t.closest('[data-ckundox]')){ CK_UNDO=null; renderCockpitCards(); return; }
+    const plan=t.closest('[data-ckplan]');
+    if(plan){ const key=plan.dataset.ckplan;
+      const c=cockpitCards().find(x=>x.key===key);
+      ckPlan().steps.push({key,name:c?c.name:key});
+      CK_PLAN_OPEN.clear();
+      renderCockpitPlan(); save(); return; }
+    const pdel=t.closest('[data-plandel]');
+    if(pdel){ ckPlan().steps.splice(+pdel.dataset.plandel,1); CK_PLAN_OPEN.clear(); renderCockpitPlan(); save(); return; }
+    const tpl=t.closest('[data-cktpl]');
+    if(tpl){ S.turnPlanIdx=+tpl.dataset.cktpl; CK_PLAN_OPEN.clear(); renderCockpitPlan(); save(); return; }
+    if(t.closest('[data-cktpladd]')){
+      ck(); S.turnPlans.push({name:'Plan '+(S.turnPlans.length+1),steps:[]});
+      S.turnPlanIdx=S.turnPlans.length-1; CK_PLAN_OPEN.clear();
+      renderCockpitPlan(); save(); return; }
+    const tdel=t.closest('[data-cktpldel]');
+    if(tdel){
+      if(S.turnPlans.length>1){
+        const di=+tdel.dataset.cktpldel, p=S.turnPlans[di];
+        const what=`Delete plan "${p.name||'Plan '+(di+1)}"${p.steps.length?` and its ${p.steps.length} step${p.steps.length>1?'s':''}`:''}?`;
+        if(!confirm(what)) return;
+        S.turnPlans.splice(di,1);
+        if(num(S.turnPlanIdx)>=di) S.turnPlanIdx=Math.max(0,num(S.turnPlanIdx)-1);
+        CK_PLAN_OPEN.clear();
+        renderCockpitPlan(); save(); } return; }
+    const pstep=t.closest('[data-planstep]');
+    if(pstep){ // tap a step → unfold its full info right here in the timeline
+      if(t.closest('input,select,textarea,button,a,.pips,.ck-body')) return;
+      const i=+pstep.dataset.planstep;
+      CK_PLAN_OPEN.has(i)?CK_PLAN_OPEN.delete(i):CK_PLAN_OPEN.add(i);
+      renderCockpitPlan(); return; }
+    const pin=t.closest('[data-ckpin]');
+    if(pin){ const c=ck(), key=pin.dataset.ckpin;
+      c.pins=c.pins.includes(key)?c.pins.filter(x=>x!==key):[...c.pins,key]; refresh(); return; }
+    const hide=t.closest('[data-ckhide]');
+    if(hide){ const c=ck(), key=hide.dataset.ckhide;
+      c.hidden=c.hidden.includes(key)?c.hidden.filter(x=>x!==key):[...c.hidden,key];
+      CK_OPEN.delete(key); refresh(); return; }
+    const del=t.closest('[data-ccdel]');
+    if(del){ if(!confirm('Delete this custom card?')) return;
+      S.customCards.splice(+del.dataset.ccdel,1); CK_OPEN.clear(); refresh(); return; }
+    const filt=t.closest('[data-ckfilter]');
+    if(filt){ CK_FILTER=filt.dataset.ckfilter; renderCockpitCards(); return; }
+    const rsec=t.closest('[data-ckrsec]');
+    if(rsec){ const si=+rsec.dataset.ckrsec;
+      CK_RULES_OPEN.has(si)?CK_RULES_OPEN.delete(si):CK_RULES_OPEN.add(si);
+      renderCockpitExtras(); return; }
+    if(t.closest('[data-ckconcdrop]')){ S.concentration=null; renderCockpitExtras(); save(); return; }
+    const sdel=t.closest('[data-stdel]');
+    if(sdel){ S.states.splice(+sdel.dataset.stdel,1); renderCockpitExtras(); save(); return; }
+    // Card head tap toggles open — but not when the tap landed on a control or inside the
+    // opened body (accidental scroll-taps on a tablet shouldn't slam the card shut).
+    if(t.closest('input,select,textarea,button,a,.pips,.ck-body')) return;
+    const cardEl=t.closest('[data-ckopen]');
+    if(cardEl){ const key=cardEl.dataset.ckopen;
+      CK_OPEN.has(key)?CK_OPEN.delete(key):CK_OPEN.add(key);
+      renderCockpitCards(); return; }
+  });
+  // Typing fields save without re-rendering (keeps focus); selects re-render (they re-sort).
+  $('#page-combat').addEventListener('input',e=>{
+    const t=e.target;
+    if(t.dataset.cktplname!=null){ ckPlan().name=t.value; save(); return; }
+    if(t.dataset.plannote!=null){ const p=ckPlan().steps[+t.dataset.plannote]; if(p){p.note=t.value; save();} return; }
+    if(t.dataset.ckroll!=null){ const a=S.attacks[+t.dataset.ckroll];
+      if(a){ a.rolled=t.value; recalc(); save(); } return; }
+    if(t.dataset.ckcond!=null){ const o=ckRef(t.dataset.ckcond); if(o){o.cond=t.value; save();} return; }
+    if(t.dataset.cct!=null){ S.customCards[+t.dataset.cct].title=t.value; save(); return; }
+    if(t.dataset.ccb!=null){ S.customCards[+t.dataset.ccb].body=t.value; save(); return; }
+    if(t.dataset.ccu!=null){ const cc=S.customCards[+t.dataset.ccu];
+      cc.usesMax=Math.max(0,num(t.value)); cc.usesUsed=Math.min(num(cc.usesUsed),cc.usesMax); save(); return; }
+  });
+  $('#page-combat').addEventListener('change',e=>{
+    const t=e.target;
+    if(t.dataset.cktype!=null){ const o=ckRef(t.dataset.cktype); if(o){o.actionType=t.value; renderCombatFeatures(); save();} }
+  });
+  $('#ckAddCustom').addEventListener('click',()=>{
+    ck(); S.customCards.push({title:'',body:'',type:'action',cond:'',usesMax:0,usesUsed:0});
+    CK_OPEN.add('cc:'+(S.customCards.length-1));
+    renderCockpitCards(); save();
+  });
+  $('#ckPlanClear').addEventListener('click',()=>{
+    const n=ckPlan().steps.length;
+    if(n&&!confirm(`Clear all ${n} step${n>1?'s':''} from "${ckPlan().name}"?`)) return;
+    ckPlan().steps=[]; CK_PLAN_OPEN.clear(); renderCockpitPlan(); save();
+  });
+  // Drag & drop: cards from the grid drop into the plan; steps drag to reorder. The ⤵ button
+  // covers touch devices where HTML5 drag isn't reliable.
+  let CK_DRAG=null; // {kind:'card'|'step', key|idx}
+  $('#page-combat').addEventListener('dragstart',e=>{
+    const step=e.target.closest&&e.target.closest('[data-planstep]');
+    if(step){ CK_DRAG={kind:'step',idx:+step.dataset.planstep}; e.dataTransfer.effectAllowed='move'; return; }
+    const card=e.target.closest&&e.target.closest('[data-ckdrag]');
+    if(card){ CK_DRAG={kind:'card',key:card.dataset.ckdrag}; e.dataTransfer.effectAllowed='copy'; }
+  });
+  const planBox=$('#ckPlan');
+  planBox.addEventListener('dragover',e=>{ if(CK_DRAG) e.preventDefault(); });
+  planBox.addEventListener('drop',e=>{
+    if(!CK_DRAG) return;
+    e.preventDefault(); ck();
+    const steps=ckPlan().steps;
+    const over=e.target.closest&&e.target.closest('[data-planstep]');
+    let at=over?+over.dataset.planstep:steps.length;
+    if(CK_DRAG.kind==='card'){
+      const c=cockpitCards().find(x=>x.key===CK_DRAG.key);
+      steps.splice(at,0,{key:CK_DRAG.key,name:c?c.name:CK_DRAG.key});
+    }else{
+      const [moved]=steps.splice(CK_DRAG.idx,1);
+      if(CK_DRAG.idx<at) at--;
+      steps.splice(at,0,moved);
+    }
+    CK_DRAG=null; CK_PLAN_OPEN.clear();
+    renderCockpitPlan(); save();
+  });
+  $('#page-combat').addEventListener('dragend',()=>{ CK_DRAG=null; });
+  $('#ckSpellsToggle').addEventListener('click',()=>{ ck().showAllSpells=!ck().showAllSpells; renderCockpitCards(); save(); });
+  $('#ckHiddenToggle').addEventListener('click',()=>{ CK_SHOWHIDDEN=!CK_SHOWHIDDEN; renderCockpitCards(); });
+  $('#ckStateAdd').addEventListener('click',()=>{
+    const inp=$('#ckStateIn'), v=inp.value.trim(); if(!v) return;
+    ck(); S.states.push(v); inp.value='';
+    renderCockpitExtras(); save();
+  });
+  $('#ckStateIn').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#ckStateAdd').click(); });
+  // Death saves stay out of sight while you're up; the header is always tappable to peek.
+  $('#ckDeathHead').addEventListener('click',()=>{
+    ck().showDeath=!ck().showDeath; recalc(); save();
+  });
+  $('#ckAtkHead').addEventListener('click',()=>{
+    ck().atkOpen=!ck().atkOpen;
+    $('#ckAtkPanel').classList.toggle('open',ck().atkOpen);
+  });
+  $('#ckAtkPanel').classList.toggle('open',!!ck().atkOpen);
 }
 
 // ----- Feature library: searchable instead of one giant native <select> (a lot of options) -----
@@ -1442,6 +1874,7 @@ function renderCombatSlots(){
       <div class="pips cslot-pips">${Array.from({length:lv.total},(_,i)=>
         `<button class="pip ${i<lv.used?'used':''}" data-cslotpip="${L}.${i}" title="Level ${L} slot"></button>`).join('')}</div>
     </div>`).join('') : '<p class="prep-note" style="margin:0">No slot totals set yet — set them on the Spells tab.</p>';
+  renderCockpitCards(); // spell-card slot pips mirror this data — keep them in step
 }
 function wireCombatSlots(){
   $('#combatSlots').addEventListener('click',e=>{
@@ -1650,6 +2083,13 @@ function recalc(){
   // Combat tab's sticky mini-HUD — the one thing you always need in sight while scrolling
   setCalc('chudHp',`${cur}/${max}`);
   setCalc('chudAc',num(S.ac));
+  // Death saves takeover: out of sight while up, front and center at 0 HP.
+  const dp=$('#ckDeathPanel');
+  if(dp){
+    const down=cur<=0;
+    dp.classList.toggle('ck-collapsed',!down&&!(S.cockpit&&S.cockpit.showDeath));
+    dp.classList.toggle('ck-down',down);
+  }
   // inspiration
   const insp=$('#inspBtn');
   if(insp){insp.classList.toggle('on',!!S.inspiration);
