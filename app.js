@@ -322,19 +322,14 @@ combat:`
   </div>`,
 
 skills:`
-  <div class="grid g2">
-    <div class="panel"><h2>Saving Throws</h2><div id="saveList"></div></div>
-    <div class="panel"><h2>Senses</h2>
-      <div class="stats-row">
-        <div class="stat computed"><span class="stat-label">Passive Perception</span><span class="big" data-calc="passive">10</span></div>
-        <div class="stat computed"><span class="stat-label">Proficiency Bonus</span><span class="big" data-calc="prof">+2</span></div>
-      </div>
-      <p class="prep-note" style="margin-top:12px">
-        Tap a circle: proficiency → expertise (double ring) → none.<br>
-        <span style="color:var(--gold)">Filled dot</span> = you set it, glowing in that ability's color &nbsp;·&nbsp;
-        <span style="color:var(--green)">Green dot</span> = granted by a feature (already in the bonus)<br>
-        <span style="color:var(--gold)">★ lines</span> = situational reminders from features — apply them yourself when the condition is true.
-      </p>
+  <div class="panel"><h2>Saving Throws</h2>
+    <div id="saveList"></div>
+    <div class="sense-row">
+      <span class="sense-chips-line">
+        <span class="sense-chip">👁 Passive Perception <b data-calc="passive">10</b></span>
+        <span class="sense-chip">📖 Proficiency <b data-calc="prof">+2</b></span>
+      </span>
+      <span class="prep-note sense-note">Tap a save tile or skill circle: proficiency → expertise → none · <span style="color:var(--green)">green</span> = granted by a feature (already counted) · <span style="color:var(--gold)">★</span> = situational reminder, apply it yourself.</span>
     </div>
   </div>
   <div class="panel"><h2>Skills</h2><div id="skillList"></div></div>`,
@@ -552,6 +547,9 @@ function buildShell(){
 function showTab(id){
   $$('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
   $$('.tab-page').forEach(p=>p.classList.toggle('active',p.id==='page-'+id));
+  // Textareas rendered while their tab was hidden measured scrollHeight 0, so auto-grow
+  // clipped them to the minimum — remeasure everything the moment the tab is actually visible.
+  $$('#page-'+id+' textarea').forEach(autoGrow);
   if(id==='overview') renderOverviewQuick();
   // Title/description edits on the Features tab don't live-refresh this panel (typing shouldn't
   // yank focus mid-keystroke), so re-render it fresh whenever the Combat tab is opened — otherwise
@@ -597,21 +595,22 @@ function renderAbilityCards(){
       <div class="ab-race" data-abrace="${k}"></div>
     </div>`).join('');
 }
+// Saving throws as six ability tiles — same elemental icon + color language as the ability
+// cards, so a save reads as "that ability, defending". The whole tile is the tap target.
 function renderSaves(){
   $('#saveList').innerHTML = ABILITIES.map(([k,label])=>{
     const srcs=allFx().filter(x=>x.t==='save'&&x.ab===k).map(x=>x.src);
     const granted=srcs.length>0&&!S.saveProf[k];
-    const dotCls=S.saveProf[k]?'on':granted?'grant':'';
-    const note=granted?`<div class="sk-note"><span class="from">✦ Proficiency</span> from ${esc(srcs.join(', '))} — already counted in the bonus</div>`:'';
+    const cls=S.saveProf[k]?'on':granted?'grant':'';
+    const tag=S.saveProf[k]?'proficient':granted?`✦ ${esc(srcs.join(', '))}`:'&nbsp;';
     return `
-    <div class="skill-block">
-      <div class="skill-row">
-        <button class="dot ${dotCls}" data-save="${k}" title="${granted?'Granted by a feature':'Proficient'}"></button>
-        <span class="bonus" data-savebonus="${k}">+0</span>
-        <span class="sk-name">${label}</span>
-      </div>
-      ${note}
-    </div>`;}).join('');
+    <button class="save-tile ${cls}" data-save="${k}" style="--ab-color:${AB_COLOR[k]};--ab-glow:${AB_COLOR[k]}40"
+      title="${granted?'Proficiency granted by: '+esc(srcs.join(', '))+' — already counted':'Tap to toggle save proficiency'}">
+      <span class="save-icon">${AB_ICON[k]||''}</span>
+      <span class="save-name">${label}</span>
+      <span class="save-bonus" data-savebonus="${k}">+0</span>
+      <span class="save-tag">${tag}</span>
+    </button>`;}).join('');
   $$('[data-save]').forEach(b=>b.addEventListener('click',()=>{
     S.saveProf[b.dataset.save]=!S.saveProf[b.dataset.save];
     renderSaves(); recalc(); save();
@@ -757,6 +756,7 @@ function attackRowHTML(a,i){
       <option value="custom">✏ Custom buff…</option>
     </select>
   </div>
+  <input type="text" class="atk-note" value="${esc(a.note||'')}" data-li="attacks.${i}.note" placeholder="✎ notes — reach, thrown 20/60, silvered, two-handed…">
   </div>`;
 }
 function renderAttacks(){
@@ -1145,9 +1145,10 @@ function ckGearRow(card){
 function ckCardOpenHTML(card){
   const g=ckGearRow(card);
   if(card.kind==='atk'){
-    const i=card.i, cSum=atkSummary(S.attacks[i]);
+    const i=card.i, a=S.attacks[i], cSum=atkSummary(a);
     return `<div class="ck-body">
       <div class="ck-desc">${esc(cSum.breakdown)} · damage ${esc(cSum.dmgBreakdown||cSum.dmg)}</div>
+      ${a.note?`<div class="ck-note">✎ ${esc(a.note)}</div>`:''}
       <p class="prep-note" style="margin:4px 0 0">Full editing (buffs, magic, dice) in the Attacks panel below.</p>${g}</div>`;
   }
   if(card.kind==='sp'){

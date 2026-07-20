@@ -273,6 +273,43 @@ label.fld span{
 .fx-chip button{background:none;border:none;color:var(--faint);cursor:pointer;font-size:.9em;padding:0}
 .fx-chip button:hover{color:var(--red)}
 .fx-note{display:block;color:var(--green);font-size:.72rem;min-height:.9em}
+/* ===== Saving throw tiles ===== */
+#saveList{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+#saveList .save-tile{flex:0 1 132px;min-width:112px}
+.save-tile{
+  position:relative;background:var(--panel3);border:1px solid var(--border-lt);border-radius:11px;
+  padding:9px 6px 7px;text-align:center;cursor:pointer;color:var(--text);min-height:96px;
+  transition:border-color .15s ease,box-shadow .2s ease,transform .12s ease;
+}
+.save-tile:hover{border-color:var(--ab-color);transform:translateY(-1px)}
+.save-icon{display:block;font-size:1.15rem;color:var(--ab-color);opacity:.55;transition:opacity .15s}
+.save-name{
+  display:block;font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);margin-top:2px;
+}
+.save-bonus{display:block;font-family:'Cinzel',serif;font-weight:700;font-size:1.45rem;color:var(--muted);line-height:1.2}
+.save-tag{display:block;font-size:.62rem;color:var(--faint);font-style:italic;min-height:.9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.save-tile.on{border-color:var(--ab-color);box-shadow:0 0 14px var(--ab-glow),inset 0 0 18px var(--ab-glow)}
+.save-tile.on .save-icon{opacity:1}
+.save-tile.on .save-bonus{color:var(--ab-color)}
+.save-tile.on .save-tag{color:var(--ab-color)}
+.save-tile.grant{border-color:var(--green)}
+.save-tile.grant .save-bonus{color:var(--green)}
+.save-tile.grant .save-tag{color:var(--green);font-style:normal}
+/* Senses — no panel of their own: one slim row tucked under the save tiles */
+.sense-row{
+  display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;
+  margin-top:10px;border-top:1px solid var(--border);padding-top:12px;
+}
+.sense-row .sense-chips-line{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.sense-row .sense-note{margin:0;max-width:640px;text-align:center}
+.sense-chip{
+  display:inline-flex;align-items:center;gap:7px;background:var(--panel3);
+  border:1px solid var(--border-lt);border-radius:999px;padding:5px 14px;
+  color:var(--muted);font-size:.82rem;
+}
+.sense-chip b{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:1.05rem;font-weight:700}
+.sense-note{margin:10px 0 0;font-size:.74rem;line-height:1.5}
 /* ===== Combat cockpit ===== */
 .ck-grid{display:grid;grid-template-columns:280px minmax(0,1fr) 260px;gap:10px;align-items:start}
 .ck-col{display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -416,6 +453,22 @@ label.fld span{
 .ck-death.ck-collapsed h2::after{content:' — hidden while you\'re up (tap to peek)';color:var(--faint);font-size:.7rem;letter-spacing:0;text-transform:none}
 .ck-death.ck-down{border-color:var(--red);box-shadow:0 0 12px rgba(224,75,74,.25)}
 .ck-death.ck-down h2{color:var(--red)}
+/* Attack cards inside the cockpit's narrower column: shave the chrome so each card reads as
+   a couple of tight lines instead of a tall block. */
+.ck-atk-body .atk-card{padding:6px 10px;margin-bottom:8px}
+.ck-atk-body .atk-card:hover{transform:none;box-shadow:none}
+.ck-atk-body .atk-row{gap:8px}
+.ck-atk-body .atk-icon{padding-top:4px}
+.ck-atk-body .atk-config{margin-top:3px;gap:3px 6px}
+.ck-atk-body .buff-row{padding:2px 4px 4px 8px}
+.ck-atk-body .atk-dmg{padding-left:8px}
+.atk-note{
+  display:block;width:100%;background:transparent;border:none;border-bottom:1px dashed transparent;
+  color:var(--muted);font-size:.78rem;font-style:italic;padding:2px 4px;margin-top:2px;
+}
+.atk-note::placeholder{color:var(--faint)}
+.atk-note:hover{border-bottom-color:var(--border-lt)}
+.atk-note:focus{border-bottom-color:var(--gold);outline:none;background:var(--ink);border-radius:4px;color:var(--text)}
 .ck-atk-panel .ck-atk-body{display:none}
 .ck-atk-panel.open .ck-atk-body{display:block}
 /* Collapsed = one slim line, not a full panel header */
