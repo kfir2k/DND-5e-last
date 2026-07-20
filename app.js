@@ -275,18 +275,23 @@ combat:`
       <div class="hp-bar chud-bar"><div class="hp-fill"></div><span class="hp-temp-fill"></span></div>
     </div>
     <span class="chud-sep"></span>
-    <div class="chud-cell"><span class="chud-lbl">🛡 AC</span><b data-calc="chudAc">—</b></div>
-    <span class="chud-sep"></span>
-    <span class="ck-conc" id="ckConc"></span>
-    <span class="ck-topstates" id="ckTopStates"></span>
-  </div>
-  <div class="panel ck-vitals-row">
     <div class="ckv"><span class="ckv-l">🛡 AC</span><input type="number" data-bind="ac"><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></div>
     <div class="ckv"><span class="ckv-l">⚡ Init</span><span class="ckv-big" data-calc="initiative">+0</span><span class="fx-rems" data-fxrem="init"></span></div>
     <div class="ckv"><span class="ckv-l">💨 Speed</span><input type="text" class="ckv-wide" data-bind="speed"><span class="fx-note" data-fxnote="speed"></span><span class="fx-rems" data-fxrem="speed"></span></div>
     <div class="ckv"><span class="ckv-l">📖 Prof</span><input type="number" data-bind="profBonus"></div>
     <div class="ckv"><span class="ckv-l">👁 Passive</span><span class="ckv-big" data-calc="passive">10</span><span class="fx-rems" data-fxrem="passive"></span></div>
     <div class="ckv"><span class="ckv-l">🌙 Vision</span><input type="text" class="ckv-wide" data-bind="vision"><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></div>
+    <span class="chud-sep"></span>
+    <span class="ck-conc" id="ckConc"></span>
+    <span class="ck-topstates" id="ckTopStates"></span>
+    <div class="chud-extra">
+      <span class="chud-x"><i>AC</i><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></span>
+      <span class="chud-x"><i>Init</i><span class="fx-rems" data-fxrem="init"></span></span>
+      <span class="chud-x"><i>Speed</i><span class="fx-note" data-fxnote="speed"></span><span class="fx-rems" data-fxrem="speed"></span></span>
+      <span class="chud-x"><i>Passive</i><span class="fx-rems" data-fxrem="passive"></span></span>
+      <span class="chud-x"><i>Vision</i><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></span>
+      <span class="chud-x"><i>Max HP</i><span class="fx-note" data-fxnote="hpmax"></span><span class="fx-rems" data-fxrem="hpmax"></span></span>
+    </div>
   </div>
   <div class="ck-duo">
     <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
@@ -296,7 +301,6 @@ combat:`
       <div class="fx-addrow" style="margin-top:8px">
         <button class="add-btn" id="ckAddCustom">+ Custom card</button>
         <button class="add-btn" id="ckSpellsToggle"></button>
-        <button class="add-btn" id="ckHiddenToggle"></button>
       </div>
     </div>
     <div class="panel ck-plan-panel"><h2>🗺 Turn Plan</h2>
@@ -987,6 +991,7 @@ function renderEquipment(){
   $$('[data-eqcombat]').forEach(b=>b.addEventListener('click',()=>{
     const e=S.equipment[+b.dataset.eqcombat];
     e.combat=!e.combat;
+    if(e.combat&&!e.actionType) e.actionType='item'; // lands in combat as an Item card
     renderEquipment(); renderCombatFeatures(); save();
   }));
   $$('[data-eqinfo]').forEach(b=>b.addEventListener('click',()=>{
@@ -1223,7 +1228,7 @@ function wireFeaturesLock(){
 const CK_TYPES=[['action','Action'],['bonus','Bonus Action'],['reaction','Reaction'],['item','Item'],['other','Other']];
 const CK_TYPE_ORDER={action:0,bonus:1,reaction:2,item:3,other:4};
 const CK_PILL={action:'pill-action',bonus:'pill-bonus',reaction:'pill-react',item:'pill-item',other:'pill-cast'};
-let CK_FILTER='all', CK_SHOWHIDDEN=false, CK_UNDO=null;
+let CK_FILTER='all', CK_UNDO=null;
 const CK_OPEN=new Set(), CK_RULES_OPEN=new Set();
 // Older saves may lack the cockpit fields entirely — normalize on every access.
 function ck(){
@@ -1294,7 +1299,7 @@ function cockpitCards(){
     const tracked=String(e.qty??'').trim()!=='';
     cards.push({key:'it:'+i,kind:'it',i,name:e.name,type:e.actionType||'item',cond:e.cond||'',out:tracked&&num(e.qty)<=0});
   });
-  cards.forEach(x=>{ x.pin=c.pins.includes(x.key); x.hidden=c.hidden.includes(x.key); });
+  cards.forEach(x=>{ x.pin=c.pins.includes(x.key); });
   return cards;
 }
 function ckSlotPips(L){
@@ -1308,7 +1313,6 @@ function ckGearRow(card){
     <select data-cktype="${card.key}">${CK_TYPES.map(([v,l])=>`<option value="${v}" ${card.type===v?'selected':''}>${l}</option>`).join('')}</select>
     <input type="text" value="${esc(obj.cond||'')}" data-ckcond="${card.key}" placeholder="Condition — e.g. first turn of combat, once per turn">
     <button data-ckpin="${card.key}">${card.pin?'📌 Unpin':'📌 Pin'}</button>
-    <button data-ckhide="${card.key}">${card.hidden?'👁 Unhide':'✕ Hide'}</button>
   </div>`;
 }
 function ckCardOpenHTML(card){
@@ -1404,6 +1408,7 @@ function ckCardHTML(card){
     <div class="ck-card-head">
       <span class="ck-card-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</span>
       <span class="sp-pill ${CK_PILL[card.type]||'pill-cast'}">${tl[card.type]||'Other'}</span>
+      ${card.kind==='it'&&!card.out?`<button class="ck-quickuse" data-ckituse="${card.i}" title="Use one — no need to open the card">Use</button>`:''}
       <button class="ck-plan-add" data-ckplan="${card.key}" title="Add to turn plan (or drag the card onto the plan)">⤵</button>
     </div>
     ${sub?`<div class="ck-card-sub">${sub}</div>`:''}
@@ -1415,8 +1420,6 @@ function renderCockpitCards(){
   const box=$('#ckCards'); if(!box) return;
   const c=ck();
   let cards=cockpitCards();
-  const hiddenCount=cards.filter(x=>x.hidden).length;
-  if(!CK_SHOWHIDDEN) cards=cards.filter(x=>!x.hidden);
   const counts={all:cards.length};
   CK_TYPES.forEach(([v])=>counts[v]=cards.filter(x=>x.type===v).length);
   if(CK_FILTER!=='all') cards=cards.filter(x=>x.type===CK_FILTER);
@@ -1432,9 +1435,6 @@ function renderCockpitCards(){
   const st=$('#ckSpellsToggle');
   st.style.display=anyPrep?'':'none';
   st.textContent=c.showAllSpells?'Showing all spells — tap for prepared only':'Prepared spells only — tap for all';
-  const ht=$('#ckHiddenToggle');
-  ht.style.display=hiddenCount||CK_SHOWHIDDEN?'':'none';
-  ht.textContent=CK_SHOWHIDDEN?'Hide hidden cards again':`Show ${hiddenCount} hidden card${hiddenCount>1?'s':''}`;
   renderCockpitPlan();
 }
 // The turn-plan timeline — the cockpit's main stage. Each step is a full-information row:
@@ -1599,10 +1599,6 @@ function wireCombatFeatures(){
     const pin=t.closest('[data-ckpin]');
     if(pin){ const c=ck(), key=pin.dataset.ckpin;
       c.pins=c.pins.includes(key)?c.pins.filter(x=>x!==key):[...c.pins,key]; refresh(); return; }
-    const hide=t.closest('[data-ckhide]');
-    if(hide){ const c=ck(), key=hide.dataset.ckhide;
-      c.hidden=c.hidden.includes(key)?c.hidden.filter(x=>x!==key):[...c.hidden,key];
-      CK_OPEN.delete(key); refresh(); return; }
     const del=t.closest('[data-ccdel]');
     if(del){ if(!confirm('Delete this custom card?')) return;
       S.customCards.splice(+del.dataset.ccdel,1); CK_OPEN.clear(); refresh(); return; }
@@ -1680,7 +1676,6 @@ function wireCombatFeatures(){
   });
   $('#page-combat').addEventListener('dragend',()=>{ CK_DRAG=null; });
   $('#ckSpellsToggle').addEventListener('click',()=>{ ck().showAllSpells=!ck().showAllSpells; renderCockpitCards(); save(); });
-  $('#ckHiddenToggle').addEventListener('click',()=>{ CK_SHOWHIDDEN=!CK_SHOWHIDDEN; renderCockpitCards(); });
   $('#ckStateAdd').addEventListener('click',()=>{
     const inp=$('#ckStateIn'), v=inp.value.trim(); if(!v) return;
     ck(); S.states.push(v); inp.value='';
@@ -2257,6 +2252,11 @@ function recalc(){
       const tip=r.cond?`<span class="sk-tip">${esc(r.cond)}</span>`:'';
       return `<span class="sk-fx">★ ${esc(r.src)}${amt}${tip}</span>`;
     }).join(''));
+  });
+  // HUD's second line only exists when something is on it — hide empty stat wrappers
+  $$('.chud-x').forEach(x=>{
+    const has=[...x.querySelectorAll('[data-fxrem],[data-fxnote]')].some(el=>el.innerHTML.trim());
+    x.style.display=has?'':'none';
   });
   // spellcasting
   if(S.spellAbility){
