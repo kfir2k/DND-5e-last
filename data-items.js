@@ -1,0 +1,80 @@
+// ---------- Adventuring gear index (PHB core) ----------
+// t: C consumable · G gear · S scroll/paper · M magic · T tool · A ammo
+// q: sensible default quantity when added · cb: suggest "show in combat" on add
+const ITEM_TYPES={C:['C','Consumables'],A:['A','Ammunition'],M:['M','Magic Items'],S:['S','Scrolls & Paper'],T:['T','Tools & Kits'],G:['G','Gear']};
+const ITEM_RAW=[
+// Consumables
+['Potion of Healing','C','Drink (action): regain 2d4+2 HP.',1,1],
+['Potion of Greater Healing','C','Drink (action): regain 4d4+4 HP.',1,1],
+['Potion of Superior Healing','C','Drink (action): regain 8d4+8 HP.',1,1],
+['Potion of Supreme Healing','C','Drink (action): regain 10d4+20 HP.',1,1],
+['Antitoxin','C','Drink (action): advantage on saves vs poison for 1 hour.',1,1],
+["Alchemist's Fire",'C','Throw 20 ft (improvised attack): 1d4 fire at start of each of the target\'s turns; DC 10 Dex check (action) to douse.',1,1],
+['Acid (vial)','C','Throw 20 ft (improvised attack): 2d6 acid damage.',1,1],
+['Holy Water (flask)','C','Throw 20 ft (improvised attack): 2d6 radiant to a fiend or undead.',1,1],
+['Oil (flask)','C','Throw or pour: covered target takes +5 fire if ignited; or burn as lamp fuel 6 hours.',1,1],
+['Torch','C','1 hour of bright light 20 ft. As a weapon: 1 fire damage on hit.',3,0],
+['Caltrops (bag of 20)','C','Spread in 5-ft square: DC 15 Dex or stop moving, take 1 piercing, −10 ft speed until healed.',1,1],
+['Ball Bearings (bag of 1,000)','C','Spread over 10-ft square: DC 10 Dex or fall prone.',1,1],
+['Rations (1 day)','C','Dry food for one day of travel.',5,0],
+['Waterskin','C','Holds 4 pints of liquid.',1,0],
+// Ammunition
+['Arrows (20)','A','Standard ammunition for bows. Recover half after battle.',1,1],
+['Crossbow Bolts (20)','A','Standard ammunition for crossbows. Recover half after battle.',1,1],
+['Sling Bullets (20)','A','Standard ammunition for slings.',1,0],
+['Blowgun Needles (50)','A','Standard ammunition for blowguns.',1,0],
+// Magic-ish
+['Bag of Holding','M','Holds 500 lb / 64 cu ft; weighs 15 lb. Retrieval is an action.',1,0],
+['Scroll Case','M','Protects up to ten rolled sheets of paper.',1,0],
+// Scrolls & paper
+['Spell Scroll','S','Cast the written spell (action, or its cast time). If it\'s above your level range, ability check to succeed. Crumbles after use.',1,1],
+['Paper (sheet)','S','One sheet of fine paper.',5,0],
+['Parchment (sheet)','S','One sheet of treated skin.',5,0],
+['Ink & Pen','S','Ink bottle (1 oz) and ink pen.',1,0],
+['Book','S','Blank or filled — lore, notes, formulae.',1,0],
+['Map or Chart','S','A map, chart, or floorplan.',1,0],
+// Tools & kits
+["Healer's Kit",'T','10 uses. Use (action): stabilize a dying creature without a Medicine check.',1,1],
+["Thieves' Tools",'T','Pick locks and disarm traps (proficiency applies).',1,0],
+['Climber\'s Kit','T','Anchors, boots, gloves, harness: anchor yourself (action); can\'t fall more than 25 ft below anchor.',1,0],
+['Disguise Kit','T','Cosmetics and props to create disguises (proficiency applies).',1,0],
+['Herbalism Kit','T','Create remedies and potions of healing (proficiency applies).',1,0],
+['Forgery Kit','T','Duplicate documents and handwriting (proficiency applies).',1,0],
+['Tinderbox','T','Light a torch (action) or other exposed fuel (1 minute).',1,0],
+['Musical Instrument','T','Play it (proficiency applies). Bards: also a spell focus.',1,0],
+['Gaming Set','T','Dice, cards, or board pieces (proficiency applies).',1,0],
+// Gear
+['Backpack','G','Holds 30 lb / 1 cu ft of gear.',1,0],
+['Bedroll','G','Sleeping roll for camp.',1,0],
+['Blanket','G','A warm blanket.',1,0],
+['Rope, Hempen (50 ft)','G','2 HP, burst DC 17 Strength.',1,0],
+['Rope, Silk (50 ft)','G','2 HP, burst DC 17 Strength. Lighter than hemp.',1,0],
+['Grappling Hook','G','Throw with rope to anchor a climb.',1,0],
+['Crowbar','G','Advantage on Strength checks where leverage applies.',1,0],
+['Hammer','G','Drive pitons, break things.',1,0],
+['Pitons (10)','G','Spikes for anchoring ropes.',1,0],
+['Lantern, Hooded','G','Bright light 30 ft, 6 hours per oil flask. Dim it (action).',1,0],
+['Lantern, Bullseye','G','Bright light 60-ft cone, 6 hours per oil flask.',1,0],
+['Candle','G','Bright light 5 ft for 1 hour.',5,0],
+['Chain (10 ft)','G','10 HP, burst DC 20 Strength.',1,0],
+['Manacles','G','DC 20 Dex or Str to escape; 15 HP.',1,0],
+['Mirror, Steel','G','Peek around corners; signal at range.',1,0],
+['Shovel','G','Dig in.',1,0],
+['Spyglass','G','Objects viewed are magnified ×2.',1,0],
+['Tent (two-person)','G','Shelter for two.',1,0],
+['Pole (10 ft)','G','Poke suspicious floors before they poke you.',1,0],
+['Chalk (1 piece)','G','Mark your path in the dark.',5,0],
+['Bell','G','A small bell — alarm, signal, distraction.',1,0],
+['Whistle','G','Signal over distance.',1,0],
+['Sack','G','Holds 30 lb / 1 cu ft.',2,0],
+['Iron Pot','G','Cook for the party.',1,0],
+['Mess Kit','G','Plate, cup, and cutlery in a tin box.',1,0],
+['Flask of Common Wine','G','Morale in a bottle.',1,0],
+['Perfume (vial)','G','Make an impression.',1,0],
+['Signal Whistle','G','Shrill blast heard far away.',1,0],
+['Hourglass','G','Track time precisely.',1,0],
+['Magnifying Glass','G','Advantage on appraisal/detail checks; start fires in sunlight.',1,0],
+['Hunting Trap','G','Set (action): DC 13 Dex or 1d4 piercing and stuck; DC 13 Str (action) to free.',1,1]
+];
+const ITEM_DB={};
+ITEM_RAW.forEach(([n,t,d,q,cb])=>{ ITEM_DB[n.toLowerCase()]={n,t,d,q:q||1,cb:!!cb}; });

@@ -24,6 +24,8 @@ function defaultState(){
     // Spells (page 3): level 0 = cantrips
     spellClass:'', spellAbility:'',
     spellLevels:Array.from({length:10},()=>({total:0,used:0,spells:[]})),
+    // Inventory UI: active pack tab, folded categories (All view), folded Equipped panel
+    eqTab:'ALL', eqCollapse:{}, invEqOpen:true,
     // Combat cockpit
     customCards:[], states:[], concentration:null,
     turnPlans:[{name:'Default',steps:[]}], turnPlanIdx:0,
@@ -392,71 +394,89 @@ spells:`
   <div id="spellLevels"></div>`,
 
 inventory:`
-  <div class="panel"><h2>Equipped — Character HUD</h2>
-    <div class="hud">
-      <div class="hud-col">
-        <label class="fld"><span>Head</span><input type="text" data-bind="equip.head" placeholder="Helm, hat, circlet…"></label>
-        <label class="fld"><span>Neck</span><input type="text" data-bind="equip.neck" placeholder="Amulet, periapt…"></label>
-        <label class="fld"><span>Cloak</span><input type="text" data-bind="equip.cloak" placeholder="Cloak, mantle…"></label>
-        <label class="fld"><span>Armor</span><select id="armorSel"></select></label>
-        <label class="fld"><span>Armor magic +N</span><input type="number" id="armorMagic" style="width:70px"></label>
-      </div>
-      <svg class="hud-fig" viewBox="0 0 100 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <g fill="none" stroke="var(--gold-dim)" stroke-width="2.5" stroke-linecap="round">
-          <circle cx="50" cy="24" r="14"/>
-          <path d="M50 38 v52"/>
-          <path d="M50 46 L22 78"/><path d="M50 46 L78 78"/>
-          <path d="M50 90 L30 150 L28 176"/><path d="M50 90 L70 150 L72 176"/>
-          <path d="M32 56 q18 14 36 0" stroke="var(--gold)"/>
-        </g>
-      </svg>
-      <div class="hud-col">
-        <label class="fld"><span>Main hand</span><input type="text" data-bind="equip.mainhand" placeholder="Weapon…"></label>
-        <label class="fld"><span>Off hand</span><input type="text" data-bind="equip.offhand" placeholder="Weapon, focus…"></label>
-        <label class="fld"><span>Shield</span>
+  <div class="money-hud">
+    <span class="coin-hud c-cp" title="Copper"><input type="number" data-bind="money.cp"><i>CP</i></span>
+    <span class="coin-hud c-sp" title="Silver"><input type="number" data-bind="money.sp"><i>SP</i></span>
+    <span class="coin-hud c-ep" title="Electrum"><input type="number" data-bind="money.ep"><i>EP</i></span>
+    <span class="coin-hud c-gp" title="Gold"><input type="number" data-bind="money.gp"><i>GP</i></span>
+    <span class="coin-hud c-pp" title="Platinum"><input type="number" data-bind="money.pp"><i>PP</i></span>
+  </div>
+  <div class="panel" id="invEqPanel"><h2 id="invEqHead">Equipped &amp; Defense</h2>
+    <div class="inv-duo">
+    <div class="inv-grid">
+      <label class="inv-slot" title="Helm, hat, circlet…">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 14a7 7 0 0 1 14 0v3H5z"/><path d="M8 14h8"/><path d="M12 7v-2"/></svg>
+        <span class="inv-lbl">Head</span><input type="text" data-bind="equip.head" placeholder=" ">
+      </label>
+      <label class="inv-slot" title="Amulet, periapt…">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4c1 5 4 7 7 7s6-2 7-7"/><path d="M12 11v3"/><path d="M12 14l2.5 3-2.5 4-2.5-4z"/></svg>
+        <span class="inv-lbl">Neck</span><input type="text" data-bind="equip.neck" placeholder=" ">
+      </label>
+      <label class="inv-slot" title="Cloak, mantle…">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C7 6 6 13 7.5 20l4.5-3 4.5 3C18 13 17 6 12 3z"/><path d="M9.5 5.5h5"/></svg>
+        <span class="inv-lbl">Cloak</span><input type="text" data-bind="equip.cloak" placeholder=" ">
+      </label>
+      <label class="inv-slot" title="Weapon">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v13"/><path d="M12 2l2 3-2 2-2-2z"/><path d="M7.5 15h9"/><path d="M12 15v6"/><path d="M10 21h4"/></svg>
+        <span class="inv-lbl">Main hand</span><input type="text" data-bind="equip.mainhand" placeholder=" ">
+      </label>
+      <label class="inv-slot" title="Weapon, focus, shield…">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 2.5V12c0 4.5-3.5 6.8-7 9-3.5-2.2-7-4.5-7-9V5.5z"/><path d="M12 6.5v10"/></svg>
+        <span class="inv-lbl">Off hand</span><input type="text" data-bind="equip.offhand" placeholder=" ">
+      </label>
+      <label class="inv-slot" title="Gloves, gauntlets…">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21V9a4 4 0 0 1 8 0v12"/><path d="M8 12h8"/><path d="M12 9v3"/></svg>
+        <span class="inv-lbl">Hands</span><input type="text" data-bind="equip.hands" placeholder=" ">
+      </label>
+      <label class="inv-slot" title="Ring">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="14" r="6"/><path d="M9.5 6.5L12 3l2.5 3.5-2.5 1.7z"/></svg>
+        <span class="inv-lbl">Ring I</span><input type="text" data-bind="equip.ring1" placeholder=" ">
+      </label>
+      <label class="inv-slot" title="Ring">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="14" r="6"/><path d="M9.5 6.5L12 3l2.5 3.5-2.5 1.7z"/></svg>
+        <span class="inv-lbl">Ring II</span><input type="text" data-bind="equip.ring2" placeholder=" ">
+      </label>
+      <label class="inv-slot" title="Boots, greaves…">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v10l-4 5v3h14v-3l-6-5V3z"/><path d="M9 8h4"/></svg>
+        <span class="inv-lbl">Boots</span><input type="text" data-bind="equip.boots" placeholder=" ">
+      </label>
+    </div>
+    <div class="inv-def">
+      <label class="fld"><span>Armor worn</span><select id="armorSel"></select></label>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <label class="fld" style="flex:0 0 auto"><span>Armor magic +N</span><input type="number" id="armorMagic" style="width:70px"></label>
+        <label class="fld" style="flex:1 1 auto"><span>Shield</span>
           <span style="display:flex;gap:10px;align-items:center">
             <input type="checkbox" id="shieldChk" style="width:auto"> <span style="color:var(--muted);font-size:.85rem">equipped (+2)</span>
             <input type="number" id="shieldMagic" style="width:60px" title="Shield magic +N">
           </span>
         </label>
-        <label class="fld"><span>Rings</span>
-          <span style="display:flex;gap:6px">
-            <input type="text" data-bind="equip.ring1" placeholder="Ring 1">
-            <input type="text" data-bind="equip.ring2" placeholder="Ring 2">
-          </span>
+      </div>
+      <div class="fx-addrow" style="border-top:1px solid var(--border);padding-top:10px;margin-top:2px">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+          <input type="checkbox" id="acAutoChk" style="width:auto">
+          <span style="font-family:'Cinzel',serif;font-size:.82rem;letter-spacing:1px;color:var(--muted)">COMPUTE AC FROM ARMOR</span>
         </label>
-        <label class="fld"><span>Hands / Boots</span>
-          <span style="display:flex;gap:6px">
-            <input type="text" data-bind="equip.hands" placeholder="Gloves">
-            <input type="text" data-bind="equip.boots" placeholder="Boots">
-          </span>
-        </label>
+        <span class="bonus" id="hudAC" style="min-width:70px"></span>
+        <span class="prep-note" id="hudACnote" style="margin:0"></span>
       </div>
     </div>
-    <div class="fx-addrow" style="border-top:1px solid var(--border);padding-top:10px;margin-top:6px">
-      <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-        <input type="checkbox" id="acAutoChk" style="width:auto">
-        <span style="font-family:'Cinzel',serif;font-size:.85rem;letter-spacing:1px;color:var(--muted)">COMPUTE AC FROM ARMOR</span>
-      </label>
-      <span class="bonus" id="hudAC" style="min-width:70px"></span>
-      <span class="prep-note" id="hudACnote" style="margin:0"></span>
     </div>
   </div>
-  <div class="panel"><h2>Money</h2>
-    <div class="money-row">
-      <div class="coin"><span>CP</span><input type="number" data-bind="money.cp"></div>
-      <div class="coin"><span>SP</span><input type="number" data-bind="money.sp"></div>
-      <div class="coin"><span>EP</span><input type="number" data-bind="money.ep"></div>
-      <div class="coin"><span>GP</span><input type="number" data-bind="money.gp"></div>
-      <div class="coin"><span>PP</span><input type="number" data-bind="money.pp"></div>
+  <div class="panel eq-panel"><h2>Inventory</h2>
+    <div class="fx-addrow" style="margin:0 0 8px;position:relative">
+      <div style="position:relative;flex:1 1 300px;max-width:420px">
+        <input type="text" id="itemSearch" style="width:100%" placeholder="+ Search adventuring gear…" autocomplete="off">
+        <div id="itemResults" class="lib-results"></div>
+      </div>
+      <span class="prep-note" style="margin:0">tap a result to add it · ⚔ on a row = usable card on the Combat tab</span>
     </div>
-  </div>
-  <div class="panel"><h2>Equipment</h2>
+    <div class="eq-tabs" id="eqTabs"></div>
     <div id="equipList"></div>
-    <button class="add-btn" data-add="equipment">+ Add item</button>
-  </div>
-  <div class="panel"><h2>Treasure</h2>
-    <textarea data-bind="treasure" placeholder="Gems, magic items, art objects..."></textarea>
+    <button class="add-btn" data-add="equipment" id="eqAddBtn">+ Add item</button>
+    <div id="eqTreasure" style="display:none">
+      <textarea data-bind="treasure" placeholder="Gems, art objects, deeds, favors owed, that suspicious idol..."></textarea>
+    </div>
   </div>`,
 
 features:`
@@ -898,14 +918,126 @@ function wireWeaponSearch(){
     $$('.atk-weapon-results.open').forEach(p=>p.classList.remove('open'));
   });
 }
+// Typed inventory: rows carry a type (consumable/gear/ammo/…), an expandable description, and
+// a ⚔ flag that projects the item into the Combat tab as a usable card. Free-text rows still
+// work exactly like the old paper list — they're just "Gear" until told otherwise.
+const EQ_OPEN=new Set();
 function renderEquipment(){
-  $('#equipList').innerHTML = S.equipment.map((e,i)=>`
-    <div class="list-row">
-      <input type="text" class="narrow" value="${esc(e.qty)}" data-li="equipment.${i}.qty" placeholder="Qty">
-      <input type="text" value="${esc(e.name)}" data-li="equipment.${i}.name" placeholder="Item">
+  const list=$('#equipList'); if(!list) return;
+  S.equipment=S.equipment||[];
+  // backfill rows saved before items had types
+  S.equipment.forEach(e=>{ if(e.type==null)e.type=(ITEM_TYPES[S.eqTab]?S.eqTab:'G'); if(e.desc==null)e.desc=''; if(e.combat==null)e.combat=false; });
+  const order=Object.keys(ITEM_TYPES);
+  const rowHTML=({e,i})=>`
+    <div class="eq-row ${EQ_OPEN.has(i)?'open':''}">
+      <input type="text" class="narrow eq-qty" value="${esc(e.qty)}" data-li="equipment.${i}.qty" placeholder="Qty" title="Quantity">
+      <input type="text" class="eq-name" value="${esc(e.name)}" data-li="equipment.${i}.name" placeholder="Item">
+      <select class="eq-type" data-eqtype="${i}" title="Item type">${order.map(t=>`<option value="${t}" ${e.type===t?'selected':''}>${ITEM_TYPES[t][0]}</option>`).join('')}</select>
+      <button class="spell-info-btn" data-eqinfo="${i}" title="Notes / description">ℹ</button>
+      <button class="combat-flag ${e.combat?'on':''}" data-eqcombat="${i}" title="${e.combat?'Shown on the Combat tab — tap to remove':'Tap to show on the Combat tab as a usable card'}">⚔</button>
       <button class="del-btn" data-del="equipment.${i}">✕</button>
-    </div>`).join('');
+      <div class="eq-desc"><textarea data-li="equipment.${i}.desc" placeholder="Notes / what it does…">${esc(e.desc)}</textarea></div>
+    </div>`;
+  S.eqCollapse=S.eqCollapse||{};
+  if(!S.eqTab) S.eqTab='ALL';
+  // One smart tab rail instead of a scroll of sections: All · each category (with count) ·
+  // Treasure. A tab shows only its own rows; new custom items adopt the open tab's type.
+  const counts=Object.fromEntries(order.map(ty=>[ty,S.equipment.filter(e=>e.type===ty).length]));
+  const tabs=[['ALL','All',S.equipment.length],...order.map(ty=>[ty,ITEM_TYPES[ty][1],counts[ty]]),['TR','Treasure',null]];
+  $('#eqTabs').innerHTML=tabs.map(([id,label,n])=>
+    `<button class="eq-tab ${S.eqTab===id?'on':''}" data-eqtab="${id}">${label}${n?` <i>${n}</i>`:''}</button>`).join('');
+  $$('[data-eqtab]').forEach(b=>b.addEventListener('click',()=>{
+    S.eqTab=b.dataset.eqtab;
+    renderEquipment(); save();
+  }));
+  const treasure=S.eqTab==='TR';
+  $('#eqTreasure').style.display=treasure?'':'none';
+  $('#eqAddBtn').style.display=treasure?'none':'';
+  list.style.display=treasure?'none':'';
+  if(treasure){ const ta=$('#eqTreasure textarea'); if(ta) autoGrow(ta); return; }
+  if(S.eqTab==='ALL'){
+    const groups=order
+      .map(ty=>({ty,rows:S.equipment.map((e,i)=>({e,i})).filter(x=>x.e.type===ty)}))
+      .filter(g=>g.rows.length);
+    list.innerHTML = groups.length
+      ? groups.map(g=>{
+          const closed=!!S.eqCollapse[g.ty];
+          return `<div class="eq-group ${closed?'closed':''}">
+            <div class="eq-group-head" data-eqgroup="${g.ty}"><span>${ITEM_TYPES[g.ty][1]}</span><b class="eq-count">${g.rows.length}</b><i class="eq-chev">${closed?'▸':'▾'}</i></div>
+            <div class="eq-rows">${g.rows.map(rowHTML).join('')}</div>
+          </div>`;
+        }).join('')
+      : '<p class="prep-note" style="margin:0">Empty pack — search the gear index above or add a custom item.</p>';
+  }else{
+    const rows=S.equipment.map((e,i)=>({e,i})).filter(x=>x.e.type===S.eqTab);
+    list.innerHTML = rows.length
+      ? rows.map(rowHTML).join('')
+      : `<p class="prep-note" style="margin:0">No ${ITEM_TYPES[S.eqTab][1].toLowerCase()} yet — "+ Add item" creates one right in this tab.</p>`;
+  }
   wireList('#equipList');
+  $$('[data-eqgroup]').forEach(h=>h.addEventListener('click',()=>{
+    const ty=h.dataset.eqgroup;
+    S.eqCollapse[ty]=!S.eqCollapse[ty];
+    renderEquipment(); save();
+  }));
+  $$('[data-eqtype]').forEach(s=>s.addEventListener('change',()=>{
+    S.equipment[+s.dataset.eqtype].type=s.value;
+    renderEquipment(); save();
+  }));
+  $$('[data-eqcombat]').forEach(b=>b.addEventListener('click',()=>{
+    const e=S.equipment[+b.dataset.eqcombat];
+    e.combat=!e.combat;
+    renderEquipment(); renderCombatFeatures(); save();
+  }));
+  $$('[data-eqinfo]').forEach(b=>b.addEventListener('click',()=>{
+    const i=+b.dataset.eqinfo;
+    EQ_OPEN.has(i)?EQ_OPEN.delete(i):EQ_OPEN.add(i);
+    renderEquipment();
+  }));
+  if($('#ckCards')) renderCockpitCards(); // combat item cards mirror qty/flag changes
+}
+// Item index search — same tap-to-add pattern as the spellbook and feature libraries.
+function wireItemLibrary(){
+  const input=$('#itemSearch'), panel=$('#itemResults'); if(!input) return;
+  const list=Object.values(ITEM_DB);
+  function renderResults(){
+    const q=input.value.trim().toLowerCase();
+    const items=list.filter(it=>!q||it.n.toLowerCase().includes(q)||(it.d||'').toLowerCase().includes(q));
+    if(!items.length){ panel.innerHTML='<div class="empty">No matches — "+ Add item" makes it a custom row</div>'; return; }
+    let html='';
+    Object.keys(ITEM_TYPES).forEach(ty=>{
+      const g=items.filter(it=>it.t===ty);
+      if(!g.length) return;
+      html+=`<div class="grp">${ITEM_TYPES[ty][1]}</div>`+
+        g.map(it=>`<div class="item" data-itempick="${esc(it.n)}">${it.cb?'⚔ ':''}${esc(it.n)}<small>${esc(it.d)}</small></div>`).join('');
+    });
+    panel.innerHTML=html;
+  }
+  const open=()=>{ renderResults(); panel.classList.add('open'); };
+  const close=()=>panel.classList.remove('open');
+  input.addEventListener('focus',open);
+  input.addEventListener('input',open);
+  panel.addEventListener('click',e=>{
+    const el=e.target.closest('[data-itempick]'); if(!el) return;
+    const it=ITEM_DB[el.dataset.itempick.toLowerCase()]; if(!it) return;
+    S.equipment.push({qty:String(it.q),name:it.n,type:it.t,desc:it.d,combat:it.cb});
+    if(S.eqTab!=='ALL'&&S.eqTab!==it.t) S.eqTab=it.t; // jump to where it landed
+    input.value=''; close();
+    renderEquipment(); save();
+  });
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('#itemSearch')&&!e.target.closest('#itemResults')) close();
+  });
+  // Equipped & Defense folds too — on a tablet you set it once and want it out of the way
+  const eqPanel=$('#invEqPanel'), eqHead=$('#invEqHead');
+  if(eqPanel&&eqHead){
+    eqPanel.classList.toggle('closed',S.invEqOpen===false);
+    eqHead.addEventListener('click',()=>{
+      S.invEqOpen=S.invEqOpen===false;
+      eqPanel.classList.toggle('closed',S.invEqOpen===false);
+      save();
+    });
+  }
 }
 const FX_STATS={ac:'AC',speed:'Speed',init:'Initiative',passive:'Passive Perception',hpmax:'Max HP',vision:'Darkvision Range'};
 const SKILL_NAMES=Object.fromEntries(SKILLS.map(s=>[s[0],s[1]]));
@@ -1088,9 +1220,9 @@ function wireFeaturesLock(){
 // elsewhere (attacks, spellbook, combat-flagged features) plus free-form custom cards. Paper
 // rule: every derived field is overridable per card (action type, condition), every card can be
 // pinned/hidden, and nothing is enforced — the cockpit reminds and tracks, the player decides.
-const CK_TYPES=[['action','Action'],['bonus','Bonus Action'],['reaction','Reaction'],['other','Other']];
-const CK_TYPE_ORDER={action:0,bonus:1,reaction:2,other:3};
-const CK_PILL={action:'pill-action',bonus:'pill-bonus',reaction:'pill-react',other:'pill-cast'};
+const CK_TYPES=[['action','Action'],['bonus','Bonus Action'],['reaction','Reaction'],['item','Item'],['other','Other']];
+const CK_TYPE_ORDER={action:0,bonus:1,reaction:2,item:3,other:4};
+const CK_PILL={action:'pill-action',bonus:'pill-bonus',reaction:'pill-react',item:'pill-item',other:'pill-cast'};
 let CK_FILTER='all', CK_SHOWHIDDEN=false, CK_UNDO=null;
 const CK_OPEN=new Set(), CK_RULES_OPEN=new Set();
 // Older saves may lack the cockpit fields entirely — normalize on every access.
@@ -1114,6 +1246,7 @@ function ckRef(key){
   if(kind==='atk') return S.attacks[+rest];
   if(kind==='ft') return S.features[+rest];
   if(kind==='cc') return S.customCards[+rest];
+  if(kind==='it') return S.equipment[+rest];
   if(kind==='sp'){ const [L,i]=rest.split('.').map(Number); return (S.spellLevels[L]||{spells:[]}).spells[i]; }
   return null;
 }
@@ -1154,6 +1287,12 @@ function cockpitCards(){
   });
   S.customCards.forEach((cc,i)=>{
     cards.push({key:'cc:'+i,kind:'cc',i,name:cc.title||'Custom',type:cc.type||'action',cond:cc.cond||''});
+  });
+  (S.equipment||[]).forEach((e,i)=>{
+    if(!e.combat||!(e.name||'').trim()) return;
+    // Blank qty = untracked (always usable); only an explicit 0 counts as "out of stock".
+    const tracked=String(e.qty??'').trim()!=='';
+    cards.push({key:'it:'+i,kind:'it',i,name:e.name,type:e.actionType||'item',cond:e.cond||'',out:tracked&&num(e.qty)<=0});
   });
   cards.forEach(x=>{ x.pin=c.pins.includes(x.key); x.hidden=c.hidden.includes(x.key); });
   return cards;
@@ -1212,6 +1351,17 @@ function ckCardOpenHTML(card){
         <button class="del-btn" data-ccdel="${i}" title="Delete card">✕</button>
       </div>${g}</div>`;
   }
+  if(card.kind==='it'){
+    const e=S.equipment[card.i], tracked=String(e.qty??'').trim()!=='', q=num(e.qty);
+    const useRow = !tracked
+      ? `<button class="ck-cast" data-ckituse="${card.i}">Use</button><span class="prep-note" style="margin:0">no count tracked — set a Qty on the Inventory tab to track uses</span>`
+      : q>0
+        ? `<button class="ck-cast" data-ckituse="${card.i}">Use 1 (×${q} left)</button>`
+        : `<span class="prep-note" style="margin:0">None left — restock on the Inventory tab.</span>`;
+    return `<div class="ck-body">
+      ${e.desc?`<div class="ck-desc">${esc(e.desc)}</div>`:''}
+      <div class="ck-castrow">${useRow}</div>${g}</div>`;
+  }
   return g;
 }
 // The one-line "what you need to know" strip for a card — shared by the grid cards and the
@@ -1240,13 +1390,17 @@ function ckSubHTML(card,withRoll){
     return (cc.body?esc(cc.body.split('\n')[0]):'')+(max>0?` <span class="pips ck-pips">${Array.from({length:max},(_,k)=>
       `<button class="pip ${k<used?'used':''}" data-ccpip="${card.i}.${k}"></button>`).join('')}</span>`:'');
   }
+  if(card.kind==='it'){
+    const e=S.equipment[card.i], tracked=String(e.qty??'').trim()!=='', q=num(e.qty);
+    return `${tracked?`<span class="cf-count" title="Quantity left">×${q}</span>`:''}${tracked&&q<=0?' <span class="cf-tag">out</span>':''}${e.desc?' '+esc(e.desc.split('\n')[0]):''}`;
+  }
   return '';
 }
 function ckCardHTML(card){
   const open=CK_OPEN.has(card.key);
   const sub=ckSubHTML(card);
   const tl=Object.fromEntries(CK_TYPES);
-  return `<div class="ck-card ${card.cond?'ck-cond':''} ${open?'open':''}" data-ckopen="${card.key}" draggable="true" data-ckdrag="${card.key}">
+  return `<div class="ck-card ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${open?'open':''}" data-ckopen="${card.key}" draggable="true" data-ckdrag="${card.key}">
     <div class="ck-card-head">
       <span class="ck-card-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</span>
       <span class="sp-pill ${CK_PILL[card.type]||'pill-cast'}">${tl[card.type]||'Other'}</span>
@@ -1389,10 +1543,28 @@ function wireCombatFeatures(){
       if(spellIsConc(sp)) S.concentration={name:sp.name};
       CK_UNDO={msg:`Cast ${sp.name} — spent a ${ordinalLevel(k)}-level slot.`,slot:k,prevConc};
       renderSpellLevels(); renderCombatFeatures(); save(); return; }
+    const ituse=t.closest('[data-ckituse]');
+    if(ituse){ const i=+ituse.dataset.ckituse, e=S.equipment[i]; if(!e) return;
+      if(String(e.qty??'').trim()===''){ // untracked — nothing to count down
+        CK_UNDO={msg:`Used ${e.name}.`,itemIdx:null,noop:true};
+        renderCombatFeatures(); return; }
+      e.qty=String(Math.max(0,num(e.qty)-1));
+      CK_UNDO={msg:`Used ${e.name} — ${num(e.qty)} left.`,itemIdx:i};
+      renderEquipment(); renderCombatFeatures(); save(); return; }
     if(t.closest('[data-ckundo]')){
-      if(CK_UNDO){ const lv=S.spellLevels[CK_UNDO.slot]; lv.used=Math.max(0,lv.used-1);
-        S.concentration=CK_UNDO.prevConc||null; CK_UNDO=null;
-        renderSpellLevels(); renderCombatFeatures(); save(); } return; }
+      if(CK_UNDO){
+        if(CK_UNDO.noop){ CK_UNDO=null; renderCockpitCards(); return; }
+        if(CK_UNDO.itemIdx!=null){
+          const e=S.equipment[CK_UNDO.itemIdx];
+          if(e) e.qty=String(num(e.qty)+1);
+          CK_UNDO=null;
+          renderEquipment(); renderCombatFeatures(); save();
+        }else{
+          const lv=S.spellLevels[CK_UNDO.slot]; lv.used=Math.max(0,lv.used-1);
+          S.concentration=CK_UNDO.prevConc||null; CK_UNDO=null;
+          renderSpellLevels(); renderCombatFeatures(); save();
+        }
+      } return; }
     if(t.closest('[data-ckundox]')){ CK_UNDO=null; renderCockpitCards(); return; }
     const plan=t.closest('[data-ckplan]');
     if(plan){ const key=plan.dataset.ckplan;
@@ -2420,7 +2592,19 @@ function wireRest(){
 function renderHudControls(){
   const eq=S.equip;
   const sel=$('#armorSel');
-  sel.innerHTML=Object.entries(ARMORS).map(([id,a])=>`<option value="${id}" ${eq.armor===id?'selected':''}>${a.n} (AC ${a.base})</option>`).join('');
+  // Grouped by weight class, each option carrying its own AC formula and drawbacks — the
+  // choice explains itself instead of sending you back to the PHB table.
+  const cat=a=>/light/.test(a.n)?'Light armor':/medium/.test(a.n)?'Medium armor':/heavy/.test(a.n)?'Heavy armor':'Unarmored';
+  const label=a=>{
+    const f=a.dex===99?`${a.base} + DEX`:a.dex===0?`${a.base} flat`:`${a.base} + DEX (max ${a.dex})`;
+    return `${a.n.split(' (')[0]} — ${f}${a.sd?' · stealth −':''}${a.str?` · needs STR ${a.str}`:''}`;
+  };
+  const cats=['Unarmored','Light armor','Medium armor','Heavy armor'];
+  sel.innerHTML=cats.map(c=>{
+    const opts=Object.entries(ARMORS).filter(([,a])=>cat(a)===c);
+    if(!opts.length) return '';
+    return `<optgroup label="${c}">${opts.map(([id,a])=>`<option value="${id}" ${eq.armor===id?'selected':''}>${label(a)}</option>`).join('')}</optgroup>`;
+  }).join('');
   $('#armorMagic').value=num(eq.armorMagic);
   $('#shieldChk').checked=!!eq.shield;
   $('#shieldMagic').value=num(eq.shieldMagic);
@@ -2496,6 +2680,6 @@ function wireSkillFx(){
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch();
+wireAddButtons(); wireHpButtons(); wireSettings(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemLibrary();
 showTab('overview');
 
