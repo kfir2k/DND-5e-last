@@ -171,7 +171,7 @@ function hpPanelHTML(){
         <span class="hp-slash">/</span>
         <input type="number" class="hp-max-in" data-bind="hpMax" title="Hit point maximum">
       </div>
-      <div class="hp-bar"><div class="hp-fill"></div></div>
+      <div class="hp-bar"><div class="hp-fill"></div><span class="hp-temp-fill"></span></div>
       <span class="fx-note" data-fxnote="hpmax" style="text-align:center"></span>
       <span class="fx-rems" data-fxrem="hpmax" style="justify-content:center"></span>
       <div class="hp-btns">
@@ -251,14 +251,31 @@ build:`
 
 combat:`
   <div class="combat-hud">
-    <span class="chud-item chud-hp">HP <b data-calc="chudHp">—</b></span>
+    <span class="chud-item">HP</span>
+    <div class="chud-hpblock">
+      <div class="chud-hpline">
+        <input type="number" class="chud-in" data-bind="hpCurrent" title="Current HP">
+        <span class="chud-slash">/</span>
+        <input type="number" class="chud-in" data-bind="hpMax" title="Hit point maximum">
+        <span class="chud-templbl" title="Temporary HP — soaked before real HP">temp</span>
+        <input type="number" class="chud-in chud-tempin" data-bind="hpTemp" title="Temporary HP — soaked before real HP">
+      </div>
+      <div class="hp-bar chud-bar"><div class="hp-fill"></div><span class="hp-temp-fill"></span></div>
+    </div>
+    <span class="hp-btns chud-btns">
+      <button class="hp-btn dmg" data-hp="-10">−10</button>
+      <button class="hp-btn dmg" data-hp="-5">−5</button>
+      <button class="hp-btn dmg" data-hp="-1">−1</button>
+      <button class="hp-btn heal" data-hp="1">+1</button>
+      <button class="hp-btn heal" data-hp="5">+5</button>
+      <button class="hp-btn heal" data-hp="10">+10</button>
+    </span>
     <span class="chud-item chud-ac">AC <b data-calc="chudAc">—</b></span>
     <span class="ck-conc" id="ckConc"></span>
     <span class="ck-topstates" id="ckTopStates"></span>
   </div>
   <div class="ck-grid">
     <div class="ck-col ck-left">
-      <div class="panel"><h2>Hit Points</h2>${hpPanelHTML()}</div>
       <div class="panel ck-death" id="ckDeathPanel"><h2 id="ckDeathHead">💀 Death Saves</h2>
         <div class="ck-death-body">
           <div class="ds-row"><span>Successes</span><div id="dsS"></div></div>
@@ -266,7 +283,6 @@ combat:`
           <p class="prep-note" style="margin:8px 0 0">At 0 HP, roll a d20 at the start of each turn: 10+ is a success. 3 successes = stable, 3 failures = dead. Natural 20 = back up with 1 HP; natural 1 = two failures. Taking damage at 0 HP = one failure (critical hit = two).</p>
         </div>
       </div>
-      <div class="panel"><h2>Vitals</h2>${vitalsHTML()}</div>
       <div class="panel"><h2>Hit Dice</h2>
         <div class="hd-row">
           <span class="stat-label">Hit Dice Left</span>
@@ -280,6 +296,14 @@ combat:`
       </div>
     </div>
     <div class="ck-col ck-center">
+      <div class="panel ck-vitals-row">
+        <div class="ckv"><span class="ckv-l">🛡 AC</span><input type="number" data-bind="ac"><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></div>
+        <div class="ckv"><span class="ckv-l">⚡ Init</span><span class="ckv-big" data-calc="initiative">+0</span><span class="fx-rems" data-fxrem="init"></span></div>
+        <div class="ckv"><span class="ckv-l">💨 Speed</span><input type="text" class="ckv-wide" data-bind="speed"><span class="fx-note" data-fxnote="speed"></span><span class="fx-rems" data-fxrem="speed"></span></div>
+        <div class="ckv"><span class="ckv-l">📖 Prof</span><input type="number" data-bind="profBonus"></div>
+        <div class="ckv"><span class="ckv-l">👁 Passive</span><span class="ckv-big" data-calc="passive">10</span><span class="fx-rems" data-fxrem="passive"></span></div>
+        <div class="ckv"><span class="ckv-l">🌙 Vision</span><input type="text" class="ckv-wide" data-bind="vision"><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></div>
+      </div>
       <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
         <div class="ck-plan-wrap">
           <div class="ck-plan-head"><span>🗺 Turn plan</span><div class="ck-plan-tabs" id="ckPlanTabs"></div><button id="ckPlanClear" style="display:none">Clear</button></div>
@@ -2078,6 +2102,12 @@ function recalc(){
   const max=Math.max(0,num(S.hpMax)+fxStat('hpmax'));
   const cur=Math.max(0,num(S.hpCurrent));
   $$('.hp-fill').forEach(f=>f.style.width=(max?Math.min(100,cur/max*100):0)+'%');
+  // Temp HP rides the same bar as a blue segment stacked after current HP (clamped to the
+  // bar's end — the numbers carry the exact value, the bar carries the feeling).
+  const curPct=max?Math.min(100,cur/max*100):0;
+  const tmpPct=max?Math.max(0,Math.min(100-curPct,num(S.hpTemp)/max*100)):0;
+  $$('.hp-temp-fill').forEach(f=>{ f.style.left=curPct+'%'; f.style.width=tmpPct+'%'; });
+  $$('.hp-bar').forEach(bar=>bar.classList.toggle('has-temp',num(S.hpTemp)>0));
   // bloodied / critical feedback directly on the real HP bar(s) — no separate decorative copy
   const hpPct=max?cur/max:1;
   $$('.hp-bar').forEach(bar=>{ bar.classList.toggle('low',hpPct<=.5&&hpPct>.25); bar.classList.toggle('critical',hpPct<=.25); });
