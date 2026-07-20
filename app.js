@@ -251,28 +251,56 @@ build:`
 
 combat:`
   <div class="combat-hud">
-    <span class="chud-item">HP</span>
-    <div class="chud-hpblock">
+    <div class="chud-hp">
       <div class="chud-hpline">
-        <input type="number" class="chud-in" data-bind="hpCurrent" title="Current HP">
-        <span class="chud-slash">/</span>
-        <input type="number" class="chud-in" data-bind="hpMax" title="Hit point maximum">
-        <span class="chud-templbl" title="Temporary HP — soaked before real HP">temp</span>
-        <input type="number" class="chud-in chud-tempin" data-bind="hpTemp" title="Temporary HP — soaked before real HP">
+        <span class="hp-btns chud-btns">
+          <button class="hp-btn dmg" data-hp="-10">−10</button>
+          <button class="hp-btn dmg" data-hp="-5">−5</button>
+          <button class="hp-btn dmg" data-hp="-1">−1</button>
+        </span>
+        <span class="chud-nums">
+          <input type="number" class="chud-in" data-bind="hpCurrent" title="Current HP">
+          <span class="chud-slash">/</span>
+          <input type="number" class="chud-in" data-bind="hpMax" title="Hit point maximum">
+        </span>
+        <span class="hp-btns chud-btns">
+          <button class="hp-btn heal" data-hp="1">+1</button>
+          <button class="hp-btn heal" data-hp="5">+5</button>
+          <button class="hp-btn heal" data-hp="10">+10</button>
+        </span>
+        <span class="chud-temp" title="Temporary HP — soaked before real HP"><span class="chud-templbl">temp</span><input type="number" class="chud-in chud-tempin" data-bind="hpTemp"></span>
       </div>
       <div class="hp-bar chud-bar"><div class="hp-fill"></div><span class="hp-temp-fill"></span></div>
     </div>
-    <span class="hp-btns chud-btns">
-      <button class="hp-btn dmg" data-hp="-10">−10</button>
-      <button class="hp-btn dmg" data-hp="-5">−5</button>
-      <button class="hp-btn dmg" data-hp="-1">−1</button>
-      <button class="hp-btn heal" data-hp="1">+1</button>
-      <button class="hp-btn heal" data-hp="5">+5</button>
-      <button class="hp-btn heal" data-hp="10">+10</button>
-    </span>
-    <span class="chud-item chud-ac">AC <b data-calc="chudAc">—</b></span>
+    <span class="chud-sep"></span>
+    <div class="chud-cell"><span class="chud-lbl">🛡 AC</span><b data-calc="chudAc">—</b></div>
+    <span class="chud-sep"></span>
     <span class="ck-conc" id="ckConc"></span>
     <span class="ck-topstates" id="ckTopStates"></span>
+  </div>
+  <div class="panel ck-vitals-row">
+    <div class="ckv"><span class="ckv-l">🛡 AC</span><input type="number" data-bind="ac"><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></div>
+    <div class="ckv"><span class="ckv-l">⚡ Init</span><span class="ckv-big" data-calc="initiative">+0</span><span class="fx-rems" data-fxrem="init"></span></div>
+    <div class="ckv"><span class="ckv-l">💨 Speed</span><input type="text" class="ckv-wide" data-bind="speed"><span class="fx-note" data-fxnote="speed"></span><span class="fx-rems" data-fxrem="speed"></span></div>
+    <div class="ckv"><span class="ckv-l">📖 Prof</span><input type="number" data-bind="profBonus"></div>
+    <div class="ckv"><span class="ckv-l">👁 Passive</span><span class="ckv-big" data-calc="passive">10</span><span class="fx-rems" data-fxrem="passive"></span></div>
+    <div class="ckv"><span class="ckv-l">🌙 Vision</span><input type="text" class="ckv-wide" data-bind="vision"><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></div>
+  </div>
+  <div class="ck-duo">
+    <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
+      <div id="ckUndo"></div>
+      <div class="ck-filters" id="ckFilters"></div>
+      <div class="ck-cards" id="ckCards"></div>
+      <div class="fx-addrow" style="margin-top:8px">
+        <button class="add-btn" id="ckAddCustom">+ Custom card</button>
+        <button class="add-btn" id="ckSpellsToggle"></button>
+        <button class="add-btn" id="ckHiddenToggle"></button>
+      </div>
+    </div>
+    <div class="panel ck-plan-panel"><h2>🗺 Turn Plan</h2>
+      <div class="ck-plan-head"><div class="ck-plan-tabs" id="ckPlanTabs"></div><button id="ckPlanClear" style="display:none">Clear</button></div>
+      <div class="ck-plan" id="ckPlan"></div>
+    </div>
   </div>
   <div class="ck-grid">
     <div class="ck-col ck-left">
@@ -296,28 +324,6 @@ combat:`
       </div>
     </div>
     <div class="ck-col ck-center">
-      <div class="panel ck-vitals-row">
-        <div class="ckv"><span class="ckv-l">🛡 AC</span><input type="number" data-bind="ac"><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></div>
-        <div class="ckv"><span class="ckv-l">⚡ Init</span><span class="ckv-big" data-calc="initiative">+0</span><span class="fx-rems" data-fxrem="init"></span></div>
-        <div class="ckv"><span class="ckv-l">💨 Speed</span><input type="text" class="ckv-wide" data-bind="speed"><span class="fx-note" data-fxnote="speed"></span><span class="fx-rems" data-fxrem="speed"></span></div>
-        <div class="ckv"><span class="ckv-l">📖 Prof</span><input type="number" data-bind="profBonus"></div>
-        <div class="ckv"><span class="ckv-l">👁 Passive</span><span class="ckv-big" data-calc="passive">10</span><span class="fx-rems" data-fxrem="passive"></span></div>
-        <div class="ckv"><span class="ckv-l">🌙 Vision</span><input type="text" class="ckv-wide" data-bind="vision"><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></div>
-      </div>
-      <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
-        <div class="ck-plan-wrap">
-          <div class="ck-plan-head"><span>🗺 Turn plan</span><div class="ck-plan-tabs" id="ckPlanTabs"></div><button id="ckPlanClear" style="display:none">Clear</button></div>
-          <div class="ck-plan" id="ckPlan"></div>
-        </div>
-        <div id="ckUndo"></div>
-        <div class="ck-filters" id="ckFilters" style="margin-top:12px"></div>
-        <div class="ck-cards" id="ckCards"></div>
-        <div class="fx-addrow" style="margin-top:10px">
-          <button class="add-btn" id="ckAddCustom">+ Custom card</button>
-          <button class="add-btn" id="ckSpellsToggle"></button>
-          <button class="add-btn" id="ckHiddenToggle"></button>
-        </div>
-      </div>
       <div class="panel ck-atk-panel" id="ckAtkPanel"><h2 id="ckAtkHead">⚔ Attacks</h2>
         <div class="ck-atk-body">
           <div id="attackList"></div>
