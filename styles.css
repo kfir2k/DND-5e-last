@@ -447,15 +447,36 @@ label.fld span{
 .sense-chip b{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:1.05rem;font-weight:700}
 .sense-note{margin:10px 0 0;font-size:.74rem;line-height:1.5}
 /* ===== Combat cockpit ===== */
+/* A single low torchlight glow behind the whole screen — the one atmospheric touch that marks
+   this tab as "the war table" rather than another form page. Subtle: it only shows through the
+   gaps between panels, never fights with the content sitting on top of it. */
+#page-combat{
+  position:relative;
+  background-image:radial-gradient(ellipse 820px 320px at 50% -30px, rgba(201,162,39,.08), transparent 72%);
+}
 .ck-grid{display:grid;grid-template-columns:232px minmax(0,1fr) 232px;gap:10px;align-items:start}
 .ck-col{display:flex;flex-direction:column;gap:10px;min-width:0}
 .ck-col .panel{margin:0}
 @media(max-width:1100px){.ck-grid{grid-template-columns:232px minmax(0,1fr)}.ck-right{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}.ck-right .panel{flex:1 1 260px}}
 @media(max-width:760px){.ck-grid{grid-template-columns:1fr}.ck-right{flex-direction:column}}
-/* Full-width duo: action library on the left, the turn plan as its own equal card on the right */
+/* Full-width duo: action library on the left, the turn plan as its own equal card on the right.
+   These two panels are where a turn actually gets decided, so they carry the stage — a lit top
+   edge and deeper shadow — while everything below (death saves, hit dice, resources, rules)
+   recedes into reference material. One glance should tell you which zone to act in. */
 .ck-duo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-bottom:10px}
-.ck-duo .panel{margin:0}
+.ck-duo .panel{
+  margin:0;border-top:2px solid var(--gold-dim);
+  box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(201,162,39,.08);
+}
+.ck-duo .panel h2{color:var(--gold-lt);font-size:1rem;letter-spacing:2.5px}
 @media(max-width:950px){.ck-duo{grid-template-columns:1fr}}
+/* Reference zone below: death saves, hit dice, attacks, resources, rules — quieter chrome so
+   the eye lands on the duo above first, then drops down here only when a specific number is
+   needed. Same data, less visual shouting. */
+.ck-grid .panel{
+  border-color:var(--border);box-shadow:none;padding:13px 15px;
+}
+.ck-grid .panel h2{font-size:.82rem;letter-spacing:1.6px;color:var(--muted);margin-bottom:9px;padding-bottom:6px}
 /* Vitals as one slim full-width row of mini-tiles — every number, none of the bulk */
 .panel.ck-vitals-row{
   display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:stretch;
@@ -488,15 +509,34 @@ label.fld span{
 .ck-filter i{font-style:normal;opacity:.7;font-size:.74rem}
 .ck-filter.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-lt)}
 .ck-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+/* Every card carries a lit left spine in its action-type color — the same color language as
+   the filter pills and turn-plan steps, so the grid is scannable by color alone: green =
+   action, gold = bonus, ember = reaction, teal = item, blue = other. No need to read every
+   label to find "what can I still do this turn." */
 .ck-card{
-  background:var(--panel3);border:1px solid var(--border-lt);border-radius:9px;
-  padding:6px 9px;cursor:pointer;min-width:0;
+  background:var(--panel3);border:1px solid var(--border-lt);border-left-width:3px;border-radius:9px;
+  padding:6px 9px;cursor:pointer;min-width:0;transition:border-color .15s ease,transform .1s ease;
 }
-.ck-card:hover{border-color:var(--border-strong,var(--muted))}
-.ck-card.open{grid-column:1/-1;background:var(--panel2);border-color:var(--gold-dim)}
-.ck-card.ck-cond{border-color:rgba(232,194,91,.4);background:rgba(232,194,91,.05)}
-.ck-card-head{display:flex;align-items:center;gap:8px;justify-content:space-between}
-.ck-card-name{color:var(--text);font-weight:600;font-size:.92rem;overflow-wrap:anywhere}
+.ck-card-action{border-left-color:#7fd6a4}
+.ck-card-bonus{border-left-color:#e8c25b}
+.ck-card-reaction{border-left-color:#e0876f}
+.ck-card-item{border-left-color:#6fd0c4}
+.ck-card-other{border-left-color:#7db8e8}
+.ck-card:hover{border-color:var(--border-strong,var(--muted));transform:translateY(-1px)}
+.ck-card.open{grid-column:1/-1;background:var(--panel2);border-color:var(--gold-dim);transform:none}
+.ck-card.open.ck-card-action{border-left-color:#7fd6a4}
+.ck-card.open.ck-card-bonus{border-left-color:#e8c25b}
+.ck-card.open.ck-card-reaction{border-left-color:#e0876f}
+.ck-card.open.ck-card-item{border-left-color:#6fd0c4}
+.ck-card.open.ck-card-other{border-left-color:#7db8e8}
+.ck-card.ck-cond{background:rgba(232,194,91,.05)}
+/* Wrap the whole head onto a second line rather than crushing the name flat: a long pill
+   ("BONUS ACTION") next to a two-word name used to leave the name almost no room, which then
+   broke mid-word ("Shortswor" / "d left"). Now the name keeps a real floor and the pill/⤵
+   button simply drop below it if there isn't room on one line. */
+.ck-card-head{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;justify-content:space-between}
+.ck-card-head .ck-drag-handle{margin-right:-2px}
+.ck-card-name{flex:1 1 90px;min-width:80px;color:var(--text);font-weight:600;font-size:.92rem;overflow-wrap:break-word}
 .ck-card-sub{color:var(--muted);font-size:.78rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
 .ck-card-sub b{color:var(--text)}
 .ck-card-cond{color:#e8c25b;font-size:.76rem;margin-top:3px;font-style:italic}
@@ -561,16 +601,27 @@ label.fld span{
 }
 .ck-plan-empty{color:var(--faint);font-size:.8rem;font-style:italic;line-height:1.45}
 .ck-plan-step{
-  display:flex;align-items:flex-start;gap:8px;cursor:grab;
+  display:flex;align-items:flex-start;gap:7px;position:relative;
   background:var(--panel3);border:1px solid var(--border-lt);border-left-width:3px;border-radius:8px;
-  padding:5px 9px;color:var(--text);
+  padding:5px 9px 5px 6px;color:var(--text);transition:box-shadow .15s ease,opacity .15s ease;
+}
+/* The connecting spine — a single lit thread running behind every numbered node, so the list
+   reads as one continuous turn instead of a stack of unrelated rows (the signature touch that
+   makes this feel like a scripted timeline, not a to-do list). */
+.ck-plan{position:relative}
+.ck-plan-step:not(:last-child)::after{
+  content:'';position:absolute;left:49px;top:28px;bottom:-5px;width:1px;
+  background:linear-gradient(var(--gold-dim),var(--border-lt));
 }
 .ck-plan-step i{
-  font-style:normal;background:var(--gold-dim);color:var(--gold-lt);border-radius:50%;flex-shrink:0;
-  width:19px;height:19px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;margin-top:2px;
+  font-style:normal;background:radial-gradient(circle at 35% 30%,var(--gold-lt),var(--gold-dim));
+  color:var(--ink);border-radius:50%;flex-shrink:0;position:relative;z-index:1;
+  width:21px;height:21px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:700;margin-top:2px;box-shadow:0 0 0 3px var(--panel3),0 0 10px rgba(201,162,39,.35);
 }
+.ck-plan-step.ck-ps-gone i{background:var(--faint);box-shadow:0 0 0 3px var(--panel3)}
 .ck-ps-main{flex:1;min-width:0}
-.ck-ps-head{display:flex;align-items:center;gap:8px}
+.ck-ps-head{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
 .ck-ps-head .sp-pill{margin-left:auto}
 .ck-ps-note{
   flex:1 1 90px;min-width:70px;background:transparent;border:none;border-bottom:1px dashed transparent;
@@ -579,7 +630,7 @@ label.fld span{
 .ck-ps-note::placeholder{color:var(--faint);font-style:italic}
 .ck-ps-note:hover{border-bottom-color:var(--border-lt)}
 .ck-ps-note:focus{border-bottom-color:var(--gold);outline:none;background:var(--ink);border-radius:4px}
-.ck-ps-name{font-weight:600;font-size:.92rem;overflow-wrap:anywhere}
+.ck-ps-name{flex:0 1 auto;min-width:80px;font-weight:600;font-size:.92rem;overflow-wrap:break-word}
 .ck-ps-sub{color:var(--muted);font-size:.78rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
 .ck-ps-sub b{color:var(--text)}
 .ck-roll{display:inline-flex;align-items:center;gap:4px;color:var(--muted)}
@@ -603,6 +654,33 @@ label.fld span{
   color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px 8px;flex-shrink:0;
 }
 .ck-plan-add:hover{border-color:var(--gold);color:var(--gold-lt)}
+/* Drag handle — the only part of a card/step that starts a drag (Pointer Events: identical
+   code path for mouse, touch and pen, unlike native HTML5 dnd which never fires on touch).
+   Sized as a real touch target, not just a decorative glyph. */
+.ck-drag-handle{
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  width:26px;height:30px;margin:-4px 0;border-radius:6px;
+  color:var(--faint);font-size:1rem;letter-spacing:-2px;cursor:grab;touch-action:none;
+  transition:color .15s ease,background .15s ease;
+}
+.ck-drag-handle:hover{color:var(--gold-lt);background:rgba(201,162,39,.12)}
+.ck-drag-handle:active{cursor:grabbing}
+.ck-plan-step .ck-drag-handle{margin-top:2px}
+.ck-dragging-source{opacity:.35}
+.ck-drag-ghost{
+  position:fixed;top:0;left:0;z-index:200;pointer-events:none;
+  background:var(--panel2);border:1px solid var(--gold);border-radius:8px;
+  padding:6px 14px;color:var(--gold-lt);font-family:'Cinzel',serif;font-size:.85rem;
+  box-shadow:0 12px 28px rgba(0,0,0,.55),0 0 0 1px rgba(201,162,39,.25);
+  transform:rotate(-1.5deg);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ck-drop-indicator{
+  height:3px;border-radius:3px;margin:2px 2px;flex-shrink:0;
+  background:linear-gradient(90deg,transparent,var(--gold-lt) 15%,var(--gold-lt) 85%,transparent);
+  box-shadow:0 0 8px var(--gold);animation:ckIndicatorPulse 1s ease-in-out infinite;
+}
+@keyframes ckIndicatorPulse{0%,100%{opacity:.6}50%{opacity:1}}
+.ck-plan.ck-plan-drophover{border-color:var(--gold);border-style:solid;background:rgba(201,162,39,.05)}
 /* hud extras */
 .ck-conc{color:#b9a3ec;font-size:.82rem;display:inline-flex;gap:6px;align-items:center;position:relative}
 .ck-conc b{color:var(--text)}
@@ -906,11 +984,17 @@ label.fld span{
 /* Combat mini-HUD: HP and AC pinned to the top of the viewport while scrolling the Combat tab,
    so the two numbers you always need mid-fight never scroll out of view once the page gets tall
    with several attacks/features. Read-only — the real editable fields are still below. */
+/* A torch-lit console rather than a data strip: a warm glow pools behind the numbers you
+   need every single round (HP, AC, Init), a lit brass edge caps the whole bar, and everything
+   you check less often (Speed, Prof, Passive, Vision) is pushed to a visibly quieter second
+   line below — so the eye always knows which numbers matter *right now*. */
 .combat-hud{
-  position:sticky;top:0;z-index:15;display:flex;gap:14px;align-items:center;flex-wrap:wrap;
-  background:var(--panel);border:1px solid var(--border);border-radius:10px;
-  padding:7px 14px;margin-bottom:12px;box-shadow:0 4px 14px rgba(0,0,0,.45);
+  position:sticky;top:0;z-index:15;
+  background:var(--panel);border:1px solid var(--border);border-top:2px solid var(--gold-dim);
+  border-radius:10px;padding:9px 16px 7px;margin-bottom:14px;
+  box-shadow:0 6px 20px rgba(0,0,0,.5),inset 0 40px 34px -34px rgba(201,162,39,.1);
 }
+.chud-primary{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 /* HP lives in the HUD: damage buttons on the left of the numbers, heals on the right —
    hit the side you mean. Temp sits apart in blue; the bar underlines the whole station. */
 .chud-hp{flex:1 1 380px;min-width:300px;max-width:560px}
@@ -929,6 +1013,7 @@ label.fld span{
 .chud-btns{display:inline-flex;gap:3px;flex-shrink:0}
 .chud-btns .hp-btn{padding:3px 0;font-size:.7rem;width:34px;min-width:34px}
 .chud-sep{width:1px;align-self:stretch;background:var(--border);flex-shrink:0}
+.chud-sep-conc{align-self:center;height:34px}
 /* Vitals cells inside the one sticky bar: identical size, value only — ★ badges and feature
    notes live on the bar's own second line so no cell ever outgrows its neighbors. */
 .combat-hud .ckv{
@@ -937,9 +1022,30 @@ label.fld span{
 }
 .combat-hud .ckv .fx-note,.combat-hud .ckv .fx-rems{display:none}
 .combat-hud .chud-hp{flex:1 1 300px;max-width:470px}
+/* AC and Initiative sit right beside HP as the third and fourth numbers checked every round —
+   same lit-gold treatment as HP's current value, visibly bigger than anything in the row below. */
+.ckv-primary{background:var(--panel3);border:1px solid var(--border-lt)}
+.ckv-primary .ckv-l{font-size:.62rem}
+.ckv-primary input,.ckv-primary .ckv-big{font-size:1.35rem;color:var(--gold-lt)}
+/* Senses & Movement: a visibly quieter second shelf — smaller type, dimmer chips, its own
+   uppercase label — for the numbers a player glances at occasionally, not every turn. */
+.chud-senses{
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  border-top:1px solid var(--border);margin-top:7px;padding-top:6px;
+}
+.chud-senses-lbl{
+  color:var(--faint);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:1.8px;
+  text-transform:uppercase;margin-right:4px;flex:0 0 auto;
+}
+.ckv-sec{
+  background:transparent;border:1px solid transparent;padding:1px 8px;min-width:0;height:auto;
+}
+.ckv-sec .ckv-l{font-size:.58rem;color:var(--faint)}
+.ckv-sec input,.ckv-sec .ckv-big{font-size:.92rem;color:var(--muted);font-weight:600}
+.ckv-sec input.ckv-wide{width:64px;font-size:.8rem}
 .chud-extra{
   flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;
-  border-top:1px solid var(--border);margin-top:2px;padding-top:5px;
+  border-top:1px solid var(--border);margin-top:6px;padding-top:5px;
 }
 .chud-extra:not(:has(.chud-x:not([style*="none"]))){display:none}
 .chud-x{display:inline-flex;align-items:center;gap:6px}

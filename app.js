@@ -253,6 +253,7 @@ build:`
 
 combat:`
   <div class="combat-hud">
+    <div class="chud-primary">
     <div class="chud-hp">
       <div class="chud-hpline">
         <span class="hp-btns chud-btns">
@@ -275,15 +276,19 @@ combat:`
       <div class="hp-bar chud-bar"><div class="hp-fill"></div><span class="hp-temp-fill"></span></div>
     </div>
     <span class="chud-sep"></span>
-    <div class="ckv"><span class="ckv-l">🛡 AC</span><input type="number" data-bind="ac"><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></div>
-    <div class="ckv"><span class="ckv-l">⚡ Init</span><span class="ckv-big" data-calc="initiative">+0</span><span class="fx-rems" data-fxrem="init"></span></div>
-    <div class="ckv"><span class="ckv-l">💨 Speed</span><input type="text" class="ckv-wide" data-bind="speed"><span class="fx-note" data-fxnote="speed"></span><span class="fx-rems" data-fxrem="speed"></span></div>
-    <div class="ckv"><span class="ckv-l">📖 Prof</span><input type="number" data-bind="profBonus"></div>
-    <div class="ckv"><span class="ckv-l">👁 Passive</span><span class="ckv-big" data-calc="passive">10</span><span class="fx-rems" data-fxrem="passive"></span></div>
-    <div class="ckv"><span class="ckv-l">🌙 Vision</span><input type="text" class="ckv-wide" data-bind="vision"><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></div>
-    <span class="chud-sep"></span>
+    <div class="ckv ckv-primary"><span class="ckv-l">🛡 AC</span><input type="number" data-bind="ac"></div>
+    <div class="ckv ckv-primary computed"><span class="ckv-l">⚡ Init</span><span class="ckv-big" data-calc="initiative">+0</span></div>
+    <span class="chud-sep chud-sep-conc"></span>
     <span class="ck-conc" id="ckConc"></span>
     <span class="ck-topstates" id="ckTopStates"></span>
+    </div>
+    <div class="chud-senses">
+      <span class="chud-senses-lbl">Senses &amp; Movement</span>
+      <div class="ckv ckv-sec"><span class="ckv-l">💨 Speed</span><input type="text" class="ckv-wide" data-bind="speed"></div>
+      <div class="ckv ckv-sec"><span class="ckv-l">📖 Prof</span><input type="number" data-bind="profBonus"></div>
+      <div class="ckv ckv-sec computed"><span class="ckv-l">👁 Passive</span><span class="ckv-big" data-calc="passive">10</span></div>
+      <div class="ckv ckv-sec"><span class="ckv-l">🌙 Vision</span><input type="text" class="ckv-wide" data-bind="vision"></div>
+    </div>
     <div class="chud-extra">
       <span class="chud-x"><i>AC</i><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></span>
       <span class="chud-x"><i>Init</i><span class="fx-rems" data-fxrem="init"></span></span>
@@ -1404,12 +1409,13 @@ function ckCardHTML(card){
   const open=CK_OPEN.has(card.key);
   const sub=ckSubHTML(card);
   const tl=Object.fromEntries(CK_TYPES);
-  return `<div class="ck-card ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${open?'open':''}" data-ckopen="${card.key}" draggable="true" data-ckdrag="${card.key}">
+  return `<div class="ck-card ck-card-${card.type||'other'} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${open?'open':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
     <div class="ck-card-head">
+      <span class="ck-drag-handle" data-ckdraghandle title="Drag to place in your turn plan">⠿</span>
       <span class="ck-card-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</span>
       <span class="sp-pill ${CK_PILL[card.type]||'pill-cast'}">${tl[card.type]||'Other'}</span>
       ${card.kind==='it'&&!card.out?`<button class="ck-quickuse" data-ckituse="${card.i}" title="Use one — no need to open the card">Use</button>`:''}
-      <button class="ck-plan-add" data-ckplan="${card.key}" title="Add to turn plan (or drag the card onto the plan)">⤵</button>
+      <button class="ck-plan-add" data-ckplan="${card.key}" title="Add to end of turn plan (or drag the ⠿ handle to place it precisely)">⤵</button>
     </div>
     ${sub?`<div class="ck-card-sub">${sub}</div>`:''}
     ${card.cond?`<div class="ck-card-cond">⏱ ${esc(card.cond)}</div>`:''}
@@ -1460,13 +1466,15 @@ function renderCockpitPlan(){
         const card=all.find(x=>x.key===p.key);
         const open=CK_PLAN_OPEN.has(i);
         const noteIn=`<input type="text" class="ck-ps-note" value="${esc(p.note||'')}" data-plannote="${i}" placeholder="✎ quick note…" title="Free text for this step — e.g. 'only if he saves', 'target the caster'">`;
-        if(!card) return `<div class="ck-plan-step ck-ps-gone" data-planstep="${i}" draggable="true">
+        if(!card) return `<div class="ck-plan-step ck-ps-gone" data-planstep="${i}">
+          <span class="ck-drag-handle" data-ckdraghandle title="Drag to reorder">⠿</span>
           <i>${i+1}</i>
           <div class="ck-ps-main"><span class="ck-ps-name">${esc(p.name)}</span>
           ${noteIn}
           <span class="ck-ps-sub">source card was removed — step kept as a note</span></div>
           <button data-plandel="${i}" title="Remove step">✕</button></div>`;
-        return `<div class="ck-plan-step ck-ps-${card.type} ${open?'open':''}" data-planstep="${i}" draggable="true">
+        return `<div class="ck-plan-step ck-ps-${card.type} ${open?'open':''}" data-planstep="${i}">
+          <span class="ck-drag-handle" data-ckdraghandle title="Drag to reorder">⠿</span>
           <i>${i+1}</i>
           <div class="ck-ps-main">
             <div class="ck-ps-head">
@@ -1481,7 +1489,7 @@ function renderCockpitPlan(){
           <button data-plandel="${i}" title="Remove step">✕</button>
         </div>`;
       }).join('')
-    : '<div class="ck-plan-empty">Script your ideal turn: drag cards up here, or tap ⤵ on a card — e.g. Dread Ambusher → Shortsword → Hunter\'s Mark. Tap a step for its full info and cast/use buttons. Make templates (+) for different situations: boss fight, defensive, stealth...</div>';
+    : '<div class="ck-plan-empty">Script your ideal turn: drag a card\'s ⠿ handle up here, or tap ⤵ on a card — e.g. Dread Ambusher → Shortsword → Hunter\'s Mark. Tap a step for its full info and cast/use buttons. Make templates (+) for different situations: boss fight, defensive, stealth...</div>';
   const clr=$('#ckPlanClear');
   if(clr) clr.style.display=cur.steps.length?'':'none';
 }
@@ -1646,35 +1654,7 @@ function wireCombatFeatures(){
     if(n&&!confirm(`Clear all ${n} step${n>1?'s':''} from "${ckPlan().name}"?`)) return;
     ckPlan().steps=[]; CK_PLAN_OPEN.clear(); renderCockpitPlan(); save();
   });
-  // Drag & drop: cards from the grid drop into the plan; steps drag to reorder. The ⤵ button
-  // covers touch devices where HTML5 drag isn't reliable.
-  let CK_DRAG=null; // {kind:'card'|'step', key|idx}
-  $('#page-combat').addEventListener('dragstart',e=>{
-    const step=e.target.closest&&e.target.closest('[data-planstep]');
-    if(step){ CK_DRAG={kind:'step',idx:+step.dataset.planstep}; e.dataTransfer.effectAllowed='move'; return; }
-    const card=e.target.closest&&e.target.closest('[data-ckdrag]');
-    if(card){ CK_DRAG={kind:'card',key:card.dataset.ckdrag}; e.dataTransfer.effectAllowed='copy'; }
-  });
-  const planBox=$('#ckPlan');
-  planBox.addEventListener('dragover',e=>{ if(CK_DRAG) e.preventDefault(); });
-  planBox.addEventListener('drop',e=>{
-    if(!CK_DRAG) return;
-    e.preventDefault(); ck();
-    const steps=ckPlan().steps;
-    const over=e.target.closest&&e.target.closest('[data-planstep]');
-    let at=over?+over.dataset.planstep:steps.length;
-    if(CK_DRAG.kind==='card'){
-      const c=cockpitCards().find(x=>x.key===CK_DRAG.key);
-      steps.splice(at,0,{key:CK_DRAG.key,name:c?c.name:CK_DRAG.key});
-    }else{
-      const [moved]=steps.splice(CK_DRAG.idx,1);
-      if(CK_DRAG.idx<at) at--;
-      steps.splice(at,0,moved);
-    }
-    CK_DRAG=null; CK_PLAN_OPEN.clear();
-    renderCockpitPlan(); save();
-  });
-  $('#page-combat').addEventListener('dragend',()=>{ CK_DRAG=null; });
+  initCkDrag();
   $('#ckSpellsToggle').addEventListener('click',()=>{ ck().showAllSpells=!ck().showAllSpells; renderCockpitCards(); save(); });
   $('#ckStateAdd').addEventListener('click',()=>{
     const inp=$('#ckStateIn'), v=inp.value.trim(); if(!v) return;
@@ -1691,6 +1671,122 @@ function wireCombatFeatures(){
     $('#ckAtkPanel').classList.toggle('open',ck().atkOpen);
   });
   $('#ckAtkPanel').classList.toggle('open',!!ck().atkOpen);
+}
+
+// ----- Cockpit drag & drop (Pointer Events) -----
+// Native HTML5 drag/drop (dragstart/dragover/drop) never fires from a touch gesture on a
+// tablet — the exact device this screen is built for — so a drag-only "add to plan" or
+// "reorder steps" gesture would silently be mouse-only. Pointer Events fire identically for
+// mouse, touch and pen, so one implementation covers every device. Only the ⠿ handle starts a
+// drag (not the whole card/step), so tapping a card to open it or tapping a field never gets
+// mistaken for a drag-in-progress. Tap-to-add (⤵) still works untouched as the one-hand
+// alternative — this only replaces precise placement and reordering.
+function initCkDrag(){
+  const root=$('#page-combat'); if(!root||root._ckDragInit) return; root._ckDragInit=true;
+  let drag=null; // {kind:'card'|'step', key|idx, stepEl, ghost, dropIndex}
+
+  function planBox(){ return $('#ckPlan'); }
+  function stepEls(box){ return [...box.querySelectorAll(':scope > [data-planstep]')].filter(el=>el!==(drag&&drag.stepEl)); }
+  function makeGhost(x,y,label){
+    const g=document.createElement('div');
+    g.className='ck-drag-ghost';
+    g.textContent=label;
+    g.style.left=x+'px'; g.style.top=y+'px';
+    document.body.appendChild(g);
+    return g;
+  }
+  function clearIndicator(){ const n=root.querySelector('.ck-drop-indicator'); if(n) n.remove(); }
+  function showIndicatorAt(box,index){
+    clearIndicator();
+    const line=document.createElement('div');
+    line.className='ck-drop-indicator';
+    const steps=stepEls(box);
+    if(index>=steps.length) box.appendChild(line); else box.insertBefore(line,steps[index]);
+  }
+  function indexAtPoint(box,clientY){
+    const steps=stepEls(box);
+    for(let i=0;i<steps.length;i++){
+      const r=steps[i].getBoundingClientRect();
+      if(clientY<r.top+r.height/2) return i;
+    }
+    return steps.length;
+  }
+  function autoScroll(box,clientY){
+    const r=box.getBoundingClientRect(), edge=32;
+    if(clientY<r.top+edge) box.scrollTop-=16;
+    else if(clientY>r.bottom-edge) box.scrollTop+=16;
+  }
+  function onMove(e){
+    if(!drag) return;
+    e.preventDefault();
+    const p=e.touches?e.touches[0]:e;
+    drag.ghost.style.left=(p.clientX+14)+'px';
+    drag.ghost.style.top=(p.clientY+10)+'px';
+    const box=planBox(); if(!box) return;
+    const r=box.getBoundingClientRect();
+    const inside=p.clientX>=r.left&&p.clientX<=r.right&&p.clientY>=r.top&&p.clientY<=r.bottom;
+    box.classList.toggle('ck-plan-drophover',inside);
+    if(inside){
+      const idx=indexAtPoint(box,p.clientY);
+      drag.dropIndex=idx;
+      showIndicatorAt(box,idx);
+      autoScroll(box,p.clientY);
+    }else{
+      drag.dropIndex=null; clearIndicator();
+    }
+  }
+  function endDrag(commit){
+    if(!drag) return;
+    document.removeEventListener('pointermove',onMove);
+    document.removeEventListener('pointerup',onUp);
+    document.removeEventListener('pointercancel',onCancel);
+    drag.ghost.remove();
+    clearIndicator();
+    const box=planBox(); if(box) box.classList.remove('ck-plan-drophover');
+    if(drag.stepEl) drag.stepEl.classList.remove('ck-dragging-source');
+    if(commit && drag.dropIndex!=null){
+      ck();
+      const steps=ckPlan().steps;
+      if(drag.kind==='card'){
+        const c=cockpitCards().find(x=>x.key===drag.key);
+        steps.splice(drag.dropIndex,0,{key:drag.key,name:c?c.name:drag.key});
+      }else{
+        // dropIndex already came from indexAtPoint(), which measures against the step list
+        // with the dragged step filtered out — so it's already the correct target index in
+        // the post-removal array. No further shifting needed (that was double-correcting and
+        // could cancel out entirely, e.g. swapping 2 steps appeared to do nothing).
+        const [moved]=steps.splice(drag.idx,1);
+        steps.splice(drag.dropIndex,0,moved);
+      }
+      CK_PLAN_OPEN.clear();
+      renderCockpitPlan(); save();
+    }
+    drag=null;
+  }
+  function onUp(){ endDrag(true); }
+  function onCancel(){ endDrag(false); }
+
+  root.addEventListener('pointerdown',e=>{
+    const handle=e.target.closest('[data-ckdraghandle]'); if(!handle) return;
+    const cardEl=handle.closest('[data-ckdrag]');
+    const stepEl=handle.closest('[data-planstep]');
+    if(!cardEl && !stepEl) return;
+    e.preventDefault();
+    const p=e.touches?e.touches[0]:e;
+    if(cardEl){
+      const key=cardEl.dataset.ckdrag;
+      const c=cockpitCards().find(x=>x.key===key);
+      drag={kind:'card',key,dropIndex:null,ghost:makeGhost(p.clientX+14,p.clientY+10,(c?c.name:'Card'))};
+    }else{
+      const idx=+stepEl.dataset.planstep;
+      const name=stepEl.querySelector('.ck-ps-name')?.textContent||'Step';
+      stepEl.classList.add('ck-dragging-source');
+      drag={kind:'step',idx,stepEl,dropIndex:null,ghost:makeGhost(p.clientX+14,p.clientY+10,name)};
+    }
+    document.addEventListener('pointermove',onMove,{passive:false});
+    document.addEventListener('pointerup',onUp);
+    document.addEventListener('pointercancel',onCancel);
+  });
 }
 
 // ----- Feature library: searchable instead of one giant native <select> (a lot of options) -----
