@@ -21,6 +21,7 @@
   </div>
   <div class="header-right">
     <span id="saveStatus">saved</span>
+    <button class="icon-btn" id="charsBtn" title="Choose or manage characters">🎭 Characters</button>
     <button class="icon-btn" id="settingsBtn">⚙ Settings</button>
   </div>
 </header>
@@ -36,6 +37,16 @@
 
 <main id="pages"></main>
 
+<div class="char-select" id="charSelect">
+  <div class="cs-inner">
+    <h1 class="cs-title">Choose Your Adventurer</h1>
+    <p class="cs-sub">Tap a character to open their sheet. Everything saves automatically as you play.</p>
+    <div class="cs-grid" id="csGrid"></div>
+    <button class="cs-back" id="csBack">↩ Back to the current sheet</button>
+    <input type="file" id="csImportFile" accept=".json,application/json" style="display:none">
+  </div>
+</div>
+
 <div class="modal-bg" id="settingsModal">
   <div class="modal">
     <button class="close-x" id="settingsClose">✕</button>
@@ -44,7 +55,7 @@
     <button class="icon-btn" id="exportBtn">Export character (JSON)</button>
     <button class="icon-btn" id="importBtn">Import character (JSON)</button>
     <input type="file" id="importFile" accept=".json,application/json" style="display:none">
-    <button class="icon-btn danger" id="resetBtn">Reset all data</button>
+    <button class="icon-btn danger" id="resetBtn">Reset this character</button>
   </div>
 </div>
 

@@ -780,6 +780,14 @@ label.fld span{
 .lib-results .item:hover,.lib-results .item.hi{background:var(--panel3)}
 .lib-results .item small{display:block;color:var(--muted);font-size:.73rem;margin-top:1px;font-style:italic}
 .lib-results .empty{padding:12px;color:var(--faint);font-style:italic;font-size:.85rem}
+/* Subclass/feat suggestion fields (former <datalist> fields). The dropdown itself is a
+   position:fixed popover appended straight to <body> (see renderSuggest in app.js) so it can
+   never get clipped by an ancestor's overflow:hidden — the Subclass field lives inside
+   .build-panel, which needs overflow:hidden for its class-color glow. No positioning context
+   is required here; .sug-wrap just exists as a layout hook if these fields need one later. */
+.sug-wrap{display:inline-block}
+label.fld.sug-wrap{display:block}
+.sug-results{position:fixed}
 /* Spell search gets its own grimoire index instead of the plain generic dropdown every other
    search box uses — each result carries a left rune-tab colored by its power tier (same silver/
    arcane-blue/mystic-violet/legendary-gold language as the level cards), so browsing results
@@ -1465,8 +1473,143 @@ input[type=text].spell-meta:focus{background:var(--ink);border-color:var(--accen
 .modal .close-x{float:right;background:none;border:none;color:var(--faint);font-size:1.3rem;cursor:pointer}
 .modal p{color:var(--muted);font-size:.9rem;margin-bottom:14px}
 
+/* ---------- Character select ("choose your adventurer") ---------- */
+/* A full screen, not a modal: switching heroes is a chapter break, and it deserves the same
+   theatrical framing as the rest of the binder. Cards borrow the Build panel's class-color
+   treatment (lit top edge + tinted glow) so a roster of different classes reads as a party. */
+.char-select{
+  position:fixed;inset:0;z-index:60;display:none;overflow-y:auto;
+  background:var(--bg);
+  background-image:radial-gradient(ellipse at 50% -10%, #2b2113 0%, var(--bg) 62%);
+}
+.char-select.open{display:block;animation:fadein .18s ease}
+.cs-inner{max-width:980px;margin:0 auto;padding:46px 20px 60px;text-align:center}
+.cs-title{
+  color:var(--gold-lt);font-family:'Cinzel',serif;font-size:2rem;font-weight:700;
+  letter-spacing:2px;
+}
+/* Cinzel has no lowercase — the title is already caps; underline it like a chapter heading */
+.cs-title::after{
+  content:'';display:block;width:180px;height:2px;margin:12px auto 0;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+}
+.cs-sub{color:var(--muted);font-style:italic;margin:12px 0 30px}
+.cs-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;
+  text-align:left;
+}
+.cs-card{
+  --cs-accent:var(--gold);
+  position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:var(--panel); /* fallback for browsers without color-mix */
+  background:linear-gradient(170deg,color-mix(in srgb,var(--cs-accent) 10%,var(--panel)),var(--panel) 70%);
+  border:1px solid var(--border-lt);border-top:2px solid var(--cs-accent);border-radius:13px;
+  padding:20px 14px 12px;cursor:pointer;text-align:center;color:var(--text);
+  transition:transform .12s ease,box-shadow .2s ease,border-color .15s ease;
+}
+.cs-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px -10px rgba(0,0,0,.6);border-color:var(--cs-accent)}
+.cs-card.active{box-shadow:0 0 18px color-mix(in srgb,var(--cs-accent) 30%,transparent),inset 0 0 24px rgba(0,0,0,.25)}
+.cs-badge{
+  position:absolute;top:10px;right:10px;color:var(--cs-accent);
+  font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;
+  border:1px solid var(--cs-accent);border-radius:999px;padding:2px 9px;opacity:.9;
+}
+.cs-icon{font-size:2.1rem;line-height:1;margin-bottom:8px;filter:drop-shadow(0 0 12px color-mix(in srgb,var(--cs-accent) 45%,transparent))}
+.cs-name{font-family:'Cinzel',serif;font-weight:700;font-size:1.05rem;color:var(--gold-lt);overflow-wrap:anywhere}
+.cs-line{color:var(--muted);font-size:.85rem;font-style:italic;min-height:1.2em}
+.cs-hp{
+  width:70%;height:6px;background:var(--ink);border:1px solid var(--border);border-radius:5px;
+  overflow:hidden;margin-top:10px;
+}
+.cs-hp>div{height:100%;background:linear-gradient(90deg,#7d3b34,var(--red))}
+.cs-hp.low>div{background:linear-gradient(90deg,#7d1f1f,#c0504a)}
+.cs-hpnum{color:var(--faint);font-size:.72rem;margin-top:3px}
+.cs-actions{
+  display:flex;gap:6px;margin-top:12px;border-top:1px solid var(--border);
+  padding-top:9px;width:100%;justify-content:center;
+}
+.cs-actions button{
+  background:transparent;border:1px solid var(--border-lt);border-radius:7px;
+  color:var(--muted);padding:4px 10px;font-size:.72rem;cursor:pointer;min-height:30px;
+}
+.cs-actions button:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
+.cs-actions .cs-del:hover{border-color:var(--red);color:var(--red)}
+/* New / Import: same footprint, dashed — clearly "empty seats at the table" */
+.cs-card.cs-new{
+  border:1px dashed var(--border-lt);border-top:1px dashed var(--border-lt);
+  background:transparent;justify-content:center;min-height:180px;color:var(--muted);
+}
+.cs-card.cs-new:hover{border-color:var(--gold-dim);color:var(--gold-lt);box-shadow:none}
+.cs-card.cs-new .cs-icon{filter:none;color:var(--gold-dim)}
+.cs-card.cs-new .cs-name{color:inherit}
+.cs-back{
+  margin-top:26px;background:transparent;border:1px solid var(--border-lt);border-radius:8px;
+  color:var(--muted);padding:9px 18px;font-size:.85rem;cursor:pointer;
+}
+.cs-back:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
+
+/* ---------- Themed dialogs & select option sheets ---------- */
+/* Replaces native confirm()/alert() and the OS <select> dropdown — both looked like another
+   operating system barging into the tavern, and OS dropdown rows are far below the 44px touch
+   floor this app is built around. */
+.ui-dlg-bg{
+  position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.6);padding:20px;animation:fadein .14s ease;
+}
+.ui-dlg{
+  background:var(--panel);border:1px solid var(--border-lt);border-top:2px solid var(--gold-dim);
+  border-radius:13px;max-width:400px;width:100%;padding:20px 22px;
+  box-shadow:0 18px 50px rgba(0,0,0,.6);
+}
+.ui-dlg h3{
+  color:var(--gold-lt);font-family:'Cinzel',serif;font-size:1rem;letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:10px;
+}
+.ui-dlg p{color:var(--text);font-size:.95rem;line-height:1.5;margin-bottom:18px}
+.ui-dlg-btns{display:flex;gap:10px;justify-content:flex-end}
+.ui-dlg-btns button{
+  border-radius:8px;padding:9px 18px;font-size:.88rem;cursor:pointer;min-height:42px;
+  font-family:'Cinzel',serif;letter-spacing:.5px;
+}
+.ui-dlg-cancel{background:transparent;border:1px solid var(--border-lt);color:var(--muted)}
+.ui-dlg-cancel:hover{border-color:var(--gold-dim);color:var(--text)}
+.ui-dlg-ok{background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold-lt)}
+.ui-dlg-ok:hover{background:var(--gold);color:var(--ink)}
+.ui-dlg-ok.danger{background:rgba(192,80,70,.18);border-color:var(--red);color:#e08a80}
+.ui-dlg-ok.danger:hover{background:var(--red);color:var(--text)}
+/* The option sheet: one column of full-width rows, current choice marked with a gold ✦ */
+.sel-sheet{
+  background:var(--panel);border:1px solid var(--border-lt);border-top:2px solid var(--gold-dim);
+  border-radius:13px;max-width:360px;width:100%;padding:14px 0 8px;
+  box-shadow:0 18px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;max-height:76vh;
+}
+.sel-sheet h3{
+  color:var(--gold);font-family:'Cinzel',serif;font-size:.82rem;letter-spacing:2px;
+  text-transform:uppercase;padding:0 18px 10px;border-bottom:1px solid var(--border);
+}
+.sel-opts{overflow-y:auto;padding:6px 8px 4px}
+.sel-group{
+  color:var(--faint);font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:1.8px;
+  text-transform:uppercase;padding:10px 12px 4px;
+}
+.sel-opt{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+  background:transparent;border:none;border-radius:8px;text-align:left;cursor:pointer;
+  color:var(--text);font-family:'Crimson Pro',serif;font-size:.98rem;padding:11px 12px;min-height:44px;
+}
+.sel-opt:hover{background:var(--panel3)}
+.sel-opt.on{background:var(--gold-dim);color:var(--gold-lt)}
+.sel-opt.on i{font-style:normal;color:var(--gold-lt);flex-shrink:0}
+.sel-opt:disabled{opacity:.4;cursor:default}
+.sel-opt:disabled:hover{background:transparent}
+
 @media (max-width:640px){
   main{padding:14px 10px 70px}
   .panel{padding:12px}
   #charNameHeader{font-size:1.3rem}
+  .cs-inner{padding:26px 12px 40px}
+  .cs-title{font-size:1.4rem}
+  /* On a phone the option sheet docks to the bottom edge — thumb range, not screen center */
+  .ui-dlg-bg.sel-sheet-bg{align-items:flex-end;padding:0}
+  .sel-sheet{max-width:none;border-radius:16px 16px 0 0;max-height:70vh}
 }

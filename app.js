@@ -236,19 +236,17 @@ build:`
     <div class="grid g3">
       <label class="fld"><span>Class</span><select id="classSel"><option value="">— choose —</option></select></label>
       <label class="fld"><span>Level</span><input type="number" id="levelIn" min="1" max="20" value="1"></label>
-      <label class="fld"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" list="subclassNames" placeholder="e.g. Gloom Stalker"></label>
+      <label class="fld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="e.g. Gloom Stalker"></label>
       <label class="fld"><span>Race</span><select id="raceSel"><option value="">— choose —</option></select></label>
       <label class="fld" id="subraceFld" style="display:none"><span>Subrace</span><select id="subraceSel"></select></label>
       <label class="fld flex-fld" id="flex0Fld" style="display:none"><span id="flex0Lbl">Bonus +1 (choice 1)</span><select id="flex0"></select></label>
       <label class="fld flex-fld" id="flex1Fld" style="display:none"><span id="flex1Lbl">Bonus +1 (choice 2)</span><select id="flex1"></select></label>
     </div>
-    <datalist id="subclassNames"></datalist>
     <p class="prep-note" id="buildNote">Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses. Subclass features are searchable in the Features tab once picked here.</p>
   </div>
   <div class="panel" id="asiPanel" style="display:none"><h2>Level-Up Choices — ASI &amp; Feats</h2>
     <p class="prep-note" style="margin:0 0 10px">At each of these levels you chose either an Ability Score Improvement (two +1s — pick the same ability twice for +2) or a feat. Ability picks are added to your scores automatically.</p>
     <div id="asiList"></div>
-    <datalist id="featList"></datalist>
   </div>`,
 
 combat:`
@@ -544,23 +542,54 @@ notes:`
   <button class="add-btn" data-add="notes">+ New note</button>`
 };
 
-// ---------- Persistence ----------
+// ---------- Persistence (multi-character roster) ----------
+// One character per localStorage key, plus a tiny index: {list:[ids], active:id, meta:{id:{t}}}.
+// meta.t = last-played timestamp, so the select screen can sort by recency. The pre-roster
+// single save (STORE_KEY) is adopted as the first roster entry on first boot — it is left in
+// place untouched as a one-time backup, and never read again once the roster exists.
+const ROSTER_KEY='dnd5e-binder-roster-v1';
+const CHAR_PREFIX='dnd5e-binder-char-';
+let ROSTER={list:[],active:null,meta:{}};
+const charKey=id=>CHAR_PREFIX+id;
+const newCharId=()=>'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function saveRoster(){ try{ localStorage.setItem(ROSTER_KEY,JSON.stringify(ROSTER)); }catch(e){} }
+function initRoster(){
+  try{ const raw=localStorage.getItem(ROSTER_KEY); if(raw) ROSTER=Object.assign({list:[],active:null,meta:{}},JSON.parse(raw)); }
+  catch(e){ ROSTER={list:[],active:null,meta:{}}; }
+  ROSTER.list=(ROSTER.list||[]).filter(id=>localStorage.getItem(charKey(id))!=null);
+  ROSTER.meta=ROSTER.meta||{};
+  if(!ROSTER.list.length){
+    // First boot on the roster system: adopt the legacy single save if there is one.
+    const id=newCharId();
+    const legacy=localStorage.getItem(STORE_KEY);
+    try{ localStorage.setItem(charKey(id),legacy||JSON.stringify(defaultState())); }catch(e){}
+    ROSTER.list=[id];
+  }
+  if(!ROSTER.list.includes(ROSTER.active)) ROSTER.active=ROSTER.list[0];
+  saveRoster();
+}
 let saveTimer=null;
+function saveNow(){
+  try{
+    localStorage.setItem(charKey(ROSTER.active),JSON.stringify(S));
+    ROSTER.meta[ROSTER.active]={t:Date.now()}; saveRoster();
+    const el=$('#saveStatus');
+    el.textContent='saved'; el.classList.add('flash');
+    setTimeout(()=>el.classList.remove('flash'),600);
+  }catch(e){ $('#saveStatus').textContent='save failed'; }
+}
 function save(){
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{
-    try{
-      localStorage.setItem(STORE_KEY,JSON.stringify(S));
-      const el=$('#saveStatus');
-      el.textContent='saved'; el.classList.add('flash');
-      setTimeout(()=>el.classList.remove('flash'),600);
-    }catch(e){ $('#saveStatus').textContent='save failed'; }
-  },350);
+  saveTimer=setTimeout(saveNow,350);
 }
+// Any pending debounced save must land in the OLD character's slot before S is replaced —
+// switching mid-debounce would otherwise write hero A's sheet into hero B's key.
+function flushSave(){ if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; saveNow(); } }
 function load(){
   try{
-    const raw=localStorage.getItem(STORE_KEY);
+    const raw=localStorage.getItem(charKey(ROSTER.active));
     if(raw){ S=Object.assign(defaultState(),JSON.parse(raw)); }
+    else S=defaultState();
   }catch(e){ /* corrupt data -> start fresh */ }
   migrateAttacks();
 }
@@ -1593,11 +1622,13 @@ function wireCombatFeatures(){
       if(S.turnPlans.length>1){
         const di=+tdel.dataset.cktpldel, p=S.turnPlans[di];
         const what=`Delete plan "${p.name||'Plan '+(di+1)}"${p.steps.length?` and its ${p.steps.length} step${p.steps.length>1?'s':''}`:''}?`;
-        if(!confirm(what)) return;
-        S.turnPlans.splice(di,1);
-        if(num(S.turnPlanIdx)>=di) S.turnPlanIdx=Math.max(0,num(S.turnPlanIdx)-1);
-        CK_PLAN_OPEN.clear();
-        renderCockpitPlan(); save(); } return; }
+        uiConfirm(what,{title:'Delete plan',ok:'Delete',danger:true}).then(ok=>{
+          if(!ok) return;
+          S.turnPlans.splice(di,1);
+          if(num(S.turnPlanIdx)>=di) S.turnPlanIdx=Math.max(0,num(S.turnPlanIdx)-1);
+          CK_PLAN_OPEN.clear();
+          renderCockpitPlan(); save();
+        }); } return; }
     const pstep=t.closest('[data-planstep]');
     if(pstep){ // tap a step → unfold its full info right here in the timeline
       if(t.closest('input,select,textarea,button,a,.pips,.ck-body')) return;
@@ -1608,8 +1639,10 @@ function wireCombatFeatures(){
     if(pin){ const c=ck(), key=pin.dataset.ckpin;
       c.pins=c.pins.includes(key)?c.pins.filter(x=>x!==key):[...c.pins,key]; refresh(); return; }
     const del=t.closest('[data-ccdel]');
-    if(del){ if(!confirm('Delete this custom card?')) return;
-      S.customCards.splice(+del.dataset.ccdel,1); CK_OPEN.clear(); refresh(); return; }
+    if(del){ uiConfirm('Delete this custom card?',{title:'Delete card',ok:'Delete',danger:true}).then(ok=>{
+        if(!ok) return;
+        S.customCards.splice(+del.dataset.ccdel,1); CK_OPEN.clear(); refresh();
+      }); return; }
     const filt=t.closest('[data-ckfilter]');
     if(filt){ CK_FILTER=filt.dataset.ckfilter; renderCockpitCards(); return; }
     const rsec=t.closest('[data-ckrsec]');
@@ -1651,8 +1684,10 @@ function wireCombatFeatures(){
   });
   $('#ckPlanClear').addEventListener('click',()=>{
     const n=ckPlan().steps.length;
-    if(n&&!confirm(`Clear all ${n} step${n>1?'s':''} from "${ckPlan().name}"?`)) return;
-    ckPlan().steps=[]; CK_PLAN_OPEN.clear(); renderCockpitPlan(); save();
+    const go=()=>{ ckPlan().steps=[]; CK_PLAN_OPEN.clear(); renderCockpitPlan(); save(); };
+    if(!n) return go();
+    uiConfirm(`Clear all ${n} step${n>1?'s':''} from "${ckPlan().name}"?`,{title:'Clear plan',ok:'Clear',danger:true})
+      .then(ok=>{ if(ok) go(); });
   });
   initCkDrag();
   $('#ckSpellsToggle').addEventListener('click',()=>{ ck().showAllSpells=!ck().showAllSpells; renderCockpitCards(); save(); });
@@ -2483,13 +2518,13 @@ function renderBuildSelectors(){
       .map(([id,r])=>`<option value="${id}">${r.name}</option>`).join('')+
     '</optgroup>').join('');
   rs.value=S.raceId||'';
-  $('#featList').innerHTML=FEATS.map(f=>`<option value="${f}">`).join('');
   renderSubraceAndFlex();
   renderBuildTheme();
 }
 // Class-flavored theming for the Build screen — accent color + icon + a "Level X Class —
 // Subclass" nameplate, so picking a class feels like forging a character, not filling a form.
-// Also keeps the Subclass field's datalist in sync with whatever class is currently chosen.
+// (The Subclass field's suggestion list reads subclassNamesForClass(S.classId) live on focus,
+// so it always matches the currently chosen class with no syncing needed here.)
 function renderBuildTheme(){
   const panel=$('#buildPanel'); if(!panel) return;
   const c=CLASSES[S.classId];
@@ -2504,7 +2539,6 @@ function renderBuildTheme(){
   }else{
     title.style.display='none';
   }
-  $('#subclassNames').innerHTML=subclassNamesForClass(S.classId).map(n=>`<option value="${esc(n)}">`).join('');
 }
 function renderSubraceAndFlex(){
   const r=RACES[S.raceId];
@@ -2541,6 +2575,9 @@ function renderAsi(){
   const lvls=asiLevels(S.classId).filter(L=>L<=num(S.level));
   if(!S.classId||!lvls.length){ panel.style.display='none'; return; }
   panel.style.display='';
+  // The feat inputs below get fully rebuilt — an open suggestion popover would be left
+  // pointing at a detached node, so close it first rather than track it through the rebuild.
+  closeSuggest();
   // drop stale entries from levels no longer earned (e.g. level lowered)
   Object.keys(S.asi).forEach(L=>{ if(!lvls.includes(+L)) delete S.asi[L]; });
   const abOpts=sel=>'<option value="">— pick —</option>'+ABILITIES
@@ -2559,7 +2596,7 @@ function renderAsi(){
         <select data-asia="${L}">${abOpts(e.a)}</select>
         <select data-asib="${L}">${abOpts(e.b)}</select>`:''}
       ${e.choice==='feat'?`
-        <input type="text" list="featList" value="${esc(e.feat)}" data-asifeat="${L}" placeholder="Feat name (start typing…)">`:''}
+        <span class="sug-wrap" style="flex:1 1 220px;min-width:180px"><input type="text" value="${esc(e.feat)}" data-asifeat="${L}" autocomplete="off" placeholder="Feat name (start typing…)" style="width:100%"></span>`:''}
     </div>`;
   }).join('');
   const entry=L=>S.asi[L]||(S.asi[L]={choice:'',a:'',b:'',feat:''});
@@ -2714,6 +2751,304 @@ function wireHud(){
   $('#shieldMagic').addEventListener('input',e=>{S.equip.shieldMagic=num(e.target.value);recalc();save();});
   $('#acAutoChk').addEventListener('change',e=>{S.equip.acAuto=e.target.checked;recalc();save();});
 }
+// ---------- Themed dialogs & option sheets ----------
+// Native confirm()/alert() and the OS <select> dropdown look nothing like the binder and give
+// tiny tap targets on a tablet. Both get an in-theme replacement:
+//  · uiAlert / uiConfirm — promise-based modals in the binder's own chrome; callers .then().
+//  · every <select> opens as a big-rowed option sheet. The real <select> stays in the DOM and
+//    receives value + input/change events, so all existing listeners work unchanged. Only
+//    taps are intercepted — opening with the keyboard keeps the native, accessible control.
+function uiDialog(o){
+  return new Promise(res=>{
+    const wrap=document.createElement('div');
+    wrap.className='ui-dlg-bg open';
+    wrap.innerHTML=`<div class="ui-dlg" role="dialog" aria-modal="true">
+      <h3>${esc(o.title||'Are you sure?')}</h3>
+      <p>${esc(o.msg||'')}</p>
+      <div class="ui-dlg-btns">
+        ${o.cancel?`<button class="ui-dlg-cancel">${esc(o.cancel)}</button>`:''}
+        <button class="ui-dlg-ok ${o.danger?'danger':''}">${esc(o.ok||'OK')}</button>
+      </div></div>`;
+    const onKey=e=>{ if(e.key==='Escape') done(false); };
+    const done=v=>{ wrap.remove(); document.removeEventListener('keydown',onKey); res(v); };
+    wrap.addEventListener('click',e=>{
+      if(e.target===wrap) return done(false);
+      if(e.target.closest('.ui-dlg-ok')) return done(true);
+      if(e.target.closest('.ui-dlg-cancel')) return done(false);
+    });
+    document.addEventListener('keydown',onKey);
+    document.body.appendChild(wrap);
+    wrap.querySelector('.ui-dlg-ok').focus();
+  });
+}
+const uiAlert=(msg,title='Heads up')=>uiDialog({title,msg,ok:'OK'});
+const uiConfirm=(msg,o={})=>uiDialog(Object.assign({msg,title:'Are you sure?',ok:'Yes',cancel:'Cancel'},o));
+// The sheet's heading: the select's own title, or the field label it sits inside.
+function selectSheetLabel(sel){
+  if(sel.title) return sel.title;
+  const fld=sel.closest('label.fld'), sp=fld&&fld.querySelector('span');
+  return (sp&&sp.textContent.trim())||'Choose an option';
+}
+let SEL_OPEN=false;
+function openSelectSheet(sel){
+  SEL_OPEN=true;
+  const wrap=document.createElement('div');
+  wrap.className='ui-dlg-bg sel-sheet-bg open';
+  const rows=[];
+  const opt=o=>rows.push(`<button class="sel-opt ${o.value===sel.value?'on':''}" ${o.disabled?'disabled':''} data-selval="${esc(o.value)}"><span>${esc(o.textContent.trim()||'—')}</span>${o.value===sel.value?'<i>✦</i>':''}</button>`);
+  [...sel.children].forEach(ch=>{
+    if(ch.tagName==='OPTGROUP'){ rows.push(`<div class="sel-group">${esc(ch.label)}</div>`); [...ch.children].forEach(opt); }
+    else if(ch.tagName==='OPTION') opt(ch);
+  });
+  wrap.innerHTML=`<div class="sel-sheet" role="listbox" aria-label="${esc(selectSheetLabel(sel))}">
+    <h3>${esc(selectSheetLabel(sel))}</h3>
+    <div class="sel-opts">${rows.join('')}</div></div>`;
+  const onKey=e=>{ if(e.key==='Escape') done(); };
+  const done=()=>{ wrap.remove(); document.removeEventListener('keydown',onKey); SEL_OPEN=false; };
+  wrap.addEventListener('click',e=>{
+    if(e.target===wrap) return done();
+    const b=e.target.closest('[data-selval]');
+    if(b){
+      sel.value=b.dataset.selval;
+      // Both events, bubbling — data-bind fields listen to 'input', everything else to 'change'.
+      sel.dispatchEvent(new Event('input',{bubbles:true}));
+      sel.dispatchEvent(new Event('change',{bubbles:true}));
+      done();
+    }
+  });
+  document.addEventListener('keydown',onKey);
+  document.body.appendChild(wrap);
+  const on=wrap.querySelector('.sel-opt.on'); if(on) on.scrollIntoView({block:'center'});
+}
+function wireSelectSheets(){
+  // Preventing the compat 'mousedown' is the one reliable way to stop the OS dropdown for both
+  // mouse and touch; 'touchend' is also intercepted for browsers that open the picker earlier.
+  const handler=e=>{
+    const sel=e.target.closest&&e.target.closest('select');
+    if(!sel||sel.disabled) return;
+    e.preventDefault();
+    if(!SEL_OPEN) openSelectSheet(sel);
+  };
+  document.addEventListener('mousedown',handler);
+  document.addEventListener('touchend',handler,{passive:false});
+}
+// ---------- Themed suggestion dropdowns (subclass & feats) ----------
+// The last two native pickers: Subclass and the ASI feat inputs used <datalist>, the browser's
+// own unthemed autocomplete popup. Replaced with the same .lib-results dropdown every other
+// search in the app already uses — but rendered as a single popover appended to <body> with
+// position:fixed, computed from the input's own screen position, rather than the normal
+// "absolute sibling" pattern the other search boxes use. Reason: the Subclass field lives
+// inside .build-panel, which has overflow:hidden for its class-color glow effect — an absolute
+// dropdown anchored inside that panel gets clipped against its edge, which is what looked like
+// the dropdown "overlapping" the field. Escaping to <body> sidesteps any clipped ancestor,
+// current or future, instead of special-casing this one panel.
+function suggestSourceFor(el){
+  if(!el||el.tagName!=='INPUT') return null;
+  if(el.id==='subclassIn') return subclassNamesForClass(S.classId);
+  if(el.dataset&&el.dataset.asifeat!=null) return FEATS;
+  return null;
+}
+let SUG_SILENT=false, SUG_POP=null; // SUG_POP: the one open popover, tagged with ._inputEl
+function positionSuggest(inp,p){
+  const r=inp.getBoundingClientRect();
+  const width=Math.max(r.width,240);
+  const left=Math.max(8,Math.min(r.left,window.innerWidth-8-width));
+  p.style.left=left+'px';
+  p.style.top=(r.bottom+4)+'px';
+  p.style.width=width+'px';
+}
+function closeSuggest(){
+  if(!SUG_POP) return;
+  SUG_POP.remove(); SUG_POP=null;
+  window.removeEventListener('scroll',repositionSuggest,true);
+  window.removeEventListener('resize',repositionSuggest);
+}
+function repositionSuggest(){
+  if(!SUG_POP) return;
+  // The field this popover belongs to may have scrolled away or been re-rendered out from
+  // under it (e.g. choosing a different ASI option rebuilds the panel) — bail cleanly rather
+  // than position a dropdown that no longer has anything to anchor to.
+  if(!SUG_POP._inputEl.isConnected) return closeSuggest();
+  positionSuggest(SUG_POP._inputEl,SUG_POP);
+}
+function renderSuggest(inp){
+  const src=suggestSourceFor(inp); if(!src) return;
+  if(!SUG_POP||SUG_POP._inputEl!==inp){
+    closeSuggest();
+    SUG_POP=document.createElement('div');
+    SUG_POP.className='lib-results sug-results open';
+    SUG_POP._inputEl=inp;
+    document.body.appendChild(SUG_POP);
+    window.addEventListener('scroll',repositionSuggest,true);
+    window.addEventListener('resize',repositionSuggest);
+  }
+  const q=inp.value.trim().toLowerCase();
+  const items=src.filter(n=>!q||n.toLowerCase().includes(q));
+  SUG_POP.innerHTML=(items.length?items.slice(0,50).map(n=>`<div class="item" data-sugpick="${esc(n)}">${esc(n)}</div>`).join(''):'')
+    +((!items.length||(q&&!src.some(n=>n.toLowerCase()===q)))
+      ?`<div class="empty">${items.length?'':'No matches — '}free text works too</div>`:'');
+  positionSuggest(inp,SUG_POP);
+}
+function wireSuggest(){
+  document.addEventListener('focusin',e=>{ if(suggestSourceFor(e.target)) renderSuggest(e.target); });
+  document.addEventListener('input',e=>{ if(!SUG_SILENT&&suggestSourceFor(e.target)) renderSuggest(e.target); });
+  document.addEventListener('click',e=>{
+    const pick=e.target.closest('[data-sugpick]');
+    if(pick&&SUG_POP){
+      const inp=SUG_POP._inputEl;
+      inp.value=pick.dataset.sugpick;
+      // Fire the input event so data-bind / renderAsi listeners update state, but flag it so
+      // our own delegated handler doesn't immediately reopen the list we're closing.
+      SUG_SILENT=true;
+      inp.dispatchEvent(new Event('input',{bubbles:true}));
+      SUG_SILENT=false;
+      closeSuggest();
+      return;
+    }
+    if(SUG_POP && !e.target.closest('.sug-results') && e.target!==SUG_POP._inputEl) closeSuggest();
+  });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&SUG_POP) closeSuggest(); });
+}
+
+// ---------- Character select screen ----------
+// A full-screen "party roster" rather than a dropdown: each character is a class-flavored card
+// (same elemental icon + color language as the Build panel), tap to play. Duplicate / export /
+// delete live on each card; New and Import are cards of the same size so the empty roster
+// still looks like a roster, not a form. Shown at boot only when there's actually a choice to
+// make (2+ characters) — a single-character player goes straight to their sheet.
+function charSummary(id){
+  try{
+    const d=JSON.parse(localStorage.getItem(charKey(id))||'{}');
+    const cls=CLASSES[d.classId];
+    return {
+      name:(d.name||'').trim()||'Unnamed hero',
+      cls:cls?cls.name:(d.classLevel||'').trim(),
+      lvl:cls?num(d.level)||1:'',
+      race:(d.race||'').trim(),
+      hp:num(d.hpCurrent), hpMax:num(d.hpMax),
+      icon:CLASS_ICON[d.classId]||'⚔',
+      color:CLASS_COLOR[d.classId]||'#c9a227',
+    };
+  }catch(e){ return {name:'Corrupted save',cls:'',lvl:'',race:'',hp:0,hpMax:0,icon:'⚠',color:'#c05046'}; }
+}
+function renderCharSelect(){
+  const grid=$('#csGrid'); if(!grid) return;
+  // Active character first, then most recently played — the card you want is always near the top.
+  const t=id=>(ROSTER.meta[id]||{}).t||0;
+  const ids=[...ROSTER.list].sort((a,b)=>((b===ROSTER.active)-(a===ROSTER.active))||(t(b)-t(a)));
+  grid.innerHTML=ids.map(id=>{
+    const c=charSummary(id), active=id===ROSTER.active;
+    const hpPct=c.hpMax>0?Math.max(0,Math.min(100,Math.round(c.hp/c.hpMax*100))):0;
+    const line=[c.cls?(c.lvl?`Level ${c.lvl} ${c.cls}`:c.cls):'',c.race].filter(Boolean).join(' · ');
+    return `<div class="cs-card ${active?'active':''}" data-csplay="${id}" style="--cs-accent:${c.color}">
+      ${active?'<span class="cs-badge">now playing</span>':''}
+      <div class="cs-icon">${c.icon}</div>
+      <div class="cs-name">${esc(c.name)}</div>
+      <div class="cs-line">${esc(line)||'A blank sheet'}</div>
+      ${c.hpMax>0?`<div class="cs-hp ${hpPct<=25?'low':''}"><div style="width:${hpPct}%"></div></div><div class="cs-hpnum">${c.hp} / ${c.hpMax} HP</div>`:''}
+      <div class="cs-actions">
+        <button data-csdup="${id}" title="Duplicate this character">⧉ Copy</button>
+        <button data-csexp="${id}" title="Download as JSON backup">⬇ Export</button>
+        <button class="cs-del" data-csdel="${id}" title="Delete this character">✕</button>
+      </div>
+    </div>`;
+  }).join('')
+  +`<button class="cs-card cs-new" data-csnew>
+      <span class="cs-icon">+</span><span class="cs-name">New Character</span><span class="cs-line">Start a blank sheet</span>
+    </button>
+    <button class="cs-card cs-new" data-csimportbtn>
+      <span class="cs-icon">⬆</span><span class="cs-name">Import</span><span class="cs-line">From a JSON export</span>
+    </button>`;
+}
+function openCharSelect(){ renderCharSelect(); $('#charSelect').classList.add('open'); }
+function closeCharSelect(){ $('#charSelect').classList.remove('open'); }
+function switchChar(id){
+  if(id===ROSTER.active){ closeCharSelect(); return; }
+  flushSave();                    // pending edits land in the OLD slot first
+  ROSTER.active=id; ROSTER.meta[id]={t:Date.now()}; saveRoster();
+  load(); renderAll(); showTab('overview');
+  closeCharSelect();
+}
+function createChar(data){
+  flushSave();                    // pending edits land in the OLD slot first
+  const id=newCharId();
+  try{ localStorage.setItem(charKey(id),JSON.stringify(data||defaultState())); }
+  catch(e){ uiAlert('Could not save a new character — browser storage may be full.','Storage problem'); return; }
+  ROSTER.list.push(id);
+  ROSTER.active=id; ROSTER.meta[id]={t:Date.now()}; saveRoster();
+  load(); renderAll();
+  showTab(data?'overview':'build'); // fresh hero → Build tab; imported hero is complete → Overview
+  closeCharSelect();
+}
+function exportChar(id){
+  const raw=localStorage.getItem(charKey(id)); if(!raw) return;
+  let name='character';
+  try{ name=(JSON.parse(raw).name||'character').replace(/[^\w\- ]/g,'').trim()||'character'; }catch(e){}
+  const blob=new Blob([raw],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function wireCharSelect(){
+  $('#charsBtn').addEventListener('click',openCharSelect);
+  $('#csBack').addEventListener('click',closeCharSelect);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&$('#charSelect').classList.contains('open')) closeCharSelect();
+  });
+  $('#charSelect').addEventListener('click',e=>{
+    const t=e.target;
+    const dup=t.closest('[data-csdup]');
+    if(dup){ e.stopPropagation();
+      const raw=localStorage.getItem(charKey(dup.dataset.csdup)); if(!raw) return;
+      try{
+        const d=JSON.parse(raw); d.name=(d.name||'Unnamed hero')+' (copy)';
+        const id=newCharId();
+        localStorage.setItem(charKey(id),JSON.stringify(d));
+        ROSTER.list.push(id); saveRoster(); renderCharSelect();
+      }catch(err){ uiAlert('This save appears corrupted — could not duplicate it.','Duplicate failed'); }
+      return; }
+    const exp=t.closest('[data-csexp]');
+    if(exp){ e.stopPropagation(); exportChar(exp.dataset.csexp); return; }
+    const del=t.closest('[data-csdel]');
+    if(del){ e.stopPropagation();
+      const id=del.dataset.csdel, c=charSummary(id);
+      uiConfirm(`Delete ${c.name}? This cannot be undone — export a backup first if unsure.`,
+        {title:'Delete character',ok:'Delete forever',danger:true}).then(ok=>{
+        if(!ok) return;
+        localStorage.removeItem(charKey(id));
+        ROSTER.list=ROSTER.list.filter(x=>x!==id);
+        delete ROSTER.meta[id];
+        if(ROSTER.active===id){
+          // The character being played was deleted: fall back to another, or a fresh blank one.
+          if(!ROSTER.list.length){
+            const nid=newCharId();
+            try{ localStorage.setItem(charKey(nid),JSON.stringify(defaultState())); }catch(err){}
+            ROSTER.list=[nid];
+          }
+          ROSTER.active=ROSTER.list[0]; saveRoster();
+          load(); renderAll(); showTab('overview');
+        }else saveRoster();
+        renderCharSelect();
+      }); return; }
+    if(t.closest('[data-csnew]')){ createChar(); return; }
+    if(t.closest('[data-csimportbtn]')){ $('#csImportFile').click(); return; }
+    const play=t.closest('[data-csplay]');
+    if(play){ switchChar(play.dataset.csplay); return; }
+  });
+  $('#csImportFile').addEventListener('change',e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const d=Object.assign(defaultState(),JSON.parse(r.result));
+        createChar(d);
+      }catch(err){ uiAlert('That file is not a valid character JSON.','Import failed'); }
+      e.target.value='';
+    };
+    r.readAsText(file);
+  });
+}
+
 function wireSettings(){
   $('#settingsBtn').addEventListener('click',()=>$('#settingsModal').classList.add('open'));
   $('#settingsClose').addEventListener('click',()=>$('#settingsModal').classList.remove('open'));
@@ -2729,27 +3064,30 @@ function wireSettings(){
     a.click(); URL.revokeObjectURL(a.href);
   });
   $('#importBtn').addEventListener('click',()=>$('#importFile').click());
+  // Import never overwrites the sheet you're on anymore — it lands as a NEW character on the
+  // roster and switches to it, so a mis-click can't wipe hours of play.
   $('#importFile').addEventListener('change',e=>{
     const file=e.target.files[0]; if(!file) return;
     const r=new FileReader();
     r.onload=()=>{
       try{
-        S=Object.assign(defaultState(),JSON.parse(r.result));
-        migrateAttacks();
-        renderAll(); save();
+        const d=Object.assign(defaultState(),JSON.parse(r.result));
+        createChar(d);
         $('#settingsModal').classList.remove('open');
-      }catch(err){ alert('That file is not a valid character JSON.'); }
+      }catch(err){ uiAlert('That file is not a valid character JSON.','Import failed'); }
       e.target.value='';
     };
     r.readAsText(file);
   });
   $('#resetBtn').addEventListener('click',()=>{
-    if(confirm('Erase ALL character data? Export a backup first if unsure.')){
+    const who=(S.name||'').trim()||'this character';
+    uiConfirm(`Erase ${who}'s sheet and start it blank? Other characters are untouched. Export a backup first if unsure.`,
+      {title:'Reset character',ok:'Erase sheet',danger:true}).then(ok=>{
+      if(!ok) return;
       S=defaultState();
-      localStorage.removeItem(STORE_KEY);
-      renderAll();
+      renderAll(); saveNow();
       $('#settingsModal').classList.remove('open');
-    }
+    });
   });
   $('#inspBtn').addEventListener('click',()=>{
     S.inspiration=!S.inspiration; recalc(); save();
@@ -2773,9 +3111,12 @@ function wireSkillFx(){
     if(chip) chip.classList.toggle('open');
   });
 }
+initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemLibrary();
+wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemLibrary();
 showTab('overview');
+// With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
+if(ROSTER.list.length>1) openCharSelect();
 
