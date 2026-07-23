@@ -6,10 +6,11 @@
   "race": "",
   "alignment": "",
   "xp": "",
-  "inspiration": false,
+  "inspiration": true,
   "profBonus": 3,
   "classId": "ranger",
   "level": 6,
+  "subclass": "Gloom Stalker",
   "raceId": "shadarkai",
   "subraceId": "",
   "flexBonus": [
@@ -80,7 +81,55 @@
     false,
     false
   ],
-  "attacks": [],
+  "attacks": [
+    {
+      "name": "Dagger",
+      "weapon": "dagger",
+      "die": "1d4",
+      "dmgStat": "dex",
+      "magic": 0,
+      "miscAtk": 0,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": []
+    },
+    {
+      "name": "Shortsword right",
+      "weapon": "custom",
+      "die": "1d6",
+      "dmgStat": "dex",
+      "magic": 0,
+      "miscAtk": 1,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": [],
+      "actionType": "action"
+    },
+    {
+      "name": "Shortsword left",
+      "weapon": "custom",
+      "die": "1d6",
+      "dmgStat": "dex",
+      "magic": 0,
+      "miscAtk": 1,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": [],
+      "actionType": "bonus"
+    },
+    {
+      "name": "Poisned Dagger",
+      "weapon": "custom",
+      "die": "1d4",
+      "dmgStat": "auto",
+      "magic": 0,
+      "miscAtk": 2,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": [],
+      "dmgType": "poison"
+    }
+  ],
   "atkNotes": "",
   "equip": {
     "armor": "breastplate",
@@ -107,8 +156,42 @@
   },
   "equipment": [
     {
+      "qty": "3",
+      "name": "Potion of Healing",
+      "type": "C",
+      "desc": "Drink (action): regain 2d4+2 HP.",
+      "combat": true,
+      "actionType": "item"
+    },
+    {
+      "qty": "1",
+      "name": "שרשרת",
+      "type": "G",
+      "desc": "נמצאה בגופה שחיפשתי",
+      "combat": false
+    },
+    {
       "qty": "",
-      "name": ""
+      "name": "",
+      "type": "T",
+      "desc": "",
+      "combat": false
+    },
+    {
+      "qty": "1",
+      "name": "glory porions",
+      "type": "C",
+      "desc": "",
+      "combat": true,
+      "actionType": "item"
+    },
+    {
+      "qty": "1",
+      "name": "test",
+      "type": "C",
+      "desc": "",
+      "combat": true,
+      "actionType": "item"
     }
   ],
   "treasure": "",
@@ -167,7 +250,7 @@
       "combat": true,
       "usesMax": 3,
       "usesPer": "long",
-      "usesUsed": 1,
+      "usesUsed": 0,
       "usesScale": "prof"
     },
     {
@@ -199,6 +282,56 @@
       "usesPer": "short",
       "usesUsed": 0,
       "usesScale": ""
+    },
+    {
+      "title": "Dread Ambusher",
+      "desc": "At 3rd level, you master the art of the ambush. You can give yourself a bonus to your initiative rolls equal to your Wisdom modifier.\nAt the start of your first turn of each combat, your walking speed increases by 10 feet, which lasts until the end of that turn. If you take the Attack action on that turn, you can make one additional weapon attack as part of that action. If that attack hits, the target takes an extra 1d8 damage of the weapon's damage type.",
+      "fx": [
+        {
+          "t": "statnote",
+          "stat": "init",
+          "cond": "Start of the fight",
+          "n": "WIS"
+        },
+        {
+          "t": "statnote",
+          "stat": "speed",
+          "cond": "Start of the fight",
+          "n": 10
+        }
+      ],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "source": {
+        "kind": "class",
+        "classId": "ranger",
+        "className": "Ranger — Gloom Stalker"
+      },
+      "cond": ""
+    },
+    {
+      "title": "Umbral Sight",
+      "desc": "Darkvision 60 ft. (or +30 ft. if you already have it); invisible to creatures relying on darkvision to see you in darkness.",
+      "fx": [
+        {
+          "t": "stat",
+          "stat": "vision",
+          "n": 30
+        }
+      ],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "source": {
+        "kind": "class",
+        "classId": "ranger",
+        "className": "Ranger — Gloom Stalker"
+      }
     }
   ],
   "profLang": "",
@@ -214,25 +347,41 @@
     {
       "total": 0,
       "used": 0,
-      "spells": [
-        {
-          "name": "Hunter's Mark",
-          "prep": false
-        }
-      ]
+      "spells": []
     },
     {
       "total": 4,
       "used": 0,
-      "spells": []
+      "spells": [
+        {
+          "name": "Hunter's Mark",
+          "prep": false,
+          "meta": "1 Bonus Action · 90 ft · Conc., up to 1 hour",
+          "desc": "Add 1d6 damage to each weapon hit against the marked target."
+        },
+        {
+          "name": "Zephyr Strike",
+          "prep": false,
+          "meta": "1 Bonus Action · Self · Conc., up to 1 min",
+          "desc": "Movement does not provoke opportunity attacks. One attack can gain advantage and +1d8 force damage."
+        },
+        {
+          "name": "Cure Wounds",
+          "prep": false,
+          "meta": "1 Action · Touch · Instantaneous",
+          "desc": "Touch heals 1d8 + spellcasting modifier HP."
+        }
+      ]
     },
     {
       "total": 2,
       "used": 0,
       "spells": [
         {
-          "name": "",
-          "prep": false
+          "name": "Rope Trick",
+          "prep": false,
+          "meta": "1 Action · Touch · 1 hour",
+          "desc": "Create an extradimensional hiding space at the upper end of a rope."
         }
       ]
     },
@@ -272,6 +421,95 @@
       "spells": []
     }
   ],
+  "eqTab": "S",
+  "eqCollapse": {
+    "M": false,
+    "G": true,
+    "A": false,
+    "C": true,
+    "T": true
+  },
+  "invEqOpen": true,
+  "customCards": [],
+  "states": [],
+  "concentration": null,
+  "turnPlans": [
+    {
+      "name": "First attack",
+      "steps": [
+        {
+          "key": "ft:7",
+          "name": "Dread Ambusher",
+          "note": "1d8 + action attack"
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword"
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword right"
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword right"
+        },
+        {
+          "key": "atk:2",
+          "name": "Shortsword"
+        }
+      ]
+    },
+    {
+      "name": "Defance",
+      "steps": [
+        {
+          "key": "ft:3",
+          "name": "Blessing of the Raven Queen",
+          "note": ""
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword right"
+        },
+        {
+          "key": "atk:2",
+          "name": "Shortsword left"
+        }
+      ]
+    },
+    {
+      "name": "Multiply attackers",
+      "steps": [
+        {
+          "key": "sp:1.0",
+          "name": "Hunter's Mark",
+          "note": "1d6 Damage each hit"
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword right"
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword right"
+        }
+      ]
+    }
+  ],
+  "turnPlanIdx": 2,
+  "cockpit": {
+    "hidden": [
+      "cc:1",
+      "cc:0",
+      "sp:2.0",
+      "ft:2"
+    ],
+    "pins": [],
+    "showAllSpells": false,
+    "showDeath": true,
+    "atkOpen": true
+  },
   "age": "25",
   "height": "1.85",
   "weight": "",
@@ -294,5 +532,6 @@
       "title": "TEST",
       "body": "cfafafewafwa"
     }
-  ]
+  ],
+  "turnPlan": []
 }
