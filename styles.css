@@ -989,15 +989,11 @@ label.fld.sug-wrap{display:block}
 .hd-row .big{color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:1.6rem}
 .hd-row .hp-btns{margin:0 0 0 auto}
 
-/* Combat mini-HUD: HP and AC pinned to the top of the viewport while scrolling the Combat tab,
-   so the two numbers you always need mid-fight never scroll out of view once the page gets tall
-   with several attacks/features. Read-only — the real editable fields are still below. */
 /* A torch-lit console rather than a data strip: a warm glow pools behind the numbers you
    need every single round (HP, AC, Init), a lit brass edge caps the whole bar, and everything
    you check less often (Speed, Prof, Passive, Vision) is pushed to a visibly quieter second
    line below — so the eye always knows which numbers matter *right now*. */
 .combat-hud{
-  position:sticky;top:0;z-index:15;
   background:var(--panel);border:1px solid var(--border);border-top:2px solid var(--gold-dim);
   border-radius:10px;padding:9px 16px 7px;margin-bottom:14px;
   box-shadow:0 6px 20px rgba(0,0,0,.5),inset 0 40px 34px -34px rgba(201,162,39,.1);
