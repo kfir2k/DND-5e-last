@@ -2410,11 +2410,14 @@ function recalc(){
   // hp bar + clamp (effective max includes feature bonuses like Tough)
   const max=Math.max(0,num(S.hpMax)+fxStat('hpmax'));
   const cur=Math.max(0,num(S.hpCurrent));
-  $$('.hp-fill').forEach(f=>f.style.width=(max?Math.min(100,cur/max*100):0)+'%');
-  // Temp HP rides the same bar as a blue segment stacked after current HP (clamped to the
-  // bar's end — the numbers carry the exact value, the bar carries the feeling).
-  const curPct=max?Math.min(100,cur/max*100):0;
-  const tmpPct=max?Math.max(0,Math.min(100-curPct,num(S.hpTemp)/max*100)):0;
+  const temp=Math.max(0,num(S.hpTemp));
+  // Temp HP rides the same bar as a blue segment stacked after current HP. The bar's scale
+  // widens to fit (max HP + temp) whenever temp is active, so the blue segment stays visible
+  // even at full HP instead of being squeezed into whatever room was left under 100%.
+  const scale=Math.max(max,cur)+temp;
+  const curPct=scale?cur/scale*100:0;
+  const tmpPct=scale?Math.min(100-curPct,temp/scale*100):0;
+  $$('.hp-fill').forEach(f=>f.style.width=curPct+'%');
   $$('.hp-temp-fill').forEach(f=>{ f.style.left=curPct+'%'; f.style.width=tmpPct+'%'; });
   $$('.hp-bar').forEach(bar=>bar.classList.toggle('has-temp',num(S.hpTemp)>0));
   // bloodied / critical feedback directly on the real HP bar(s) — no separate decorative copy

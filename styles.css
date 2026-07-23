@@ -1002,7 +1002,7 @@ label.fld.sug-wrap{display:block}
   border-radius:10px;padding:9px 16px 7px;margin-bottom:14px;
   box-shadow:0 6px 20px rgba(0,0,0,.5),inset 0 40px 34px -34px rgba(201,162,39,.1);
 }
-.chud-primary{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.chud-primary{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:center}
 /* HP lives in the HUD: damage buttons on the left of the numbers, heals on the right —
    hit the side you mean. Temp sits apart in blue; the bar underlines the whole station. */
 .chud-hp{flex:1 1 380px;min-width:300px;max-width:560px}
