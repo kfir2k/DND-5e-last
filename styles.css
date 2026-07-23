@@ -1022,14 +1022,21 @@ label.fld.sug-wrap{display:block}
 .chud-btns .hp-btn{padding:3px 0;font-size:.7rem;width:34px;min-width:34px}
 .chud-sep{width:1px;align-self:stretch;background:var(--border);flex-shrink:0}
 .chud-sep-conc{align-self:center;height:34px}
-/* Vitals cells inside the one sticky bar: identical size, value only — ★ badges and feature
-   notes live on the bar's own second line so no cell ever outgrows its neighbors. */
+/* Vitals cells inside the one sticky bar: label+value pinned to the top and never shift —
+   a ★ badge or feature note just grows the cell downward, so nothing you're already reading
+   jumps position mid-fight when a buff lands. */
 .combat-hud .ckv{
-  padding:3px 8px;min-width:64px;height:46px;flex:0 0 auto;
-  justify-content:center;gap:0;
+  padding:3px 8px;min-width:64px;min-height:46px;flex:0 0 auto;
+  justify-content:flex-start;gap:0;
 }
-.combat-hud .ckv .fx-note,.combat-hud .ckv .fx-rems{display:none}
 .combat-hud .chud-hp{flex:1 1 300px;max-width:470px}
+.chud-hp .fx-note{min-height:0;text-align:center;font-size:.62rem;margin-top:2px}
+.chud-hp .fx-rems{justify-content:center;margin-top:2px}
+/* Reminder badges shrink to fit these compact cells — full-size .sk-fx is sized for roomy
+   panels elsewhere and would balloon a stat cell that happens to have one active, next to
+   plain neighbors that don't. */
+.combat-hud .ckv .fx-rems .sk-fx{font-size:.66rem;padding:1px 6px;gap:1px 4px}
+.combat-hud .ckv .fx-rems .sk-fx b{font-size:.68rem;padding:0 4px}
 /* AC and Initiative sit right beside HP as the third and fourth numbers checked every round —
    same lit-gold treatment as HP's current value, visibly bigger than anything in the row below. */
 .ckv-primary{background:var(--panel3);border:1px solid var(--border-lt)}
@@ -1038,7 +1045,7 @@ label.fld.sug-wrap{display:block}
 /* Senses & Movement: a visibly quieter second shelf — smaller type, dimmer chips, its own
    uppercase label — for the numbers a player glances at occasionally, not every turn. */
 .chud-senses{
-  display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;
   border-top:1px solid var(--border);margin-top:7px;padding-top:6px;
 }
 .chud-senses-lbl{
@@ -1051,19 +1058,6 @@ label.fld.sug-wrap{display:block}
 .ckv-sec .ckv-l{font-size:.58rem;color:var(--faint)}
 .ckv-sec input,.ckv-sec .ckv-big{font-size:.92rem;color:var(--muted);font-weight:600}
 .ckv-sec input.ckv-wide{width:64px;font-size:.8rem}
-.chud-extra{
-  flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;
-  border-top:1px solid var(--border);margin-top:6px;padding-top:5px;
-}
-.chud-extra:not(:has(.chud-x:not([style*="none"]))){display:none}
-.chud-x{display:inline-flex;align-items:center;gap:6px}
-.chud-x i{
-  font-style:normal;color:var(--faint);font-family:'Cinzel',serif;
-  font-size:.58rem;letter-spacing:1.2px;text-transform:uppercase;
-}
-.chud-x .fx-note{display:inline;min-height:0;font-size:.7rem}
-.chud-x .fx-rems{margin:0}
-.chud-x .fx-rems .sk-fx{font-size:.7rem;padding:0 7px}
 .chud-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:54px}
 .chud-lbl{color:var(--muted);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap}
 .chud-cell b{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:1.25rem;line-height:1.15}

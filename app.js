@@ -272,28 +272,21 @@ combat:`
         <span class="chud-temp" title="Temporary HP — soaked before real HP"><span class="chud-templbl">temp</span><input type="number" class="chud-in chud-tempin" data-bind="hpTemp"></span>
       </div>
       <div class="hp-bar chud-bar"><div class="hp-fill"></div><span class="hp-temp-fill"></span></div>
+      <span class="fx-note" data-fxnote="hpmax"></span><span class="fx-rems" data-fxrem="hpmax"></span>
     </div>
     <span class="chud-sep"></span>
-    <div class="ckv ckv-primary"><span class="ckv-l">🛡 AC</span><input type="number" data-bind="ac"></div>
-    <div class="ckv ckv-primary computed"><span class="ckv-l">⚡ Init</span><span class="ckv-big" data-calc="initiative">+0</span></div>
+    <div class="ckv ckv-primary"><span class="ckv-l">🛡 AC</span><input type="number" data-bind="ac"><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></div>
+    <div class="ckv ckv-primary computed"><span class="ckv-l">⚡ Init</span><span class="ckv-big" data-calc="initiative">+0</span><span class="fx-rems" data-fxrem="init"></span></div>
     <span class="chud-sep chud-sep-conc"></span>
     <span class="ck-conc" id="ckConc"></span>
     <span class="ck-topstates" id="ckTopStates"></span>
     </div>
     <div class="chud-senses">
       <span class="chud-senses-lbl">Senses &amp; Movement</span>
-      <div class="ckv ckv-sec"><span class="ckv-l">💨 Speed</span><input type="text" class="ckv-wide" data-bind="speed"></div>
+      <div class="ckv ckv-sec"><span class="ckv-l">💨 Speed</span><input type="text" class="ckv-wide" data-bind="speed"><span class="fx-note" data-fxnote="speed"></span><span class="fx-rems" data-fxrem="speed"></span></div>
       <div class="ckv ckv-sec"><span class="ckv-l">📖 Prof</span><input type="number" data-bind="profBonus"></div>
-      <div class="ckv ckv-sec computed"><span class="ckv-l">👁 Passive</span><span class="ckv-big" data-calc="passive">10</span></div>
-      <div class="ckv ckv-sec"><span class="ckv-l">🌙 Vision</span><input type="text" class="ckv-wide" data-bind="vision"></div>
-    </div>
-    <div class="chud-extra">
-      <span class="chud-x"><i>AC</i><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></span>
-      <span class="chud-x"><i>Init</i><span class="fx-rems" data-fxrem="init"></span></span>
-      <span class="chud-x"><i>Speed</i><span class="fx-note" data-fxnote="speed"></span><span class="fx-rems" data-fxrem="speed"></span></span>
-      <span class="chud-x"><i>Passive</i><span class="fx-rems" data-fxrem="passive"></span></span>
-      <span class="chud-x"><i>Vision</i><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></span>
-      <span class="chud-x"><i>Max HP</i><span class="fx-note" data-fxnote="hpmax"></span><span class="fx-rems" data-fxrem="hpmax"></span></span>
+      <div class="ckv ckv-sec computed"><span class="ckv-l">👁 Passive</span><span class="ckv-big" data-calc="passive">10</span><span class="fx-rems" data-fxrem="passive"></span></div>
+      <div class="ckv ckv-sec"><span class="ckv-l">🌙 Vision</span><input type="text" class="ckv-wide" data-bind="vision"><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></div>
     </div>
   </div>
   <div class="ck-duo">
@@ -2383,11 +2376,6 @@ function recalc(){
       const tip=r.cond?`<span class="sk-tip">${esc(r.cond)}</span>`:'';
       return `<span class="sk-fx">★ ${esc(r.src)}${amt}${tip}</span>`;
     }).join(''));
-  });
-  // HUD's second line only exists when something is on it — hide empty stat wrappers
-  $$('.chud-x').forEach(x=>{
-    const has=[...x.querySelectorAll('[data-fxrem],[data-fxnote]')].some(el=>el.innerHTML.trim());
-    x.style.display=has?'':'none';
   });
   // spellcasting
   if(S.spellAbility){
