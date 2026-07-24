@@ -457,8 +457,18 @@ label.fld span{
 .ck-grid{display:grid;grid-template-columns:232px minmax(0,1fr) 232px;gap:10px;align-items:start}
 .ck-col{display:flex;flex-direction:column;gap:10px;min-width:0}
 .ck-col .panel{margin:0}
-@media(max-width:1100px){.ck-grid{grid-template-columns:232px minmax(0,1fr)}.ck-right{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}.ck-right .panel{flex:1 1 260px}}
-@media(max-width:760px){.ck-grid{grid-template-columns:1fr}.ck-right{flex-direction:column}}
+/* Tablet and below: a 232px sidebar next to Attacks left almost no room for the hit/damage
+   numbers, forcing every card to wrap tall. Below 1100px, Attacks drops to a single full-width
+   column and goes first; Death Saves/Hit Dice and the resource panels move underneath as their
+   own wrapped rows instead of squeezing the center column. */
+@media(max-width:1100px){
+  .ck-grid{grid-template-columns:1fr}
+  .ck-center{order:1}
+  .ck-left{order:2;flex-direction:row;flex-wrap:wrap}
+  .ck-left .panel{flex:1 1 240px}
+  .ck-right{order:3;flex-direction:row;flex-wrap:wrap}
+  .ck-right .panel{flex:1 1 240px}
+}
 /* Full-width duo: action library on the left, the turn plan as its own equal card on the right.
    These two panels are where a turn actually gets decided, so they carry the stage — a lit top
    edge and deeper shadow — while everything below (death saves, hit dice, resources, rules)
@@ -707,15 +717,10 @@ label.fld span{
 .ck-death.ck-collapsed h2::after{content:' — hidden while you\'re up (tap to peek)';color:var(--faint);font-size:.7rem;letter-spacing:0;text-transform:none}
 .ck-death.ck-down{border-color:var(--red);box-shadow:0 0 12px rgba(224,75,74,.25)}
 .ck-death.ck-down h2{color:var(--red)}
-/* Attack cards inside the cockpit's narrower column: shave the chrome so each card reads as
-   a couple of tight lines instead of a tall block. */
-.ck-atk-body .atk-card{padding:6px 10px;margin-bottom:8px}
+/* atk-card only ever renders inside the Attacks panel, so hover lift (a mouse-pointer cue) is
+   switched off here — there's no hover on a touchscreen, just a shadow stuck on after a tap. */
 .ck-atk-body .atk-card:hover{transform:none;box-shadow:none}
-.ck-atk-body .atk-row{gap:8px}
-.ck-atk-body .atk-icon{padding-top:4px}
-.ck-atk-body .atk-config{margin-top:3px;gap:3px 6px}
-.ck-atk-body .buff-row{padding:2px 4px 4px 8px}
-.ck-atk-body .atk-dmg{padding-left:8px}
+.ck-atk-body .buff-row{padding:2px 4px 6px 10px}
 .atk-note{
   display:block;width:100%;background:transparent;border:none;border-bottom:1px dashed transparent;
   color:var(--muted);font-size:.78rem;font-style:italic;padding:2px 4px;margin-top:2px;
@@ -1167,32 +1172,37 @@ label.fld.sug-wrap{display:block}
    own name — either way it's the same input. */
 input.atk-combo{width:100%;font-size:.92rem}
 .atk-weapon-results{width:100%}
-.atk-config{display:flex;flex-wrap:wrap;gap:5px 8px;margin-top:5px;align-items:center}
+.atk-config{display:flex;flex-wrap:wrap;gap:7px 10px;margin-top:6px;align-items:center}
 /* Each label+input is one inline unit so wrapping (on narrow rows) breaks between pairs, never
    inside one — no more orphan input floating on its own line with no visible label. */
-.cfg-pair{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
-.cfg-lbl{color:var(--faint);font-size:.68rem;white-space:nowrap}
-select.atk-stat-sel{width:64px;font-size:.78rem;padding:3px 4px}
-select.atk-dtype-sel{width:92px;font-size:.78rem;padding:3px 4px}
-input.atk-die{width:44px;text-align:center;font-size:.82rem;background:var(--panel3);
-  border:1px solid var(--border-lt);border-radius:5px;padding:3px 2px}
-input.atk-tiny{width:30px;text-align:center;font-size:.8rem;padding:3px 2px}
+.cfg-pair{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.cfg-lbl{color:var(--faint);font-size:.7rem;white-space:nowrap}
+/* These fields (stat/die/type/misc bonuses) are the ones most often tapped mid-combat on a
+   touchscreen — sized well past the old ~26px targets so a fingertip doesn't miss or land on
+   the field next door. */
+select.atk-stat-sel{width:76px;font-size:.85rem;padding:6px 6px}
+select.atk-dtype-sel{width:104px;font-size:.85rem;padding:6px 6px}
+input.atk-die{width:54px;text-align:center;font-size:.9rem;background:var(--panel3);
+  border:1px solid var(--border-lt);border-radius:5px;padding:6px 4px}
+input.atk-tiny{width:40px;text-align:center;font-size:.88rem;padding:6px 4px}
 /* Hit sits left of Damage — a thin gold divider marks the boundary between "will it land" and
    "how much does it do" so the two never blur together even at a glance. */
-.atk-hit{flex:0 0 60px;text-align:center;padding-top:1px}
-.atk-dmg{flex:1 1 170px;min-width:140px;border-left:1px solid var(--border-lt);padding-left:10px}
+.atk-hit{flex:0 0 82px;text-align:center;padding-top:1px}
+.atk-dmg{flex:1 1 190px;min-width:160px;border-left:1px solid var(--border-lt);padding-left:10px}
 .atk-label{color:var(--muted);font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;display:block}
+/* The two numbers a player actually needs mid-swing — to-hit and final damage — read at a glance
+   now instead of blending into the surrounding labels/breakdowns. */
 .atk-hit .big,.atk-final{
-  color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:1.2rem;white-space:nowrap;
+  color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:1.6rem;white-space:nowrap;
 }
 .atk-hit .big{display:block}
-.atk-formula{color:var(--text);font-size:.88rem;display:block}
+.atk-formula{color:var(--text);font-size:1rem;display:block}
 .atk-breakdown{color:var(--faint);font-size:.66rem;display:block;margin-top:1px;white-space:nowrap}
-.atk-roll{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap}
-.atk-roll input{width:48px;text-align:center;font-size:.85rem}
+.atk-roll{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
+.atk-roll input{width:56px;text-align:center;font-size:.92rem;padding:6px 4px}
 /* A buff's own damage-roll input (shown only when that buff has dice to roll) is a smaller
    sibling of the main weapon roll, not its own separate concept. */
-.atk-roll input.atk-buffroll{width:38px;font-size:.8rem}
+.atk-roll input.atk-buffroll{width:42px;font-size:.85rem}
 .atk-roll .atk-plus{color:var(--faint);font-size:.8rem}
 .atk-eq{color:var(--faint)}
 .atk-legacy{color:var(--faint);font-size:.72rem;font-style:italic;display:block;padding:2px 4px 4px}
