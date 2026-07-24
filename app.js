@@ -1252,9 +1252,9 @@ function wireFeaturesLock(){
 // elsewhere (attacks, spellbook, combat-flagged features) plus free-form custom cards. Paper
 // rule: every derived field is overridable per card (action type, condition), every card can be
 // pinned/hidden, and nothing is enforced — the cockpit reminds and tracks, the player decides.
-const CK_TYPES=[['action','Action'],['bonus','Bonus Action'],['reaction','Reaction'],['item','Item'],['other','Other']];
-const CK_TYPE_ORDER={action:0,bonus:1,reaction:2,item:3,other:4};
-const CK_PILL={action:'pill-action',bonus:'pill-bonus',reaction:'pill-react',item:'pill-item',other:'pill-cast'};
+const CK_TYPES=[['action','Action'],['bonus','Bonus Action'],['item','Item'],['other','Other']];
+const CK_TYPE_ORDER={action:0,bonus:1,item:2,other:3};
+const CK_PILL={action:'pill-action',bonus:'pill-bonus',item:'pill-item',other:'pill-cast'};
 let CK_FILTER='all', CK_UNDO=null;
 const CK_OPEN=new Set(), CK_RULES_OPEN=new Set();
 // Older saves may lack the cockpit fields entirely — normalize on every access.
@@ -1289,10 +1289,10 @@ function spellActionType(sp){
   const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
   if(db){
     const b=db.t.endsWith('r')?db.t.slice(0,-1):db.t;
-    return b==='A'?'action':b==='B'?'bonus':b==='R'?'reaction':'other';
+    return b==='A'?'action':b==='B'?'bonus':'other';
   }
   const m=(sp.meta||'').toLowerCase();
-  return m.startsWith('bonus')?'bonus':m.startsWith('reaction')?'reaction':m.includes('action')?'action':'other';
+  return m.startsWith('bonus')?'bonus':m.includes('action')&&!m.startsWith('reaction')?'action':'other';
 }
 function spellIsConc(sp){
   const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
@@ -1431,7 +1431,7 @@ function ckCardHTML(card){
   const open=CK_OPEN.has(card.key);
   const sub=ckSubHTML(card);
   const tl=Object.fromEntries(CK_TYPES);
-  return `<div class="ck-card ck-card-${card.type||'other'} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${open?'open':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
+  return `<div class="ck-card ck-card-${card.type||'other'} ${card.kind==='sp'?'ck-card-spell':''} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${open?'open':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
     <div class="ck-card-head">
       <span class="ck-drag-handle" data-ckdraghandle title="Drag to place in your turn plan">⠿</span>
       <span class="ck-card-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</span>
@@ -1448,12 +1448,16 @@ function renderCockpitCards(){
   const box=$('#ckCards'); if(!box) return;
   const c=ck();
   let cards=cockpitCards();
-  const counts={all:cards.length};
+  const counts={all:cards.length,spell:cards.filter(x=>x.kind==='sp').length};
   CK_TYPES.forEach(([v])=>counts[v]=cards.filter(x=>x.type===v).length);
-  if(CK_FILTER!=='all') cards=cards.filter(x=>x.type===CK_FILTER);
+  // "Spells" is a source facet (kind), not an action-type facet — it sits alongside Action/Bonus/
+  // etc. rather than replacing them, so a spell that's also an Action (e.g. Fireball) shows up
+  // under either filter instead of being forced into one exclusive bucket.
+  if(CK_FILTER==='spell') cards=cards.filter(x=>x.kind==='sp');
+  else if(CK_FILTER!=='all') cards=cards.filter(x=>x.type===CK_FILTER);
   cards.sort((a,b)=>(b.pin-a.pin)||(CK_TYPE_ORDER[a.type]-CK_TYPE_ORDER[b.type])||((a.cond?1:0)-(b.cond?1:0))||a.name.localeCompare(b.name));
-  $('#ckFilters').innerHTML=[['all','All'],...CK_TYPES].map(([v,l])=>
-    `<button class="ck-filter ${CK_FILTER===v?'on':''}" data-ckfilter="${v}">${l}${counts[v]?` <i>${counts[v]}</i>`:''}</button>`).join('');
+  $('#ckFilters').innerHTML=[['all','All'],...CK_TYPES,['spell','🔮 Spells']].map(([v,l])=>
+    `<button class="ck-filter ${v==='spell'?'ck-filter-spell':''} ${CK_FILTER===v?'on':''}" data-ckfilter="${v}">${l}${counts[v]?` <i>${counts[v]}</i>`:''}</button>`).join('');
   box.innerHTML = cards.length
     ? cards.map(ckCardHTML).join('')
     : '<p class="prep-note" style="margin:0">Nothing here yet — add attacks below, pick spells on the Spells tab, flag features with ⚔ on the Features tab, or add a custom card.</p>';
@@ -1495,7 +1499,7 @@ function renderCockpitPlan(){
           ${noteIn}
           <span class="ck-ps-sub">source card was removed — step kept as a note</span></div>
           <button data-plandel="${i}" title="Remove step">✕</button></div>`;
-        return `<div class="ck-plan-step ck-ps-${card.type} ${open?'open':''}" data-planstep="${i}">
+        return `<div class="ck-plan-step ck-ps-${card.type} ${card.kind==='sp'?'ck-card-spell':''} ${open?'open':''}" data-planstep="${i}">
           <span class="ck-drag-handle" data-ckdraghandle title="Drag to reorder">⠿</span>
           <i>${i+1}</i>
           <div class="ck-ps-main">

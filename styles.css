@@ -479,7 +479,11 @@ label.fld span{
   box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(201,162,39,.08);
 }
 .ck-duo .panel h2{color:var(--gold-lt);font-size:1rem;letter-spacing:2.5px}
-@media(max-width:950px){.ck-duo{grid-template-columns:1fr}}
+/* 950px stacked these even on a tablet held in portrait (iPad-class devices are ~745-834px wide
+   there) — both panels wrap their own content (filter chips, step list) at any width, so there's
+   no reason they need more room than that to stay side by side. Only phone-width viewports stack
+   now. */
+@media(max-width:680px){.ck-duo{grid-template-columns:1fr}}
 /* Reference zone below: death saves, hit dice, attacks, resources, rules — quieter chrome so
    the eye lands on the duo above first, then drops down here only when a specific number is
    needed. Same data, less visual shouting. */
@@ -518,28 +522,36 @@ label.fld span{
 }
 .ck-filter i{font-style:normal;opacity:.7;font-size:.74rem}
 .ck-filter.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-lt)}
+/* Spells is a separate facet from the action-type filters next to it (source, not timing) —
+   a violet border marks that split even before it's tapped active. */
+.ck-filter-spell{border-color:rgba(165,140,224,.5)}
+.ck-filter-spell.on{background:rgba(165,140,224,.28);border-color:#a58ce0;color:#cdbdf0}
 .ck-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
 /* Every card carries a lit left spine in its action-type color — the same color language as
    the filter pills and turn-plan steps, so the grid is scannable by color alone: green =
-   action, gold = bonus, ember = reaction, teal = item, blue = other. No need to read every
-   label to find "what can I still do this turn." */
+   action, gold = bonus, teal = item, blue = other. No need to read every label to find
+   "what can I still do this turn." */
 .ck-card{
   background:var(--panel3);border:1px solid var(--border-lt);border-left-width:3px;border-radius:9px;
-  padding:6px 9px;cursor:pointer;min-width:0;transition:border-color .15s ease,transform .1s ease;
+  padding:6px 9px;cursor:pointer;min-width:0;transition:border-color .15s ease,transform .1s ease,background .15s ease;
 }
 .ck-card-action{border-left-color:#7fd6a4}
 .ck-card-bonus{border-left-color:#e8c25b}
-.ck-card-reaction{border-left-color:#e0876f}
 .ck-card-item{border-left-color:#6fd0c4}
 .ck-card-other{border-left-color:#7db8e8}
+/* Spells carry a second, independent signal — a faint violet wash on top of whichever
+   action-type spine color they already have — so Fireball (green spine, it's an Action) still
+   visibly reads as a spell at a glance instead of looking identical to a weapon attack. */
+.ck-card.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.16),var(--panel3) 75%)}
 .ck-card:hover{border-color:var(--border-strong,var(--muted));transform:translateY(-1px)}
 .ck-card.open{grid-column:1/-1;background:var(--panel2);border-color:var(--gold-dim);transform:none}
+.ck-card.open.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.12),var(--panel2) 75%)}
 .ck-card.open.ck-card-action{border-left-color:#7fd6a4}
 .ck-card.open.ck-card-bonus{border-left-color:#e8c25b}
-.ck-card.open.ck-card-reaction{border-left-color:#e0876f}
 .ck-card.open.ck-card-item{border-left-color:#6fd0c4}
 .ck-card.open.ck-card-other{border-left-color:#7db8e8}
 .ck-card.ck-cond{background:rgba(232,194,91,.05)}
+.ck-card.ck-cond.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.16),rgba(232,194,91,.05) 75%)}
 /* Wrap the whole head onto a second line rather than crushing the name flat: a long pill
    ("BONUS ACTION") next to a two-word name used to leave the name almost no room, which then
    broke mid-word ("Shortswor" / "d left"). Now the name keeps a real floor and the pill/⤵
@@ -652,11 +664,12 @@ label.fld span{
 .ck-roll b[data-atkfinal]{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:.95rem}
 .ck-plan-step.ck-ps-action{border-left-color:#7fd6a4}
 .ck-plan-step.ck-ps-bonus{border-left-color:#e8c25b}
-.ck-plan-step.ck-ps-reaction{border-left-color:#e0876f}
 .ck-plan-step.ck-ps-item{border-left-color:#6fd0c4}
 .ck-plan-step.ck-ps-other{border-left-color:#7db8e8}
 .ck-plan-step.ck-ps-gone{opacity:.6;border-left-color:var(--border-lt)}
+.ck-plan-step.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.16),var(--panel3) 75%)}
 .ck-plan-step.open{background:var(--panel2);border-color:var(--gold-dim);cursor:default}
+.ck-plan-step.open.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.12),var(--panel2) 75%)}
 .ck-plan-step>[data-plandel]{background:transparent;border:none;color:var(--faint);cursor:pointer;font-size:.85rem;padding:2px 4px;flex-shrink:0}
 .ck-plan-step>[data-plandel]:hover{color:var(--red)}
 .ck-plan-add{
