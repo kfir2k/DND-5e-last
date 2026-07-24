@@ -143,3 +143,8 @@ function asiLevels(classId){
   if(classId==='rogue')   return [4,8,10,12,16,19];
   return base;
 }
+// PHB 1-20 XP-to-reach-this-level table (index = level). Only used when a table tracks XP —
+// tables that level by milestone just never fill the XP field, so the Overview XP bar stays
+// hidden (see renderOverviewIdentity).
+const XP_THRESHOLDS=[0,0,300,900,2700,6500,14000,23000,34000,48000,64000,85000,
+  100000,120000,140000,165000,195000,225000,265000,305000,355000];

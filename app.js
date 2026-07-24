@@ -164,92 +164,12 @@ function setPath(obj,path,val){
 }
 
 // ---------- Page templates ----------
-function hpPanelHTML(){
+// The combat HUD strip — HP/AC/Init up top, Speed/Prof/Passive/Vision underneath, concentration
+// + top-state chips woven in — is rendered on both Combat (where it lives sticky at the top of a
+// fight) and Overview (the title page's vitals strip). Same markup, same data-bind/data-calc
+// bindings, two homes: this is markup reuse, not a second implementation to keep in sync by hand.
+function combatHudHTML(){
   return `
-  <div class="hp-panel">
-    <div class="hp-main">
-      <div class="hp-numbers">
-        <input type="number" class="hp-cur" data-bind="hpCurrent">
-        <span class="hp-slash">/</span>
-        <input type="number" class="hp-max-in" data-bind="hpMax" title="Hit point maximum">
-      </div>
-      <div class="hp-bar"><div class="hp-fill"></div><span class="hp-temp-fill"></span></div>
-      <span class="fx-note" data-fxnote="hpmax" style="text-align:center"></span>
-      <span class="fx-rems" data-fxrem="hpmax" style="justify-content:center"></span>
-      <div class="hp-btns">
-        <button class="hp-btn dmg" data-hp="-10">−10</button>
-        <button class="hp-btn dmg" data-hp="-5">−5</button>
-        <button class="hp-btn dmg" data-hp="-1">−1</button>
-        <button class="hp-btn heal" data-hp="1">+1</button>
-        <button class="hp-btn heal" data-hp="5">+5</button>
-        <button class="hp-btn heal" data-hp="10">+10</button>
-      </div>
-    </div>
-    <div class="temp-box">
-      <label class="fld"><span>Temp HP</span>
-        <input type="number" data-bind="hpTemp">
-      </label>
-    </div>
-  </div>`;
-}
-// Vitals stat tiles carry the same elemental accent colors as the ability cards (AC=steel,
-// Initiative=amber, Speed=verdant, Perception=violet) — no separate summary card duplicating
-// these numbers, just the real editable tiles dressed up in place. AC and Initiative are the two
-// numbers a player needs instantly in a fight, so they get their own larger "primary" row;
-// Speed/Proficiency/Passive Perception/Darkvision are checked far less often mid-combat and sit
-// smaller underneath instead of competing for the same visual weight.
-function vitalsHTML(){
-  return `
-  <div class="vitals-primary">
-    <div class="stat stat-ac"><span class="stat-label">🛡 Armor Class</span><input type="number" data-bind="ac"><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></div>
-    <div class="stat computed stat-init"><span class="stat-label">⚡ Initiative</span><span class="big" data-calc="initiative">+0</span><span class="fx-rems" data-fxrem="init"></span></div>
-  </div>
-  <div class="stats-row vitals-secondary">
-    <div class="stat stat-speed"><span class="stat-label">💨 Speed</span><input type="text" data-bind="speed"><span class="fx-note" data-fxnote="speed"></span><span class="fx-rems" data-fxrem="speed"></span></div>
-    <div class="stat"><span class="stat-label">Proficiency</span><input type="number" data-bind="profBonus"></div>
-    <div class="stat computed stat-perc"><span class="stat-label">👁 Passive Perception</span><span class="big" data-calc="passive">10</span><span class="fx-rems" data-fxrem="passive"></span></div>
-    <div class="stat stat-vision"><span class="stat-label">🌙 Darkvision</span><input type="text" data-bind="vision"><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></div>
-  </div>`;
-}
-
-const PAGES = {
-overview:`
-  <div class="panel"><h2>Ability Scores</h2><div class="abilities" id="abilityCards"></div></div>
-  <div class="panel"><h2>Vitals</h2>${vitalsHTML()}</div>
-  <div class="grid g2">
-    <div class="panel"><h2>Hit Points</h2>${hpPanelHTML()}</div>
-    <div class="panel"><h2>Inspiration &amp; Experience</h2>
-      <button class="insp-btn" id="inspBtn">Inspiration</button>
-      <div style="margin-top:12px" class="grid g3">
-        <label class="fld"><span>Experience Points</span><input type="text" data-bind="xp"></label>
-        <label class="fld"><span>Alignment</span><input type="text" data-bind="alignment"></label>
-      </div>
-    </div>
-  </div>
-  <div class="panel"><h2>At a Glance</h2><div class="ov-quick" id="ovQuick"></div></div>`,
-
-build:`
-  <div class="panel build-panel" id="buildPanel">
-    <div class="build-icon" id="buildIcon">⚔</div>
-    <h2>Build — Class &amp; Race</h2>
-    <div class="build-title" id="buildTitle"></div>
-    <div class="grid g3">
-      <label class="fld"><span>Class</span><select id="classSel"><option value="">— choose —</option></select></label>
-      <label class="fld"><span>Level</span><input type="number" id="levelIn" min="1" max="20" value="1"></label>
-      <label class="fld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="e.g. Gloom Stalker"></label>
-      <label class="fld"><span>Race</span><select id="raceSel"><option value="">— choose —</option></select></label>
-      <label class="fld" id="subraceFld" style="display:none"><span>Subrace</span><select id="subraceSel"></select></label>
-      <label class="fld flex-fld" id="flex0Fld" style="display:none"><span id="flex0Lbl">Bonus +1 (choice 1)</span><select id="flex0"></select></label>
-      <label class="fld flex-fld" id="flex1Fld" style="display:none"><span id="flex1Lbl">Bonus +1 (choice 2)</span><select id="flex1"></select></label>
-    </div>
-    <p class="prep-note" id="buildNote">Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses. Subclass features are searchable in the Features tab once picked here.</p>
-  </div>
-  <div class="panel" id="asiPanel" style="display:none"><h2>Level-Up Choices — ASI &amp; Feats</h2>
-    <p class="prep-note" style="margin:0 0 10px">At each of these levels you chose either an Ability Score Improvement (two +1s — pick the same ability twice for +2) or a feat. Ability picks are added to your scores automatically.</p>
-    <div id="asiList"></div>
-  </div>`,
-
-combat:`
   <div class="combat-hud">
     <div class="chud-primary">
     <div class="chud-hp">
@@ -278,8 +198,8 @@ combat:`
     <div class="ckv ckv-primary"><span class="ckv-l">🛡 AC</span><input type="number" data-bind="ac"><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></div>
     <div class="ckv ckv-primary computed"><span class="ckv-l">⚡ Init</span><span class="ckv-big" data-calc="initiative">+0</span><span class="fx-rems" data-fxrem="init"></span></div>
     <span class="chud-sep chud-sep-conc"></span>
-    <span class="ck-conc" id="ckConc"></span>
-    <span class="ck-topstates" id="ckTopStates"></span>
+    <span class="ck-conc"></span>
+    <span class="ck-topstates"></span>
     </div>
     <div class="chud-senses">
       <span class="chud-senses-lbl">Senses &amp; Movement</span>
@@ -288,7 +208,84 @@ combat:`
       <div class="ckv ckv-sec computed"><span class="ckv-l">👁 Passive</span><span class="ckv-big" data-calc="passive">10</span><span class="fx-rems" data-fxrem="passive"></span></div>
       <div class="ckv ckv-sec"><span class="ckv-l">🌙 Vision</span><input type="text" class="ckv-wide" data-bind="vision"><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></div>
     </div>
+  </div>`;
+}
+
+const PAGES = {
+overview:`
+  <div class="panel ov-identity" id="ovIdentity">
+    <div class="ov-id-icon" id="ovIdIcon">⚔</div>
+    <div class="ov-id-main">
+      <input type="text" class="ov-id-name" data-bind="name" placeholder="Character Name" autocomplete="off">
+      <div class="ov-id-line">
+        <input type="text" class="ov-id-field" data-bind="subclass" placeholder="Subclass" size="12">
+        <span class="ov-id-dot">·</span>
+        <input type="text" class="ov-id-field" data-bind="classLevel" placeholder="Class &amp; Level" size="12">
+        <span class="ov-id-dot">·</span>
+        <input type="text" class="ov-id-field" data-bind="race" placeholder="Race" size="10">
+        <span class="ov-id-dot">·</span>
+        <input type="text" class="ov-id-field" data-bind="background" placeholder="Background" size="10">
+        <span class="ov-id-dot">·</span>
+        <input type="text" class="ov-id-field" data-bind="alignment" placeholder="Alignment" size="10">
+      </div>
+      <p class="ov-id-outlook" id="ovOutlook"></p>
+    </div>
+    <div class="ov-id-side">
+      <button class="insp-btn big" id="inspBtn">Inspiration</button>
+      <div class="ov-xp" id="ovXp"></div>
+    </div>
   </div>
+  ${combatHudHTML()}
+  <div class="grid g2 ov-main-grid">
+    <div class="ov-col">
+      <div class="panel"><h2>Ability Scores</h2><div class="abilities" id="abilityCards"></div></div>
+      <div class="panel"><h2>Saving Throws</h2><div class="save-list-mini" id="ovSaves"></div></div>
+    </div>
+    <div class="ov-col">
+      <div class="panel"><h2>Trained Skills</h2><div id="ovSkillChips"></div></div>
+      <div class="panel ov-spellslots-panel" id="ovSpellPanel"><h2>🔮 Spellcasting</h2>
+        <div class="stats-row" style="grid-template-columns:1fr 1fr">
+          <div class="stat computed stat-dc"><span class="stat-label">🔮 Spell Save DC</span><span class="big" data-calc="spellDC">—</span></div>
+          <div class="stat computed stat-dc"><span class="stat-label">✨ Spell Attack</span><span class="big" data-calc="spellAtk">—</span></div>
+        </div>
+        <div class="ov-spellslots-list"></div>
+        <span class="ck-conc"></span>
+      </div>
+      <div class="panel"><h2>Wealth &amp; Attunement</h2><div id="ovWealth"></div></div>
+      <div class="panel"><h2>States</h2>
+        <div class="ck-states-list"></div>
+        <div class="fx-addrow" style="margin-top:6px">
+          <input type="text" id="ovStateIn" placeholder="e.g. Raging, Hidden, Blessed" style="flex:1;min-width:0">
+          <button class="add-btn" id="ovStateAdd">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="panel ov-whisper" id="ovWhisper"></div>`,
+
+build:`
+  <div class="panel build-panel" id="buildPanel">
+    <div class="build-icon" id="buildIcon">⚔</div>
+    <h2>Build — Class &amp; Race</h2>
+    <div class="build-title" id="buildTitle"></div>
+    <div class="grid g3">
+      <label class="fld"><span>Class</span><select id="classSel"><option value="">— choose —</option></select></label>
+      <label class="fld"><span>Level</span><input type="number" id="levelIn" min="1" max="20" value="1"></label>
+      <label class="fld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="e.g. Gloom Stalker"></label>
+      <label class="fld"><span>Race</span><select id="raceSel"><option value="">— choose —</option></select></label>
+      <label class="fld" id="subraceFld" style="display:none"><span>Subrace</span><select id="subraceSel"></select></label>
+      <label class="fld flex-fld" id="flex0Fld" style="display:none"><span id="flex0Lbl">Bonus +1 (choice 1)</span><select id="flex0"></select></label>
+      <label class="fld flex-fld" id="flex1Fld" style="display:none"><span id="flex1Lbl">Bonus +1 (choice 2)</span><select id="flex1"></select></label>
+    </div>
+    <p class="prep-note" id="buildNote">Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses. Subclass features are searchable in the Features tab once picked here.</p>
+  </div>
+  <div class="panel" id="asiPanel" style="display:none"><h2>Level-Up Choices — ASI &amp; Feats</h2>
+    <p class="prep-note" style="margin:0 0 10px">At each of these levels you chose either an Ability Score Improvement (two +1s — pick the same ability twice for +2) or a feat. Ability picks are added to your scores automatically.</p>
+    <div id="asiList"></div>
+  </div>`,
+
+combat:`
+  ${combatHudHTML()}
   <div class="ck-duo">
     <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
       <div id="ckUndo"></div>
@@ -337,11 +334,11 @@ combat:`
       </div>
     </div>
     <div class="ck-col ck-right">
-      <div class="panel" id="combatSlotsPanel"><h2>🔮 Spell Slots</h2>
-        <div id="combatSlots"></div>
+      <div class="panel ov-spellslots-panel" id="combatSlotsPanel"><h2>🔮 Spell Slots</h2>
+        <div class="ov-spellslots-list" id="combatSlots"></div>
       </div>
       <div class="panel"><h2>🏷 States</h2>
-        <div id="ckStates"></div>
+        <div class="ck-states-list" id="ckStates"></div>
         <div class="fx-addrow" style="margin-top:6px">
           <input type="text" id="ckStateIn" placeholder="e.g. Raging, Hidden, Blessed" style="flex:1;min-width:0">
           <button class="add-btn" id="ckStateAdd">+</button>
@@ -631,7 +628,7 @@ function showTab(id){
   // Textareas rendered while their tab was hidden measured scrollHeight 0, so auto-grow
   // clipped them to the minimum — remeasure everything the moment the tab is actually visible.
   $$('#page-'+id+' textarea').forEach(autoGrow);
-  if(id==='overview') renderOverviewQuick();
+  if(id==='overview') renderOverview();
   // Title/description edits on the Features tab don't live-refresh this panel (typing shouldn't
   // yank focus mid-keystroke), so re-render it fresh whenever the Combat tab is opened — otherwise
   // a feature edited after its "Show in Combat" flag was set could show a stale row with no chevron.
@@ -678,8 +675,10 @@ function renderAbilityCards(){
 }
 // Saving throws as six ability tiles — same elemental icon + color language as the ability
 // cards, so a save reads as "that ability, defending". The whole tile is the tap target.
+// Rendered into both the Skills tab's full list and Overview's compact mirror — same tiles, same
+// data-save/data-savebonus wiring, two homes (see combatHudHTML for the same pattern on Combat).
 function renderSaves(){
-  $('#saveList').innerHTML = ABILITIES.map(([k,label])=>{
+  const html = ABILITIES.map(([k,label])=>{
     const srcs=allFx().filter(x=>x.t==='save'&&x.ab===k).map(x=>x.src);
     const granted=srcs.length>0&&!S.saveProf[k];
     const cls=S.saveProf[k]?'on':granted?'grant':'';
@@ -692,6 +691,7 @@ function renderSaves(){
       <span class="save-bonus" data-savebonus="${k}">+0</span>
       <span class="save-tag">${tag}</span>
     </button>`;}).join('');
+  $$('#saveList, #ovSaves').forEach(el=>el.innerHTML=html);
   $$('[data-save]').forEach(b=>b.addEventListener('click',()=>{
     S.saveProf[b.dataset.save]=!S.saveProf[b.dataset.save];
     renderSaves(); recalc(); save();
@@ -957,7 +957,7 @@ function renderEquipment(){
   const list=$('#equipList'); if(!list) return;
   S.equipment=S.equipment||[];
   // backfill rows saved before items had types
-  S.equipment.forEach(e=>{ if(e.type==null)e.type=(ITEM_TYPES[S.eqTab]?S.eqTab:'G'); if(e.desc==null)e.desc=''; if(e.combat==null)e.combat=false; });
+  S.equipment.forEach(e=>{ if(e.type==null)e.type=(ITEM_TYPES[S.eqTab]?S.eqTab:'G'); if(e.desc==null)e.desc=''; if(e.combat==null)e.combat=false; if(e.att==null)e.att=false; });
   const order=Object.keys(ITEM_TYPES);
   const rowHTML=({e,i})=>`
     <div class="eq-row ${EQ_OPEN.has(i)?'open':''}">
@@ -966,6 +966,7 @@ function renderEquipment(){
       <select class="eq-type" data-eqtype="${i}" title="Item type">${order.map(t=>`<option value="${t}" ${e.type===t?'selected':''}>${ITEM_TYPES[t][0]}</option>`).join('')}</select>
       <button class="spell-info-btn" data-eqinfo="${i}" title="Notes / description">ℹ</button>
       <button class="combat-flag ${e.combat?'on':''}" data-eqcombat="${i}" title="${e.combat?'Shown on the Combat tab — tap to remove':'Tap to show on the Combat tab as a usable card'}">⚔</button>
+      ${e.type==='M'?`<button class="attune-flag ${e.att?'on':''}" data-eqattune="${i}" title="${e.att?'Attuned — tap to remove':'Tap to mark as attuned (3-item limit)'}">✦</button>`:''}
       <button class="del-btn" data-del="equipment.${i}">✕</button>
       <div class="eq-desc"><textarea data-li="equipment.${i}.desc" placeholder="Notes / what it does…">${esc(e.desc)}</textarea></div>
     </div>`;
@@ -1020,6 +1021,13 @@ function renderEquipment(){
     e.combat=!e.combat;
     if(e.combat&&!e.actionType) e.actionType='item'; // lands in combat as an Item card
     renderEquipment(); renderCombatFeatures(); save();
+  }));
+  // 3-slot rule is a reminder, not an enforced cap (paper first) — Overview's Wealth &
+  // Attunement card flags 4+ instead of blocking the toggle here.
+  $$('[data-eqattune]').forEach(b=>b.addEventListener('click',()=>{
+    const e=S.equipment[+b.dataset.eqattune];
+    e.att=!e.att;
+    renderEquipment(); renderOverviewWealth(); save();
   }));
   $$('[data-eqinfo]').forEach(b=>b.addEventListener('click',()=>{
     const i=+b.dataset.eqinfo;
@@ -1519,17 +1527,22 @@ function renderCockpitPlan(){
   const clr=$('#ckPlanClear');
   if(clr) clr.style.display=cur.steps.length?'':'none';
 }
-// Concentration banner, state chips, ★ reminders feed, rules drawer.
+// Concentration banner, state chips, ★ reminders feed, rules drawer. Concentration/top-states/
+// full-states-list each render into every instance found (Combat's HUD + reference zone, and
+// Overview's identity banner + states card) — same data, several homes.
 function renderCockpitExtras(){
-  if(!$('#ckConc')) return;
+  if(!$('#ckCards')) return;
   ck();
-  $('#ckConc').innerHTML = S.concentration
+  const concHtml = S.concentration
     ? `◉ Concentrating: <b>${esc(S.concentration.name)}</b> <button data-ckconcdrop title="Drop concentration">✕</button><span class="ck-conc-tip">CON save when you take damage — DC 10 or half the damage, whichever is higher</span>`
     : '';
-  $('#ckTopStates').innerHTML=S.states.map(s=>`<span class="ck-state">${esc(s)}</span>`).join('');
-  $('#ckStates').innerHTML = S.states.length
+  $$('.ck-conc').forEach(el=>el.innerHTML=concHtml);
+  const topHtml=S.states.map(s=>`<span class="ck-state">${esc(s)}</span>`).join('');
+  $$('.ck-topstates').forEach(el=>el.innerHTML=topHtml);
+  const listHtml = S.states.length
     ? S.states.map((s,i)=>`<span class="fx-chip">${esc(s)}<button data-stdel="${i}">✕</button></span>`).join('')
     : '<p class="prep-note" style="margin:0">Nothing active.</p>';
+  $$('.ck-states-list').forEach(el=>el.innerHTML=listHtml);
   const rems=allFx().filter(x=>x.t==='statnote');
   $('#ckRems').innerHTML = rems.length
     ? rems.map(r=>{
@@ -1554,7 +1567,10 @@ function renderCombatFeatures(){ renderCockpitCards(); renderCockpitExtras(); }
 function wireCombatFeatures(){
   const box=$('#ckCards'); if(!box) return;
   const refresh=()=>{ renderCombatFeatures(); save(); };
-  $('#page-combat').addEventListener('click',e=>{
+  // Delegated on the whole document, not just #page-combat: several of these controls (state
+  // delete, drop-concentration, slot pips) are now mirrored onto Overview's identity banner and
+  // right column too, via the same data-ck*/data-stdel attributes.
+  document.addEventListener('click',e=>{
     const t=e.target;
     const slot=t.closest('[data-ckslot]');
     if(slot){ const [L,k]=slot.dataset.ckslot.split('.').map(Number);
@@ -1688,12 +1704,19 @@ function wireCombatFeatures(){
   });
   initCkDrag();
   $('#ckSpellsToggle').addEventListener('click',()=>{ ck().showAllSpells=!ck().showAllSpells; renderCockpitCards(); save(); });
-  $('#ckStateAdd').addEventListener('click',()=>{
-    const inp=$('#ckStateIn'), v=inp.value.trim(); if(!v) return;
-    ck(); S.states.push(v); inp.value='';
-    renderCockpitExtras(); save();
-  });
-  $('#ckStateIn').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#ckStateAdd').click(); });
+  // Same add-a-state control lives on both Combat and Overview (#ckState*/#ovState*) — one
+  // little wiring helper instead of duplicating the click+Enter logic per instance.
+  const wireStateAdd=(inId,btnId)=>{
+    const inp=$(inId), btn=$(btnId); if(!inp||!btn) return;
+    btn.addEventListener('click',()=>{
+      const v=inp.value.trim(); if(!v) return;
+      ck(); S.states.push(v); inp.value='';
+      renderCockpitExtras(); save();
+    });
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') btn.click(); });
+  };
+  wireStateAdd('#ckStateIn','#ckStateAdd');
+  wireStateAdd('#ovStateIn','#ovStateAdd');
   // Death saves stay out of sight while you're up; the header is always tappable to peek.
   $('#ckDeathHead').addEventListener('click',()=>{
     ck().showDeath=!ck().showDeath; recalc(); save();
@@ -2188,27 +2211,28 @@ function renderSpellLevels(){
 // entirely for non-casters and re-rendered by renderSpellLevels() so both stay in sync no matter
 // which tab the click happened on.
 function renderCombatSlots(){
-  const panel=$('#combatSlotsPanel'), list=$('#combatSlots');
-  if(!panel||!list) return; // Combat tab may not be built yet on first boot
+  const panels=$$('.ov-spellslots-panel'), lists=$$('.ov-spellslots-list');
+  if(!panels.length||!lists.length) return; // Combat/Overview may not be built yet on first boot
   const isCaster=!!S.spellAbility;
-  panel.style.display = isCaster ? '' : 'none';
+  panels.forEach(p=>p.style.display=isCaster?'':'none');
   if(!isCaster) return;
   const levels=S.spellLevels.map((lv,L)=>({lv,L})).filter(x=>x.L>0&&x.lv.total>0);
-  list.innerHTML = levels.length ? levels.map(({lv,L})=>`
+  const html = levels.length ? levels.map(({lv,L})=>`
     <div class="cslot-row tier${spellTier(L)}">
       <span class="cslot-lvl">${toRoman(L)}</span>
       <div class="pips cslot-pips">${Array.from({length:lv.total},(_,i)=>
         `<button class="pip ${i<lv.used?'used':''}" data-cslotpip="${L}.${i}" title="Level ${L} slot"></button>`).join('')}</div>
     </div>`).join('') : '<p class="prep-note" style="margin:0">No slot totals set yet — set them on the Spells tab.</p>';
+  lists.forEach(l=>l.innerHTML=html);
   renderCockpitCards(); // spell-card slot pips mirror this data — keep them in step
 }
 function wireCombatSlots(){
-  $('#combatSlots').addEventListener('click',e=>{
+  document.addEventListener('click',e=>{
     const p=e.target.closest('[data-cslotpip]'); if(!p) return;
     const [L,i]=p.dataset.cslotpip.split('.').map(Number);
     const lv=S.spellLevels[L];
     lv.used = (i<lv.used) ? i : i+1;
-    renderSpellLevels(); save(); // also refreshes this tracker — keeps Combat/Spells in sync
+    renderSpellLevels(); save(); // also refreshes this tracker — keeps Combat/Spells/Overview in sync
   });
 }
 // Tap-to-expand detail (range/duration/DC/wikidot link) — delegated once on the persistent
@@ -2429,38 +2453,82 @@ function recalc(){
   const insp=$('#inspBtn');
   if(insp){insp.classList.toggle('on',!!S.inspiration);
     insp.textContent=S.inspiration?'★ Inspired':'Inspiration';}
+  renderOverviewIdentity(); renderOverviewSkillChips(); renderOverviewWealth(); renderOverviewWhisper();
   document.title=(S.name?S.name+' — ':'')+'Character Binder';
 }
 function setCalc(key,val){ $$(`[data-calc="${key}"]`).forEach(el=>el.textContent=val); }
 
-// ---------- Overview "At a Glance" ----------
-function renderOverviewQuick(){
-  const preparedCount=S.spellLevels.reduce((n,lv,L)=>n+(L===0?0:lv.spells.filter(s=>s.prep).length),0);
-  const slotsLeft=S.spellLevels.reduce((n,lv,L)=>n+(L===0?0:Math.max(0,lv.total-lv.used)),0);
+// ---------- Overview identity banner: crest, level-up outlook, XP ----------
+// Level-up outlook (next ASI/feat, next proficiency bump) is level-based, not XP-based, so it
+// still means something for tables that level by milestone and never touch the XP field below.
+function renderOverviewIdentity(){
+  const panel=$('#ovIdentity'); if(!panel) return;
+  const accent=CLASS_COLOR[S.classId]||'#c9a227';
+  panel.style.setProperty('--accent',accent);
+  panel.style.setProperty('--accent-dim',accent+'30');
+  const icon=$('#ovIdIcon');
+  if(icon) icon.textContent = CLASS_ICON[S.classId] || ((S.name||'').trim()[0]||'?').toUpperCase();
+  const lvl=Math.max(1,Math.min(20,num(S.level)||1));
+  const nextAsi=asiLevels(S.classId).find(L=>L>lvl);
+  const nextBump=[5,9,13,17].find(L=>L>lvl);
+  const outlook=[];
+  if(nextAsi) outlook.push(`Next ASI/Feat at level ${nextAsi}`);
+  if(nextBump) outlook.push(`Proficiency +${2+Math.floor((nextBump-1)/4)} at level ${nextBump}`);
+  const outlookEl=$('#ovOutlook');
+  if(outlookEl){ outlookEl.textContent=outlook.join(' · '); outlookEl.style.display=outlook.length?'':'none'; }
+  // XP: the input always sits here for tables that track it; the bar/threshold text only shows
+  // once there's a real number in it, so milestone-leveling tables just never see it.
+  const xpVal=num(S.xp), next=XP_THRESHOLDS[lvl+1];
+  let xpHtml=`<input type="text" class="ov-xp-in" data-li="xp" value="${esc(S.xp)}" placeholder="XP">`;
+  if(xpVal>0 && lvl<20 && next!=null){
+    const prev=XP_THRESHOLDS[lvl]||0;
+    const pct=Math.max(0,Math.min(100,(xpVal-prev)/Math.max(1,next-prev)*100));
+    xpHtml+=`<div class="ov-xp-bar"><div class="ov-xp-fill" style="width:${pct}%"></div></div>
+      <span class="ov-xp-note">${(next-xpVal).toLocaleString()} to level ${lvl+1}</span>`;
+  }
+  const xpBox=$('#ovXp');
+  if(xpBox){ xpBox.innerHTML=xpHtml; wireList('#ovXp'); }
+}
+// ---------- Overview trained-skill chips: proficient/expertise only, tap → Skills tab ----------
+// Computes its own bonus text (rather than the data-skillbonus multi-target trick) since chips
+// are (re)created inside recalc() itself — a data-skillbonus span born after recalc()'s skill
+// loop already ran would sit at its "+0" placeholder until the next keystroke elsewhere.
+function renderOverviewSkillChips(){
+  const box=$('#ovSkillChips'); if(!box) return;
+  const P=num(S.profBonus);
+  const rows=SKILLS.map(([k,label,ab])=>({label,eff:effSkill(k),b:amod(ab)+effSkill(k)*P})).filter(r=>r.eff>0);
+  box.innerHTML = rows.length
+    ? rows.map(r=>`<button class="ov-skchip" data-ovsktab>${esc(r.label)} <span>${fmt(r.b)}</span> ${r.eff===2?'●●':'●'}</button>`).join('')
+    : '<p class="prep-note" style="margin:0">No trained skills yet — pick proficiencies on the Skills tab.</p>';
+  $$('[data-ovsktab]').forEach(b=>b.addEventListener('click',()=>showTab('skills')));
+}
+// ---------- Overview wealth + attunement ----------
+function renderOverviewWealth(){
+  const box=$('#ovWealth'); if(!box) return;
   const gold=S.money.gp+S.money.pp*10+Math.floor((S.money.sp+S.money.ep*5)/10+S.money.cp/100);
-  const feats=S.features.filter(f=>f.title.trim());
-  const atks=S.attacks.filter(a=>(a.name||'').trim()||a.weapon).map(a=>{
-    const s=atkSummary(a);
-    return {name:(a.name||'').trim()||(WEAPONS[a.weapon]?.n??'Attack'),bonus:s.bonus||'',dmg:s.dmg||''};
-  });
-  $('#ovQuick').innerHTML=`
-    <div class="ov-card ov-combat"><h3>⚔ Combat</h3>
-      <ul class="ov-list">
-        ${atks.length?atks.map(a=>`<li><span>${esc(a.name)}</span><span class="k">${esc(a.bonus)} · ${esc(a.dmg)}</span></li>`).join(''):'<li class="ov-empty">No attacks yet — add them in Combat</li>'}
-        <li><span class="k">Hit dice</span><span>${(()=>{const h=hdCount();return h.n?`${Math.max(0,h.n-num(S.hdUsed))}/${h.n}${h.die}`:'—';})()}</span></li>
-      </ul></div>
-    <div class="ov-card ov-magic"><h3>✦ Magic</h3>
-      <ul class="ov-list">
-        <li><span class="k">Prepared spells</span><span>${preparedCount}</span></li>
-        <li><span class="k">Slots remaining</span><span>${slotsLeft}</span></li>
-        <li><span class="k">Save DC / Attack</span><span>${S.spellAbility?(8+num(S.profBonus)+amod(S.spellAbility))+' / '+fmt(num(S.profBonus)+amod(S.spellAbility)):'—'}</span></li>
-      </ul></div>
-    <div class="ov-card ov-char"><h3>📜 Character</h3>
-      <ul class="ov-list">
-        <li><span class="k">Wealth (approx.)</span><span>${gold} gp</span></li>
-        <li><span class="k">Features</span><span>${feats.length?esc(feats.slice(0,3).map(f=>f.title).join(', '))+(feats.length>3?'…':''):'—'}</span></li>
-        <li><span class="k">Traits</span><span>${S.personality?esc(S.personality.slice(0,60))+(S.personality.length>60?'…':''):'—'}</span></li>
-      </ul></div>`;
+  const attuned=S.equipment.filter(e=>e.att&&(e.name||'').trim());
+  box.innerHTML=`
+    <div class="ov-wealth-total">${gold.toLocaleString()}<span> gp equiv.</span></div>
+    <div class="ov-wealth-coins">${['cp','sp','ep','gp','pp'].map(c=>`<span>${num(S.money[c])} ${c.toUpperCase()}</span>`).join('')}</div>
+    <div class="ov-attune-head">✦ Attunement <b class="${attuned.length>3?'ov-attune-over':''}">${attuned.length}/3</b></div>
+    ${attuned.length
+      ? `<ul class="ov-attune-list">${attuned.map(e=>`<li>${esc(e.name)}</li>`).join('')}</ul>`
+      : '<p class="prep-note" style="margin:0">Nothing attuned — flag a Magic item with ✦ on the Inventory tab.</p>'}`;
+}
+// ---------- Overview character whisper: one line per non-empty personality field ----------
+function renderOverviewWhisper(){
+  const box=$('#ovWhisper'); if(!box) return;
+  const fields=[['personality','Traits'],['ideals','Ideals'],['bonds','Bonds'],['flaws','Flaws']]
+    .filter(([k])=>(S[k]||'').trim());
+  box.style.display = fields.length ? '' : 'none';
+  box.innerHTML = fields.map(([k,label])=>{
+    const v=S[k].trim().split('\n')[0];
+    return `<p class="ov-whisper-line" data-ovwhisper><b>${label}.</b> ${esc(v.slice(0,140))}${v.length>140?'…':''}</p>`;
+  }).join('');
+  $$('[data-ovwhisper]').forEach(p=>p.addEventListener('click',()=>showTab('character')));
+}
+function renderOverview(){
+  renderOverviewIdentity(); renderOverviewSkillChips(); renderOverviewWealth(); renderOverviewWhisper();
 }
 
 // ---------- Add buttons (attacks / equipment / features / notes) ----------
@@ -3093,7 +3161,7 @@ function wireSettings(){
 function renderAll(){
   renderAbilityCards(); renderSaves(); renderSkills(); renderDeathSaves();
   renderAttacks(); renderEquipment(); renderFeatures(); renderNotes();
-  renderSpellLevels(); renderOverviewQuick(); renderCombatFeatures(); renderLanguages();
+  renderSpellLevels(); renderOverview(); renderCombatFeatures(); renderLanguages();
   renderBuildSelectors(); renderAsi(); renderHudControls();
   bindAll(); syncBound(); recalc();
 }

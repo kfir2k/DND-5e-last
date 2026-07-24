@@ -157,30 +157,7 @@ label.fld span{
 }
 
 /* ---------- Vitals: same elemental accents as ability cards, applied to the real tiles ---------- */
-.stat-ac{border-top:2px solid #5aa9e0}.stat-ac input,.stat-ac .big{color:#5aa9e0}
-.stat-init{border-top:2px solid #e0ab4a}.stat-init input,.stat-init .big{color:#e0ab4a}
-.stat-speed{border-top:2px solid #7dc26a}.stat-speed input,.stat-speed .big{color:#7dc26a}
-/* Speed holds text like "30 ft." — the shared 64px/1.3rem input (sized for 2-digit AC) clipped
-   the end of it. Still not enough room before — wider box, smaller font, minimal padding. */
-.stat-speed input{width:100%;max-width:112px;font-size:.98rem;padding:6px 3px}
-.stat-perc{border-top:2px solid #a58ce0}.stat-perc input,.stat-perc .big{color:#a58ce0}
-.stat-vision{border-top:2px solid #6f6bb0}.stat-vision input,.stat-vision .big{color:#6f6bb0}
-/* Holds text like "120 ft." or "None" — same fix as Speed above, so it never clips. */
-.stat-vision input{width:100%;max-width:112px;font-size:.98rem;padding:6px 3px}
 .stat-dc{border-top:2px solid #a58ce0}.stat-dc .big{color:#a58ce0;text-shadow:0 0 14px rgba(165,140,224,.35)}
-/* AC and Initiative are the two numbers you need instantly mid-fight, so they get a bigger,
-   bolder row of their own; Speed/Proficiency/Passive/Darkvision (checked far less often in
-   combat) sit smaller underneath instead of matching them tile-for-tile. */
-.vitals-primary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:14px}
-.vitals-primary .stat{border-top-width:3px;padding:16px 10px}
-.vitals-primary .stat-label{font-size:.8rem;letter-spacing:2px}
-.vitals-primary .big,.vitals-primary input{font-size:2.3rem}
-.vitals-secondary{opacity:.85}
-.vitals-secondary .stat{padding:8px 6px}
-.vitals-secondary .stat-label{font-size:.62rem}
-.vitals-secondary .big{font-size:1.15rem}
-.vitals-secondary input{font-size:1.05rem}
-.vitals-secondary .stat-speed input,.vitals-secondary .stat-vision input{font-size:.85rem;max-width:100px}
 
 /* ---------- Ability cards ---------- */
 /* Each ability gets its own elemental accent color (STR fire, DEX verdant, CON amber earth,
@@ -374,7 +351,7 @@ label.fld span{
   .eq-name{min-width:0}
   .eq-qty{flex-basis:34px;font-size:.78rem}
   .eq-type{flex-basis:38px}
-  .eq-row .del-btn,.eq-row .spell-info-btn,.eq-row .combat-flag{padding:2px 5px}
+  .eq-row .del-btn,.eq-row .spell-info-btn,.eq-row .combat-flag,.eq-row .attune-flag{padding:2px 5px}
   .eq-row .eq-desc{padding-left:12px}
   .money-hud{gap:8px;padding:6px 8px}
   .coin-hud input{width:52px;height:34px;font-size:.85rem}
@@ -895,6 +872,15 @@ label.fld.sug-wrap{display:block}
 }
 .fx-open-btn:hover{background:var(--panel3)}
 .combat-flag.on{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+/* Attunement toggle — same shape as the combat-flag, violet instead of gold so the two "flag
+   this item" actions (usable in combat vs. attuned) never read as the same control. */
+.attune-flag{
+  background:var(--panel3);border:1px solid var(--border-lt);color:var(--faint);
+  border-radius:7px;width:34px;height:36px;cursor:pointer;font-size:1rem;flex-shrink:0;
+  transition:background .12s ease,border-color .12s ease,color .12s ease;
+}
+.attune-flag:hover{border-color:#8b5cc9;color:var(--muted)}
+.attune-flag.on{background:#8b5cc9;border-color:#8b5cc9;color:var(--ink)}
 /* Ties a feature's max uses to the proficiency-bonus stat instead of a fixed number, for
    traits like Orc's Adrenaline Rush or Harengon's Rabbit Hop ("uses = proficiency bonus") —
    recalc() keeps it in sync automatically whenever profBonus changes (e.g. leveling up). */
@@ -972,13 +958,6 @@ label.fld.sug-wrap{display:block}
 .stat.computed .big{color:var(--gold-lt)}
 
 /* ---------- HP ---------- */
-.hp-panel{display:flex;flex-wrap:wrap;gap:18px;align-items:center}
-.hp-main{flex:1;min-width:220px}
-.hp-numbers{display:flex;align-items:baseline;gap:6px;justify-content:center}
-.hp-numbers input{background:transparent;border:none;font-family:'Cinzel',serif;text-align:center;color:var(--text)}
-.hp-cur{font-size:2.6rem;width:110px;color:var(--gold-lt)!important}
-.hp-max-in{font-size:1.3rem;width:70px;color:var(--muted)!important}
-.hp-slash{color:var(--faint);font-size:1.8rem;font-family:'Cinzel',serif}
 .hp-bar{position:relative;height:10px;background:var(--ink);border-radius:6px;overflow:hidden;margin-top:6px;border:1px solid var(--border);transition:box-shadow .3s ease}
 /* Temp HP: a cool blue segment stacked after the red fill — instantly separable from real HP */
 .hp-temp-fill{position:absolute;top:0;bottom:0;left:0;width:0;background:linear-gradient(90deg,#3f6f96,#5aa9e0);transition:width .25s,left .25s}
@@ -997,8 +976,6 @@ label.fld.sug-wrap{display:block}
 }
 .hp-btn:active{transform:scale(.95)}
 .hp-btn.dmg{color:#e08a80}.hp-btn.heal{color:#a5cf9a}
-.temp-box{text-align:center}
-.temp-box input{width:70px;text-align:center;font-size:1.2rem;font-family:'Cinzel',serif}
 
 /* Hit Dice Left used to burn a whole 2-column stat grid for one number and two buttons — now a
    single compact row so the rest of the Combat tab (Attacks) isn't pushed down for so little. */
@@ -1441,34 +1418,117 @@ input[type=text].spell-meta:focus{background:var(--ink);border-color:var(--accen
 .sd-warn{display:block;margin-top:6px;color:var(--red);font-size:.76rem;font-style:italic}
 .prep-note{color:var(--faint);font-size:.78rem;margin:2px 0 8px 6px;font-style:italic}
 
-/* ---------- Overview extras ---------- */
-/* At a Glance: the one part of this screen with content you can't already see elsewhere —
-   each section gets its own accent (Combat=ember, Magic=arcane blue, Character=gold) and a
-   little lift on hover, instead of three flat identical bullet lists. */
-.ov-quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
-.ov-card{
-  background:var(--panel2);border:1px solid var(--border-lt);border-top:2px solid var(--accent,var(--gold));
-  border-radius:12px;padding:12px 14px;transition:transform .15s ease,box-shadow .2s ease;
-}
-.ov-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px -8px rgba(0,0,0,.5)}
-.ov-card h3{
-  display:flex;align-items:center;gap:7px;color:var(--accent,var(--muted));
-  font-size:.78rem;letter-spacing:1.5px;margin-bottom:8px;font-family:'Cinzel',serif;
-}
-.ov-card.ov-combat{--accent:#e0705a}
-.ov-card.ov-magic{--accent:#5aa9e0}
-.ov-card.ov-char{--accent:#e0ab4a}
-.ov-list{list-style:none}
-.ov-list li{padding:4px 0;border-bottom:1px solid #2a2318;display:flex;justify-content:space-between;gap:10px}
-.ov-list li:last-child{border:none}
-.ov-list .k{color:var(--muted)}
-.ov-empty{color:var(--faint);font-style:italic}
+/* ---------- Overview: title page ---------- */
 .insp-btn{
   width:100%;background:var(--panel2);border:1px solid var(--border-lt);border-radius:12px;
   color:var(--muted);padding:10px;cursor:pointer;font-family:'Cinzel',serif;
   font-size:.8rem;letter-spacing:1.5px;text-transform:uppercase;
 }
 .insp-btn.on{color:var(--ink);background:linear-gradient(180deg,var(--gold-lt),var(--gold));border-color:var(--gold-lt)}
+.insp-btn.big{padding:14px 10px;font-size:.85rem;border-radius:10px}
+/* Identity banner — the character's title page. Same class-flavored glow/watermark treatment
+   as the Build screen (renderOverviewIdentity sets the same --accent/--accent-dim vars), so
+   picking a class on Build immediately re-skins this banner too. */
+.ov-identity{
+  --accent:var(--gold); --accent-dim:rgba(201,162,39,.18);
+  display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;
+  background:linear-gradient(165deg,var(--accent-dim),var(--panel) 75%);
+  border-top:2px solid var(--accent); position:relative; overflow:hidden;
+  transition:border-color .25s ease,background .25s ease;
+}
+.ov-identity::before{
+  content:'';position:absolute;top:-60%;right:-8%;width:60%;height:220%;
+  background:radial-gradient(circle,var(--accent-dim) 0%,transparent 65%);
+  pointer-events:none;
+}
+.ov-id-icon{
+  flex:0 0 auto;width:64px;height:64px;display:flex;align-items:center;justify-content:center;
+  font-size:2.1rem;border-radius:50%;background:var(--panel2);
+  border:2px solid var(--accent);box-shadow:0 0 18px var(--accent-dim);
+  position:relative;z-index:1;
+}
+.ov-id-main{flex:1 1 320px;min-width:0;position:relative;z-index:1}
+.ov-id-name{
+  display:block;width:100%;background:transparent;border:none;color:var(--gold-lt);
+  font-family:'Cinzel',serif;font-size:1.9rem;font-weight:700;outline:none;letter-spacing:.5px;
+  padding:0;
+}
+.ov-id-name::placeholder{color:var(--gold-dim)}
+.ov-id-line{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-top:2px}
+/* The shared input[type=text] rule sets width:100% at equal specificity to a single class, so
+   a plain .ov-id-field selector loses that fight and each field stretches full-width, breaking
+   the inline "field · field · field" row. input.ov-id-field wins on specificity instead. */
+input.ov-id-field{
+  background:transparent;border:none;border-bottom:1px dashed var(--border-lt);
+  color:var(--muted);font-family:'Crimson Pro',serif;font-size:1rem;
+  outline:none;padding:1px 3px;width:auto;max-width:160px;
+}
+input.ov-id-field:focus{border-bottom-color:var(--gold)}
+.ov-id-dot{color:var(--faint)}
+.ov-id-outlook{color:var(--faint);font-size:.76rem;font-style:italic;margin-top:6px}
+.ov-id-side{
+  flex:0 0 180px;display:flex;flex-direction:column;gap:8px;position:relative;z-index:1;
+}
+.ov-xp{display:flex;flex-direction:column;gap:4px}
+.ov-xp-in{
+  background:transparent;border:none;border-bottom:1px dashed var(--border-lt);
+  color:var(--muted);font-size:.85rem;text-align:center;padding:2px;
+}
+.ov-xp-in:focus{border-bottom-color:var(--gold);outline:none}
+.ov-xp-bar{height:6px;background:var(--ink);border-radius:4px;overflow:hidden;border:1px solid var(--border)}
+.ov-xp-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold-lt));transition:width .25s}
+.ov-xp-note{color:var(--faint);font-size:.68rem;text-align:center}
+@media(max-width:600px){
+  /* flex-basis maps to height once the container switches to column direction — without
+     resetting it here, .ov-id-main's 320px basis (meant as a min-width in the row layout)
+     turned into a 320px-tall empty box before the Inspiration/XP column underneath it. */
+  .ov-identity{flex-direction:column;align-items:center;text-align:center}
+  .ov-id-main,.ov-id-side{flex:0 0 auto;width:100%}
+  .ov-id-line,.ov-id-outlook{justify-content:center}
+}
+
+.ov-main-grid{align-items:start}
+.ov-col{display:flex;flex-direction:column;gap:0}
+.ov-col .panel{margin:0 0 18px}
+/* Skills tab's save tiles, shrunk for the title page — same tap-to-toggle tiles, same
+   data-save wiring (renderSaves fills both), just less floor space per tile. */
+.save-list-mini{display:flex;flex-wrap:wrap;gap:8px}
+.save-list-mini .save-tile{flex:0 1 100px;min-width:88px;padding:8px 6px}
+.save-list-mini .save-icon{font-size:.85rem}
+.save-list-mini .save-name{font-size:.72rem}
+.save-list-mini .save-bonus{font-size:1rem}
+.save-list-mini .save-tag{font-size:.6rem}
+.ov-skchip{
+  display:inline-flex;align-items:center;gap:6px;margin:0 6px 6px 0;
+  background:var(--panel2);border:1px solid var(--border-lt);border-radius:999px;
+  color:var(--text);padding:5px 12px;font-size:.85rem;cursor:pointer;
+}
+.ov-skchip:hover{border-color:var(--gold-dim)}
+.ov-skchip span{color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700}
+.ov-wealth-total{
+  color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:1.6rem;
+  text-align:center;
+}
+.ov-wealth-total span{color:var(--muted);font-size:.7rem;font-family:'Crimson Pro',serif;margin-left:4px}
+.ov-wealth-coins{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin:6px 0 12px;color:var(--muted);font-size:.78rem}
+.ov-attune-head{
+  display:flex;justify-content:space-between;align-items:center;
+  color:var(--muted);font-size:.78rem;letter-spacing:1px;text-transform:uppercase;
+  border-top:1px solid var(--border);padding-top:8px;
+}
+.ov-attune-head b{color:var(--gold-lt);font-family:'Cinzel',serif}
+.ov-attune-head b.ov-attune-over{color:var(--red)}
+.ov-attune-list{list-style:none;margin-top:4px}
+.ov-attune-list li{color:var(--text);font-size:.85rem;padding:2px 0}
+.ov-attune-list li::before{content:'✦ ';color:#a58ce0}
+/* Character whisper: a quiet closing line per non-empty personality field — skipped entirely
+   when the Character tab hasn't been filled in yet. */
+.ov-whisper{padding:12px 18px}
+.ov-whisper-line{
+  color:var(--muted);font-size:.85rem;font-style:italic;line-height:1.6;cursor:pointer;
+}
+.ov-whisper-line:hover{color:var(--text)}
+.ov-whisper-line b{color:var(--gold);font-style:normal;font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:1px;text-transform:uppercase;margin-right:6px}
 
 /* ---------- Modal ---------- */
 .modal-bg{
