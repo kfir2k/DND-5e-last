@@ -1,0 +1,313 @@
+{
+  "name": "Cassian Starfall",
+  "classLevel": "Bard 1",
+  "background": "",
+  "playerName": "Kfir Kotler",
+  "race": "Changeling Fey",
+  "alignment": "",
+  "xp": "",
+  "inspiration": false,
+  "profBonus": 2,
+  "classId": "bard",
+  "level": 1,
+  "subclass": "",
+  "raceId": "changeling",
+  "subraceId": "",
+  "flexBonus": [
+    "cha",
+    "dex"
+  ],
+  "asi": {},
+  "abilities": {
+    "str": 9,
+    "dex": 17,
+    "con": 16,
+    "int": 11,
+    "wis": 16,
+    "cha": 17
+  },
+  "saveProf": {
+    "str": false,
+    "dex": true,
+    "con": false,
+    "int": false,
+    "wis": false,
+    "cha": true
+  },
+  "skills": {
+    "acrobatics": 0,
+    "animal": 0,
+    "arcana": 0,
+    "athletics": 0,
+    "deception": 1,
+    "history": 0,
+    "insight": 1,
+    "intimidation": 0,
+    "investigation": 0,
+    "medicine": 0,
+    "nature": 0,
+    "perception": 1,
+    "performance": 0,
+    "persuasion": 1,
+    "religion": 0,
+    "sleight": 0,
+    "stealth": 1,
+    "survival": 0
+  },
+  "favSkills": [],
+  "ac": 15,
+  "initiativeMisc": 0,
+  "speed": "30 ft.",
+  "vision": "None",
+  "hpMax": 10,
+  "hpCurrent": 10,
+  "hpTemp": 0,
+  "hdTotal": "1d8",
+  "hd": "",
+  "hdUsed": 0,
+  "deathS": [
+    false,
+    false,
+    false
+  ],
+  "deathF": [
+    false,
+    false,
+    false
+  ],
+  "attacks": [
+    {
+      "name": "Rapier",
+      "weapon": "rapier",
+      "die": "1d8",
+      "dmgStat": "auto",
+      "magic": 0,
+      "miscAtk": 0,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": []
+    },
+    {
+      "name": "Dagger",
+      "weapon": "dagger",
+      "die": "1d4",
+      "dmgStat": "auto",
+      "magic": 0,
+      "miscAtk": 0,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": []
+    }
+  ],
+  "atkNotes": "",
+  "equip": {
+    "armor": "leather",
+    "armorMagic": 0,
+    "shield": false,
+    "shieldMagic": 0,
+    "acAuto": true,
+    "head": "",
+    "neck": "",
+    "cloak": "",
+    "hands": "",
+    "ring1": "",
+    "ring2": "",
+    "boots": "",
+    "mainhand": "",
+    "offhand": ""
+  },
+  "money": {
+    "cp": 0,
+    "sp": 0,
+    "ep": 0,
+    "gp": 0,
+    "pp": 0
+  },
+  "equipment": [
+    {
+      "name": "Diplomat’s Pack",
+      "qty": "1",
+      "type": "T",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "name": "Lute",
+      "qty": "1",
+      "type": "T",
+      "desc": "",
+      "combat": true,
+      "att": false,
+      "actionType": "item"
+    }
+  ],
+  "treasure": "",
+  "features": [
+    {
+      "title": "",
+      "desc": "",
+      "fx": []
+    },
+    {
+      "title": "Shapechanger",
+      "desc": "Action: change your appearance (not size) — another humanoid's face, voice, body type, hair, etc. Lasts until you use this again or die.",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "source": {
+        "kind": "race",
+        "raceName": "Changeling"
+      }
+    }
+  ],
+  "profLang": "",
+  "languages": [
+    "Common",
+    "Elvish"
+  ],
+  "featuresLocked": false,
+  "spellClass": "Bard",
+  "spellAbility": "cha",
+  "spellLevels": [
+    {
+      "total": 0,
+      "used": 0,
+      "spells": [
+        {
+          "name": "Vicious Mockery",
+          "prep": false,
+          "meta": "1 Action · 60 ft · Instantaneous",
+          "desc": "Magical insults; 1d4 psychic damage and disadvantage on next attack (Wis save)."
+        },
+        {
+          "name": "Minor Illusion",
+          "prep": false,
+          "meta": "1 Action · 30 ft · 1 minute",
+          "desc": "Create a sound or a small static image for 1 minute."
+        }
+      ]
+    },
+    {
+      "total": 2,
+      "used": 0,
+      "spells": [
+        {
+          "name": "Healing Word",
+          "prep": false,
+          "meta": "1 Bonus Action · 60 ft · Instantaneous",
+          "desc": "Heal 1d4 + modifier at range as a bonus action."
+        },
+        {
+          "name": "Dissonant Whispers",
+          "prep": false,
+          "meta": "1 Action · 60 ft · Instantaneous",
+          "desc": "3d6 psychic damage; target must use its reaction to flee you (Wis save)."
+        },
+        {
+          "name": "Dissonant Whispers",
+          "prep": false,
+          "meta": "1 Action · 60 ft · Instantaneous",
+          "desc": "3d6 psychic damage; target must use its reaction to flee you (Wis save)."
+        },
+        {
+          "name": "Silvery Barbs",
+          "prep": false,
+          "meta": "1 Reaction · 60 ft · Instantaneous",
+          "desc": "Reaction: force a reroll on a success must reroll the d20 and use the lower roll, and give someone else advantage."
+        },
+        {
+          "name": "Tasha's Hideous Laughter",
+          "prep": false,
+          "meta": "1 Action · 30 ft · Conc., up to 1 min",
+          "desc": "Target collapses laughing - prone and incapacitated (Wis save).\n A creature with an Intelligence score of 4 or less isn’t affected.\nOne practical warning: your party should avoid repeatedly damaging the affected enemy unless necessary, because every hit gives it another chance to escape the spell."
+        }
+      ]
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    }
+  ],
+  "eqTab": "ALL",
+  "invEqOpen": true,
+  "customCards": [],
+  "states": [],
+  "concentration": null,
+  "turnPlans": [
+    {
+      "name": "Default",
+      "steps": []
+    }
+  ],
+  "turnPlanIdx": 0,
+  "cockpit": {
+    "hidden": [],
+    "pins": [],
+    "showAllSpells": false,
+    "showDeath": false,
+    "atkOpen": true
+  },
+  "age": "",
+  "height": "",
+  "weight": "",
+  "eyes": "",
+  "skin": "",
+  "hair": "",
+  "personality": "Medium",
+  "ideals": "",
+  "bonds": "",
+  "flaws": "",
+  "allies": "",
+  "factionName": "",
+  "backstory": "",
+  "notes": [
+    {
+      "title": "Session notes",
+      "body": ""
+    },
+    {
+      "title": "בניית הדמות",
+      "body": "16\n17\n9\n11\n16\n17"
+    }
+  ]
+}
