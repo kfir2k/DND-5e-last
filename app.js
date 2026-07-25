@@ -19,14 +19,14 @@ function defaultState(){
     equip:{armor:'none',armorMagic:0,shield:false,shieldMagic:0,acAuto:false,
            head:'',neck:'',cloak:'',hands:'',ring1:'',ring2:'',boots:'',mainhand:'',offhand:''},
     money:{cp:0,sp:0,ep:0,gp:0,pp:0},
-    equipment:[{qty:'',name:''}], treasure:'',
+    equipment:[], treasure:'',
     // Features
     features:[{title:'',desc:'',fx:[]}], profLang:'', languages:[], featuresLocked:false,
     // Spells (page 3): level 0 = cantrips
     spellClass:'', spellAbility:'',
     spellLevels:Array.from({length:10},()=>({total:0,used:0,spells:[]})),
-    // Inventory UI: active pack tab, folded categories (All view), folded Equipped panel
-    eqTab:'ALL', eqCollapse:{}, invEqOpen:true,
+    // Inventory UI: active pack chip, folded Equipped panel
+    eqTab:'ALL', invEqOpen:true,
     // Combat cockpit
     customCards:[], states:[], concentration:null,
     turnPlans:[{name:'Default',steps:[]}], turnPlanIdx:0,
@@ -462,20 +462,78 @@ inventory:`
     </div>
   </div>
   <div class="panel eq-panel"><h2>Inventory</h2>
-    <div class="fx-addrow" style="margin:0 0 8px;position:relative">
+    <div class="eq-chips" id="eqTabs"></div>
+    <div class="fx-addrow" style="margin:0 0 12px;position:relative">
       <div style="position:relative;flex:1 1 300px;max-width:420px">
-        <input type="text" id="itemSearch" style="width:100%" placeholder="+ Search adventuring gear…" autocomplete="off">
+        <input type="text" id="itemSearch" dir="auto" style="width:100%" placeholder="Search your pack or the gear index…" autocomplete="off">
         <div id="itemResults" class="lib-results"></div>
       </div>
-      <span class="prep-note" style="margin:0">tap a result to add it · ⚔ on a row = usable card on the Combat tab</span>
+      <button class="eq-newbtn" id="eqNewItemBtn" type="button">+ New Item</button>
     </div>
-    <div class="eq-tabs" id="eqTabs"></div>
-    <div id="equipList"></div>
-    <button class="add-btn" data-add="equipment" id="eqAddBtn">+ Add item</button>
+    <div id="equipList" class="eq-list"></div>
     <div id="eqTreasure" style="display:none">
-      <textarea data-bind="treasure" placeholder="Gems, art objects, deeds, favors owed, that suspicious idol..."></textarea>
+      <textarea data-bind="treasure" dir="auto" placeholder="Gems, art objects, deeds, favors owed, that suspicious idol..."></textarea>
     </div>
-  </div>`,
+  </div>
+
+  <div class="eq-backdrop" id="eqBackdrop"></div>
+  <div class="eq-drawer" id="eqDrawer">
+    <div class="eq-drawer-head">
+      <h3 id="eqDrawerTitle">New Item</h3>
+      <button class="eq-drawer-close" id="eqDrawerClose" type="button">✕</button>
+    </div>
+    <div class="eq-drawer-tabs">
+      <button class="eq-dtab on" data-eqdtab="single" type="button">Single item</button>
+      <button class="eq-dtab" data-eqdtab="bulk" type="button">Paste a list</button>
+    </div>
+    <div class="eq-drawer-body" id="eqSinglePane">
+      <div class="eq-field big">
+        <label>Name</label>
+        <input type="text" id="eqName" dir="auto" placeholder="e.g. Potion of Healing, שריון שרשראות…">
+      </div>
+      <div class="eq-field">
+        <label>Quantity</label>
+        <div class="eq-qtyfield">
+          <button type="button" id="eqQtyDown">−</button>
+          <input type="text" id="eqQty" value="1" inputmode="numeric">
+          <button type="button" id="eqQtyUp">+</button>
+          <span>blank = not tracked (permanent gear)</span>
+        </div>
+      </div>
+      <div class="eq-field">
+        <label>Category</label>
+        <div class="eq-catpick" id="eqCatPicker"></div>
+      </div>
+      <div class="eq-field">
+        <label>Weight (lb) <span class="eq-optional">— optional, if you want to track encumbrance</span></label>
+        <input type="number" id="eqWeight" placeholder="0" style="max-width:120px">
+      </div>
+      <div class="eq-field">
+        <label>Notes / what it does</label>
+        <textarea id="eqDesc" dir="auto" placeholder="Effect, quirks, where you got it…"></textarea>
+      </div>
+      <div class="eq-switchrow">
+        <div><b>Usable on the Combat tab</b><span>Shows this item as a quick-use card mid-fight</span></div>
+        <button type="button" class="eq-switch" id="eqCombatSwitch"></button>
+      </div>
+      <div class="eq-switchrow" id="eqAttuneRow" style="display:none">
+        <div><b>Attuned</b><span>Counts toward your 3-item attunement limit</span></div>
+        <button type="button" class="eq-switch" id="eqAttuneSwitch"></button>
+      </div>
+    </div>
+    <div class="eq-drawer-body" id="eqBulkPane" style="display:none">
+      <div class="eq-field" style="flex:1;display:flex;flex-direction:column">
+        <label>One item per line</label>
+        <textarea id="eqBulkText" dir="auto" class="eq-bulktext" style="flex:1" placeholder="3 Torches&#10;Rope, 50 ft&#10;בד קסם x2&#10;Bedroll"></textarea>
+      </div>
+      <p class="eq-bulkhint">A number at the start or end of a line becomes the quantity — the rest becomes the item name. Everything lands in the category selected above; you can re-sort after.</p>
+    </div>
+    <div class="eq-drawer-foot">
+      <button class="eq-delbtn" id="eqDelBtn" type="button" style="display:none">Delete</button>
+      <button class="eq-savebtn" id="eqSaveBtn" type="button">Add to pack</button>
+    </div>
+  </div>
+  <div class="eq-toast" id="eqToast"></div>`,
 
 features:`
   <div class="panel"><h2>Features &amp; Traits<button class="lock-toggle" id="featuresLockBtn"></button></h2>
@@ -985,92 +1043,192 @@ function wireWeaponSearch(){
     $$('.atk-weapon-results.open').forEach(p=>p.classList.remove('open'));
   });
 }
-// Typed inventory: rows carry a type (consumable/gear/ammo/…), an expandable description, and
-// a ⚔ flag that projects the item into the Combat tab as a usable card. Free-text rows still
-// work exactly like the old paper list — they're just "Gear" until told otherwise.
-const EQ_OPEN=new Set();
+// Icons for the six gear categories (plus treasure) — same stroke-line language as the
+// Equipped & Defense slot icons above.
+const EQ_ICONS={
+  C:'<path d="M10 3h4"/><path d="M11 3v5.2l-4.3 8A3 3 0 0 0 9.4 21h5.2a3 3 0 0 0 2.7-4.8L13 8.2V3"/><path d="M9 14h6"/>',
+  A:'<path d="M4 20L20 4"/><path d="M13 4h7v7"/>',
+  M:'<path d="M12 3l1.9 5.3L19 10l-5.1 1.7L12 17l-1.9-5.3L5 10l5.1-1.7z"/>',
+  S:'<path d="M5 6a2 2 0 1 1 4 0v12a2 2 0 1 1-4 0z"/><path d="M9 6h8a2 2 0 0 1 2 2"/><path d="M9 18h8a2 2 0 0 0 2-2"/>',
+  T:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2z"/>',
+  G:'<path d="M7 9V7a5 5 0 0 1 10 0v2"/><rect x="5" y="9" width="14" height="12" rx="3"/><path d="M9 13h6"/>',
+  TR:'<path d="M6 9l6-6 6 6-6 12z"/><path d="M6 9h12"/><path d="M9 9l3 12 3-12"/>'
+};
+function eqIcon(ty){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${EQ_ICONS[ty]||''}</svg>`; }
+
+// Card list + a spacious add/edit drawer: the pack itself only ever shows name, qty, category
+// and flags at a glance — every other field (description, weight, combat/attune) lives in the
+// drawer so entering a lot of gear doesn't mean fighting six cramped inline controls per row.
 function renderEquipment(){
   const list=$('#equipList'); if(!list) return;
   S.equipment=S.equipment||[];
   // backfill rows saved before items had types
   S.equipment.forEach(e=>{ if(e.type==null)e.type=(ITEM_TYPES[S.eqTab]?S.eqTab:'G'); if(e.desc==null)e.desc=''; if(e.combat==null)e.combat=false; if(e.att==null)e.att=false; });
   const order=Object.keys(ITEM_TYPES);
-  const rowHTML=({e,i})=>`
-    <div class="eq-row ${EQ_OPEN.has(i)?'open':''}">
-      <input type="text" class="narrow eq-qty" value="${esc(e.qty)}" data-li="equipment.${i}.qty" placeholder="Qty" title="Quantity">
-      <input type="text" class="eq-name" value="${esc(e.name)}" data-li="equipment.${i}.name" placeholder="Item">
-      <select class="eq-type" data-eqtype="${i}" title="Item type">${order.map(t=>`<option value="${t}" ${e.type===t?'selected':''}>${ITEM_TYPES[t][0]}</option>`).join('')}</select>
-      <button class="spell-info-btn" data-eqinfo="${i}" title="Notes / description">ℹ</button>
-      <button class="combat-flag ${e.combat?'on':''}" data-eqcombat="${i}" title="${e.combat?'Shown on the Combat tab — tap to remove':'Tap to show on the Combat tab as a usable card'}">⚔</button>
-      ${e.type==='M'?`<button class="attune-flag ${e.att?'on':''}" data-eqattune="${i}" title="${e.att?'Attuned — tap to remove':'Tap to mark as attuned (3-item limit)'}">✦</button>`:''}
-      <button class="del-btn" data-del="equipment.${i}">✕</button>
-      <div class="eq-desc"><textarea data-li="equipment.${i}.desc" placeholder="Notes / what it does…">${esc(e.desc)}</textarea></div>
-    </div>`;
-  S.eqCollapse=S.eqCollapse||{};
+  const present=S.equipment.filter(e=>(e.name||'').trim()||String(e.qty||'').trim());
+
   if(!S.eqTab) S.eqTab='ALL';
-  // One smart tab rail instead of a scroll of sections: All · each category (with count) ·
-  // Treasure. A tab shows only its own rows; new custom items adopt the open tab's type.
-  const counts=Object.fromEntries(order.map(ty=>[ty,S.equipment.filter(e=>e.type===ty).length]));
-  const tabs=[['ALL','All',S.equipment.length],...order.map(ty=>[ty,ITEM_TYPES[ty][1],counts[ty]]),['TR','Treasure',null]];
-  $('#eqTabs').innerHTML=tabs.map(([id,label,n])=>
-    `<button class="eq-tab ${S.eqTab===id?'on':''}" data-eqtab="${id}">${label}${n?` <i>${n}</i>`:''}</button>`).join('');
+  const counts=Object.fromEntries(order.map(ty=>[ty,present.filter(e=>e.type===ty).length]));
+  const chips=[['ALL','All',present.length,null],...order.map(ty=>[ty,ITEM_TYPES[ty][1],counts[ty],ty]),['TR','Treasure',null,'TR']];
+  $('#eqTabs').innerHTML=chips.map(([id,label,n,ic])=>
+    `<button class="eq-chip ${S.eqTab===id?'on':''}" data-eqtab="${id}">${ic?eqIcon(ic):''}${label}${n?` <b>${n}</b>`:''}</button>`).join('');
   $$('[data-eqtab]').forEach(b=>b.addEventListener('click',()=>{
     S.eqTab=b.dataset.eqtab;
     renderEquipment(); save();
   }));
+
   const treasure=S.eqTab==='TR';
   $('#eqTreasure').style.display=treasure?'':'none';
-  $('#eqAddBtn').style.display=treasure?'none':'';
+  $('#eqNewItemBtn').closest('.fx-addrow').style.display=treasure?'none':'';
   list.style.display=treasure?'none':'';
   if(treasure){ const ta=$('#eqTreasure textarea'); if(ta) autoGrow(ta); return; }
-  if(S.eqTab==='ALL'){
-    const groups=order
-      .map(ty=>({ty,rows:S.equipment.map((e,i)=>({e,i})).filter(x=>x.e.type===ty)}))
-      .filter(g=>g.rows.length);
-    list.innerHTML = groups.length
-      ? groups.map(g=>{
-          const closed=!!S.eqCollapse[g.ty];
-          return `<div class="eq-group ${closed?'closed':''}">
-            <div class="eq-group-head" data-eqgroup="${g.ty}"><span>${ITEM_TYPES[g.ty][1]}</span><b class="eq-count">${g.rows.length}</b><i class="eq-chev">${closed?'▸':'▾'}</i></div>
-            <div class="eq-rows">${g.rows.map(rowHTML).join('')}</div>
-          </div>`;
-        }).join('')
-      : '<p class="prep-note" style="margin:0">Empty pack — search the gear index above or add a custom item.</p>';
-  }else{
-    const rows=S.equipment.map((e,i)=>({e,i})).filter(x=>x.e.type===S.eqTab);
-    list.innerHTML = rows.length
-      ? rows.map(rowHTML).join('')
-      : `<p class="prep-note" style="margin:0">No ${ITEM_TYPES[S.eqTab][1].toLowerCase()} yet — "+ Add item" creates one right in this tab.</p>`;
-  }
-  wireList('#equipList');
-  $$('[data-eqgroup]').forEach(h=>h.addEventListener('click',()=>{
-    const ty=h.dataset.eqgroup;
-    S.eqCollapse[ty]=!S.eqCollapse[ty];
+
+  const rows=(S.eqTab==='ALL'?present:present.filter(e=>e.type===S.eqTab)).map(e=>({e,i:S.equipment.indexOf(e)}));
+  list.innerHTML = rows.length ? rows.map(({e,i})=>{
+    const cat=ITEM_TYPES[e.type]||ITEM_TYPES.G;
+    let flags='';
+    if(e.combat) flags+='<span class="eq-flag combat">⚔ Combat</span>';
+    if(e.att) flags+='<span class="eq-flag attune">✦ Attuned</span>';
+    return `<div class="eq-card" data-eqopen="${i}">
+      <div class="eq-qtystep">
+        <button type="button" data-eqstep="-1" data-i="${i}">−</button>
+        <div class="eq-medal">${String(e.qty||'').trim()!==''?esc(e.qty):'—'}</div>
+        <button type="button" data-eqstep="1" data-i="${i}">+</button>
+      </div>
+      <div class="eq-card-body">
+        <div class="eq-card-name">${esc(e.name)||'<span style="color:var(--faint)">Unnamed item</span>'}</div>
+        <div class="eq-card-meta"><span class="eq-card-cat">${eqIcon(e.type)}${cat[1]}</span>${flags}</div>
+        ${e.desc?`<div class="eq-card-desc">${esc(e.desc)}</div>`:''}
+      </div>
+      <span class="eq-chev">›</span>
+    </div>`;
+  }).join('') : `<p class="prep-note" style="margin:0">${S.eqTab==='ALL'?'Empty pack — search the gear index above or “+ New Item” for a custom one.':`No ${ITEM_TYPES[S.eqTab][1].toLowerCase()} yet — “+ New Item” creates one right in this category.`}</p>`;
+
+  $$('[data-eqopen]').forEach(card=>card.addEventListener('click',e=>{
+    if(e.target.closest('[data-eqstep]')) return;
+    openEqDrawer(+card.dataset.eqopen);
+  }));
+  $$('[data-eqstep]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation();
+    const it=S.equipment[+b.dataset.i], delta=+b.dataset.eqstep;
+    if(String(it.qty||'').trim()===''){ if(delta>0) it.qty='1'; }
+    else it.qty=String(Math.max(0,num(it.qty)+delta));
     renderEquipment(); save();
-  }));
-  $$('[data-eqtype]').forEach(s=>s.addEventListener('change',()=>{
-    S.equipment[+s.dataset.eqtype].type=s.value;
-    renderEquipment(); save();
-  }));
-  $$('[data-eqcombat]').forEach(b=>b.addEventListener('click',()=>{
-    const e=S.equipment[+b.dataset.eqcombat];
-    e.combat=!e.combat;
-    if(e.combat&&!e.actionType) e.actionType='item'; // lands in combat as an Item card
-    renderEquipment(); renderCombatFeatures(); save();
-  }));
-  // 3-slot rule is a reminder, not an enforced cap (paper first) — Overview's Wealth &
-  // Attunement card flags 4+ instead of blocking the toggle here.
-  $$('[data-eqattune]').forEach(b=>b.addEventListener('click',()=>{
-    const e=S.equipment[+b.dataset.eqattune];
-    e.att=!e.att;
-    renderEquipment(); renderOverviewWealth(); save();
-  }));
-  $$('[data-eqinfo]').forEach(b=>b.addEventListener('click',()=>{
-    const i=+b.dataset.eqinfo;
-    EQ_OPEN.has(i)?EQ_OPEN.delete(i):EQ_OPEN.add(i);
-    renderEquipment();
   }));
   if($('#ckCards')) renderCockpitCards(); // combat item cards mirror qty/flag changes
+}
+
+// ---------- Item drawer (add / edit one item, or paste a whole list) ----------
+let EQ_DRAWER_MODE='single';
+let EQ_EDIT_IDX=null; // null while adding a new item
+function eqCatPickerHTML(selected){
+  return Object.keys(ITEM_TYPES).map(ty=>
+    `<button type="button" class="eq-catopt ${ty===selected?'on':''}" data-eqcat="${ty}">${eqIcon(ty)}${ITEM_TYPES[ty][1]}</button>`
+  ).join('');
+}
+function eqSwitchSet(el,on){ el.classList.toggle('on',!!on); el.dataset.on=on?'1':''; }
+function eqSwitchOn(el){ return !!el.dataset.on; }
+function openEqDrawer(idx){
+  EQ_EDIT_IDX = idx==null ? null : idx;
+  const it = EQ_EDIT_IDX==null ? null : S.equipment[EQ_EDIT_IDX];
+  $('#eqDrawerTitle').textContent = it ? 'Edit Item' : 'New Item';
+  $('#eqName').value = it ? it.name : '';
+  $('#eqQty').value = it ? it.qty : '1';
+  $('#eqWeight').value = it && it.wt ? it.wt : '';
+  $('#eqDesc').value = it ? it.desc : '';
+  const cat = it ? it.type : (ITEM_TYPES[S.eqTab] ? S.eqTab : 'G');
+  $('#eqCatPicker').innerHTML = eqCatPickerHTML(cat);
+  $$('[data-eqcat]').forEach(b=>b.addEventListener('click',()=>{
+    $$('[data-eqcat]').forEach(o=>o.classList.remove('on'));
+    b.classList.add('on');
+    $('#eqAttuneRow').style.display = b.dataset.eqcat==='M' ? 'flex' : 'none';
+  }));
+  $('#eqAttuneRow').style.display = cat==='M' ? 'flex' : 'none';
+  eqSwitchSet($('#eqCombatSwitch'), it ? it.combat : false);
+  eqSwitchSet($('#eqAttuneSwitch'), it ? it.att : false);
+  eqSwitchDrawerTab('single');
+  $('#eqBackdrop').classList.add('open');
+  $('#eqDrawer').classList.add('open');
+  setTimeout(()=>$('#eqName').focus(),200);
+}
+function closeEqDrawer(){
+  $('#eqBackdrop').classList.remove('open');
+  $('#eqDrawer').classList.remove('open');
+}
+function eqSwitchDrawerTab(mode){
+  EQ_DRAWER_MODE=mode;
+  $$('.eq-dtab').forEach(t=>t.classList.toggle('on',t.dataset.eqdtab===mode));
+  $('#eqSinglePane').style.display = mode==='single' ? 'flex' : 'none';
+  $('#eqBulkPane').style.display = mode==='bulk' ? 'flex' : 'none';
+  $('#eqDelBtn').style.display = (mode==='single' && EQ_EDIT_IDX!=null) ? '' : 'none';
+  $('#eqSaveBtn').textContent = mode==='bulk' ? 'Add all to pack' : (EQ_EDIT_IDX!=null ? 'Save changes' : 'Add to pack');
+}
+function eqToast(msg){
+  const t=$('#eqToast'); if(!t) return;
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(eqToast._h); eqToast._h=setTimeout(()=>t.classList.remove('show'),1800);
+}
+// "3 Torches", "Rope, 50 ft x2" — a leading or trailing number becomes qty, everything else is
+// the name verbatim (so it still works for names that are just numbers-ish).
+function parseBulkEqLine(line){
+  line=line.trim();
+  let m=line.match(/^(\d+)\s*[x×]?\s+(.+)$/i);
+  if(m) return {qty:m[1],name:m[2].trim()};
+  m=line.match(/^(.+?)\s*[x×]\s*(\d+)$/i);
+  if(m) return {qty:m[2],name:m[1].trim()};
+  return {qty:'',name:line};
+}
+function wireEquipmentDrawer(){
+  // Moved to <body> so the tab-switch fade animation (which briefly gives .tab-page a
+  // CSS transform, i.e. a containing block) can never hijack this fixed-position drawer's
+  // placement, and so it isn't yanked away if the player switches tabs while it's open.
+  document.body.appendChild($('#eqBackdrop'));
+  document.body.appendChild($('#eqDrawer'));
+  $('#eqNewItemBtn').addEventListener('click',()=>openEqDrawer(null));
+  $('#eqDrawerClose').addEventListener('click',closeEqDrawer);
+  $('#eqBackdrop').addEventListener('click',closeEqDrawer);
+  $$('.eq-dtab').forEach(t=>t.addEventListener('click',()=>eqSwitchDrawerTab(t.dataset.eqdtab)));
+  $('#eqQtyUp').addEventListener('click',()=>{ $('#eqQty').value=num($('#eqQty').value)+1; });
+  $('#eqQtyDown').addEventListener('click',()=>{ $('#eqQty').value=Math.max(0,num($('#eqQty').value)-1); });
+  $('#eqCombatSwitch').addEventListener('click',()=>eqSwitchSet($('#eqCombatSwitch'),!eqSwitchOn($('#eqCombatSwitch'))));
+  $('#eqAttuneSwitch').addEventListener('click',()=>eqSwitchSet($('#eqAttuneSwitch'),!eqSwitchOn($('#eqAttuneSwitch'))));
+  $('#eqDelBtn').addEventListener('click',()=>{
+    if(EQ_EDIT_IDX==null) return;
+    S.equipment.splice(EQ_EDIT_IDX,1);
+    eqToast('Removed');
+    closeEqDrawer(); renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
+  });
+  $('#eqSaveBtn').addEventListener('click',()=>{
+    const catBtn=$('.eq-catopt.on'); const cat=catBtn?catBtn.dataset.eqcat:'G';
+    if(EQ_DRAWER_MODE==='bulk'){
+      const lines=$('#eqBulkText').value.split('\n').map(l=>l.trim()).filter(Boolean);
+      if(!lines.length) return;
+      lines.forEach(line=>{
+        const {qty,name}=parseBulkEqLine(line);
+        S.equipment.push({qty,name,type:cat,desc:'',combat:false,att:false});
+      });
+      $('#eqBulkText').value='';
+      eqToast(`Added ${lines.length} item${lines.length>1?'s':''}`);
+      if(S.eqTab!=='ALL'&&S.eqTab!==cat) S.eqTab=cat;
+      closeEqDrawer(); renderEquipment(); save();
+      return;
+    }
+    const name=$('#eqName').value.trim();
+    if(!name){ $('#eqName').focus(); return; }
+    const data={
+      name, qty:$('#eqQty').value.trim(), type:cat,
+      wt: parseFloat($('#eqWeight').value) || undefined,
+      desc:$('#eqDesc').value,
+      combat:eqSwitchOn($('#eqCombatSwitch')),
+      att: cat==='M' ? eqSwitchOn($('#eqAttuneSwitch')) : false,
+    };
+    let target;
+    if(EQ_EDIT_IDX!=null){ target=Object.assign(S.equipment[EQ_EDIT_IDX],data); eqToast('Saved'); }
+    else { S.equipment.push(data); target=S.equipment[S.equipment.length-1]; eqToast(`Added ${name}`); }
+    if(target.combat&&!target.actionType) target.actionType='item'; // lands in combat as an Item card
+    if(S.eqTab!=='ALL'&&S.eqTab!==cat) S.eqTab=cat;
+    closeEqDrawer(); renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
+  });
 }
 // Item index search — same tap-to-add pattern as the spellbook and feature libraries.
 function wireItemLibrary(){
@@ -1079,7 +1237,7 @@ function wireItemLibrary(){
   function renderResults(){
     const q=input.value.trim().toLowerCase();
     const items=list.filter(it=>!q||it.n.toLowerCase().includes(q)||(it.d||'').toLowerCase().includes(q));
-    if(!items.length){ panel.innerHTML='<div class="empty">No matches — "+ Add item" makes it a custom row</div>'; return; }
+    if(!items.length){ panel.innerHTML='<div class="empty">No matches — "+ New Item" makes it a custom entry</div>'; return; }
     let html='';
     Object.keys(ITEM_TYPES).forEach(ty=>{
       const g=items.filter(it=>it.t===ty);
@@ -1096,10 +1254,11 @@ function wireItemLibrary(){
   panel.addEventListener('click',e=>{
     const el=e.target.closest('[data-itempick]'); if(!el) return;
     const it=ITEM_DB[el.dataset.itempick.toLowerCase()]; if(!it) return;
-    S.equipment.push({qty:String(it.q),name:it.n,type:it.t,desc:it.d,combat:it.cb});
+    S.equipment.push({qty:String(it.q),name:it.n,type:it.t,desc:it.d,combat:it.cb,att:false});
     if(S.eqTab!=='ALL'&&S.eqTab!==it.t) S.eqTab=it.t; // jump to where it landed
     input.value=''; close();
-    renderEquipment(); save();
+    eqToast(`Added ${it.n}`);
+    renderEquipment(); renderCombatFeatures(); save();
   });
   document.addEventListener('click',e=>{
     if(!e.target.closest('#itemSearch')&&!e.target.closest('#itemResults')) close();
@@ -2320,7 +2479,7 @@ function wireSpellLibrary(){
 // it instead, so typed text is never hidden behind a resize you have to remember to do.
 function autoGrow(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
 // Shared wiring for list inputs and delete buttons
-const RERENDER = {attacks:renderAttacks,equipment:renderEquipment,features:fxRefresh,
+const RERENDER = {attacks:renderAttacks,features:fxRefresh,
                   notes:renderNotes,spellLevels:renderSpellLevels};
 function wireList(container){
   $$(container+' [data-li]').forEach(el=>{
@@ -2612,7 +2771,6 @@ function renderOverview(){
 // ---------- Add buttons (attacks / equipment / features / notes) ----------
 const ADD_TEMPLATES = {
   attacks:()=>({name:'Longsword',weapon:'longsword',die:'1d8',dmgStat:'auto',magic:0,miscAtk:0,miscDmg:0,rolled:'',buffs:[]}),
-  equipment:()=>({qty:'',name:''}),
   features:()=>({title:'',desc:'',fx:[],combat:false,usesMax:0,usesPer:'short',usesUsed:0,usesScale:'',source:{kind:'custom'}}),
   notes:()=>({title:'',body:''})
 };
@@ -2621,7 +2779,7 @@ function wireAddButtons(){
     const key=b.dataset.add;
     S[key].push(ADD_TEMPLATES[key]());
     RERENDER[key](); save();
-    focusLast('#'+({attacks:'attackList',equipment:'equipList',features:'featureList',notes:'noteList'})[key]);
+    focusLast('#'+({attacks:'attackList',features:'featureList',notes:'noteList'})[key]);
   }));
 }
 
@@ -3256,7 +3414,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemLibrary();
+wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemLibrary(); wireEquipmentDrawer();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
