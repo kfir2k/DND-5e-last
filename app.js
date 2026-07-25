@@ -9,6 +9,7 @@ function defaultState(){
     abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},
     saveProf:{str:false,dex:false,con:false,int:false,wis:false,cha:false},
     skills:Object.fromEntries(SKILLS.map(s=>[s[0],0])), // 0 none, 1 proficient, 2 expertise
+    favSkills:[], // skills pinned onto Overview's Trained Skills card despite 0 proficiency
     // Combat
     ac:10, initiativeMisc:0, speed:'30 ft.', vision:'None',
     hpMax:10, hpCurrent:10, hpTemp:0, hdTotal:'', hd:'', hdUsed:0,
@@ -2489,18 +2490,39 @@ function renderOverviewIdentity(){
   const xpBox=$('#ovXp');
   if(xpBox){ xpBox.innerHTML=xpHtml; wireList('#ovXp'); }
 }
-// ---------- Overview trained-skill chips: proficient/expertise only, tap → Skills tab ----------
+// ---------- Overview trained-skill chips: proficient/expertise, plus pinned favorites ----------
 // Computes its own bonus text (rather than the data-skillbonus multi-target trick) since chips
 // are (re)created inside recalc() itself — a data-skillbonus span born after recalc()'s skill
 // loop already ran would sit at its "+0" placeholder until the next keystroke elsewhere.
 function renderOverviewSkillChips(){
   const box=$('#ovSkillChips'); if(!box) return;
+  S.favSkills=S.favSkills||[];
   const P=num(S.profBonus);
-  const rows=SKILLS.map(([k,label,ab])=>({label,eff:effSkill(k),b:amod(ab)+effSkill(k)*P})).filter(r=>r.eff>0);
-  box.innerHTML = rows.length
-    ? rows.map(r=>`<button class="ov-skchip" data-ovsktab>${esc(r.label)} <span>${fmt(r.b)}</span> ${r.eff===2?'●●':'●'}</button>`).join('')
-    : '<p class="prep-note" style="margin:0">No trained skills yet — pick proficiencies on the Skills tab.</p>';
+  const withBonus=([k,label,ab])=>({k,label,eff:effSkill(k),b:amod(ab)+effSkill(k)*P});
+  const trained=SKILLS.map(withBonus).filter(r=>r.eff>0);
+  // A favorite that later becomes proficient just shows through the "trained" row above instead
+  // of a second copy — favSkills itself is left untouched so it re-appears here if un-trained.
+  const pinned=SKILLS.filter(([k])=>S.favSkills.includes(k)).map(withBonus).filter(r=>r.eff===0);
+  const chipHtml=r=>`<button class="ov-skchip" data-ovsktab>${esc(r.label)} <span>${fmt(r.b)}</span> ${r.eff===2?'●●':'●'}</button>`;
+  const pinHtml=r=>`<span class="ov-skchip fav">${esc(r.label)} <span>${fmt(r.b)}</span><button data-ovskunfav="${r.k}" title="Unpin from Overview">✕</button></span>`;
+  const rows=trained.map(chipHtml).join('')+pinned.map(pinHtml).join('');
+  const pickable=SKILLS.filter(([k])=>!S.favSkills.includes(k)&&effSkill(k)===0);
+  box.innerHTML = (rows||'<p class="prep-note" style="margin:0 0 6px">No trained skills yet — pick proficiencies on the Skills tab, or pin a favorite below.</p>')
+    + (pickable.length ? `<select class="add-btn" data-ovskfav>
+        <option value="">+ Pin a favorite skill…</option>
+        ${pickable.map(([k,label])=>`<option value="${k}">${esc(label)}</option>`).join('')}
+      </select>` : '');
   $$('[data-ovsktab]').forEach(b=>b.addEventListener('click',()=>showTab('skills')));
+  $$('[data-ovskunfav]').forEach(b=>b.addEventListener('click',()=>{
+    S.favSkills=S.favSkills.filter(k=>k!==b.dataset.ovskunfav);
+    renderOverviewSkillChips(); save();
+  }));
+  const picker=$('[data-ovskfav]');
+  if(picker) picker.addEventListener('change',()=>{
+    if(!picker.value) return;
+    S.favSkills.push(picker.value);
+    renderOverviewSkillChips(); save();
+  });
 }
 // ---------- Overview wealth + attunement ----------
 function renderOverviewWealth(){

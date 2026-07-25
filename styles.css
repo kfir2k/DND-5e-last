@@ -163,7 +163,7 @@ label.fld span{
 /* Each ability gets its own elemental accent color (STR fire, DEX verdant, CON amber earth,
    INT arcane blue, WIS violet insight, CHA rose) instead of one flat gold for all six —
    a soft radial glow, a lit top edge, and a faint watermark rune make the grid feel alive. */
-.abilities{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:14px}
+.abilities{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
 .ability{
   --accent:var(--gold); --accent-dim:rgba(201,162,39,.18);
   background:linear-gradient(165deg,var(--accent-dim),var(--panel) 68%);
@@ -185,7 +185,15 @@ label.fld span{
 .ability.ab-wis{--accent:#a58ce0;--accent-dim:rgba(165,140,224,.22)}
 .ability.ab-cha{--accent:#e06bb0;--accent-dim:rgba(224,107,176,.22)}
 .ability-icon{position:absolute;top:6px;right:9px;font-size:1rem;opacity:.4;z-index:1;filter:saturate(1.3)}
-.ability-name{color:var(--muted);font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;position:relative;z-index:1}
+/* Full ability names ("INTELLIGENCE", "CONSTITUTION"...) are one unbreakable uppercase word —
+   in a narrow card (e.g. Overview's half-width column) that word is wider than the card, so
+   without a break it either overflows past the edge or runs straight through the corner icon.
+   overflow-wrap lets it fold onto a second line instead; the right padding keeps that fold clear
+   of the icon rather than tucking a wrapped line underneath it. */
+.ability-name{
+  color:var(--muted);font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;
+  position:relative;z-index:1;padding:0 14px;overflow-wrap:break-word;
+}
 .ability .mod{
   color:var(--accent);font-size:1.9rem;font-weight:700;font-family:'Cinzel',serif;line-height:1.2;
   position:relative;z-index:1;text-shadow:0 0 18px var(--accent-dim);
@@ -396,9 +404,12 @@ label.fld span{
 }
 .save-tile:hover{border-color:var(--ab-color);transform:translateY(-1px)}
 .save-icon{display:block;font-size:1.15rem;color:var(--ab-color);opacity:.55;transition:opacity .15s}
+/* Same unbreakable-word overflow as .ability-name (see there) — "INTELLIGENCE" etc. need to be
+   able to fold onto a second line in a narrow tile (Overview's mini save row) instead of
+   spilling sideways past the tile's edge and into its neighbor. */
 .save-name{
   display:block;font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:1.5px;
-  text-transform:uppercase;color:var(--muted);margin-top:2px;
+  text-transform:uppercase;color:var(--muted);margin-top:2px;overflow-wrap:break-word;
 }
 .save-bonus{display:block;font-family:'Cinzel',serif;font-weight:700;font-size:1.45rem;color:var(--muted);line-height:1.2}
 .save-tag{display:block;font-size:.62rem;color:var(--faint);font-style:italic;min-height:.9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -503,7 +514,13 @@ label.fld span{
    a violet border marks that split even before it's tapped active. */
 .ck-filter-spell{border-color:rgba(165,140,224,.5)}
 .ck-filter-spell.on{background:rgba(165,140,224,.28);border-color:#a58ce0;color:#cdbdf0}
-.ck-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+/* "All" (or any category with a lot of cards) used to push Turn Plan, and everything below it
+   on the page, further down with every card added — capped height + its own scroll keeps the
+   rest of the cockpit in place no matter how many cards are in the filtered view. */
+.ck-cards{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;
+  max-height:52vh;overflow-y:auto;padding-right:4px;
+}
 /* Every card carries a lit left spine in its action-type color — the same color language as
    the filter pills and turn-plan steps, so the grid is scannable by color alone: green =
    action, gold = bonus, teal = item, blue = other. No need to read every label to find
@@ -1300,7 +1317,12 @@ select.add-btn{padding:6px 10px;font-size:.8rem}
 /* Combat tab's compact slot tracker — same diamond-rune pips as the Spells tab (this is the same
    resource, just surfaced where a caster actually needs it mid-fight) instead of Combat's round
    feature-use pips, so it still reads as "spell slots" at a glance. */
-#combatSlots{display:flex;flex-direction:column;gap:8px}
+/* Shared by both mirrored instances (#combatSlots on Combat, the plain-class one on Overview) —
+   this was scoped to the #combatSlots id only, so Overview's copy silently lost the flex/gap
+   layout and rendered its rows unstacked. On Overview this also sits right under the Save
+   DC/Attack stat tiles instead of directly under an <h2> (which already carries its own bottom
+   margin), so it needs its own top margin to keep from butting straight up against those tiles. */
+.ov-spellslots-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .cslot-row{display:flex;align-items:center;gap:10px}
 .cslot-row.tier0{--accent:#8b98ab}.cslot-row.tier1{--accent:#5aa9e0}
 .cslot-row.tier2{--accent:#a58ce0}.cslot-row.tier3{--accent:#c9a227}
@@ -1493,9 +1515,12 @@ input.ov-id-field:focus{border-bottom-color:var(--gold)}
 /* Skills tab's save tiles, shrunk for the title page — same tap-to-toggle tiles, same
    data-save wiring (renderSaves fills both), just less floor space per tile. */
 .save-list-mini{display:flex;flex-wrap:wrap;gap:8px}
-.save-list-mini .save-tile{flex:0 1 100px;min-width:88px;padding:8px 6px}
-.save-list-mini .save-icon{font-size:.85rem}
-.save-list-mini .save-name{font-size:.72rem}
+.save-list-mini .save-tile{flex:0 1 132px;min-width:120px;padding:8px 6px}
+.save-list-mini .save-icon{font-size:.85rem;margin-bottom:2px}
+/* Smaller than the Skills tab's own .68rem (this was accidentally set larger before, which
+   only made the fit-in-a-narrow-tile problem worse) so the full ability name reliably fits on
+   one line instead of wrapping under the icon above it. */
+.save-list-mini .save-name{font-size:.6rem}
 .save-list-mini .save-bonus{font-size:1rem}
 .save-list-mini .save-tag{font-size:.6rem}
 .ov-skchip{
@@ -1505,6 +1530,15 @@ input.ov-id-field:focus{border-bottom-color:var(--gold)}
 }
 .ov-skchip:hover{border-color:var(--gold-dim)}
 .ov-skchip span{color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700}
+/* Pinned favorites (not actually proficient) are a <span> — nothing to tap for navigation, only
+   the ✕ removes the pin — so no pointer cursor and a violet dash instead of a real proficiency
+   dot, keeping it visually distinct from the auto-shown proficient/expertise chips. */
+.ov-skchip.fav{cursor:default;border-style:dashed;border-color:#8b5cc9}
+.ov-skchip.fav button{
+  background:transparent;border:none;color:var(--faint);cursor:pointer;
+  font-size:.85rem;line-height:1;padding:0;margin-left:2px;
+}
+.ov-skchip.fav button:hover{color:var(--red)}
 .ov-wealth-total{
   color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:1.6rem;
   text-align:center;
