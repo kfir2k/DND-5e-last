@@ -992,17 +992,9 @@ label.fld.sug-wrap{display:block}
 }
 .attune-flag:hover{border-color:#8b5cc9;color:var(--muted)}
 .attune-flag.on{background:#8b5cc9;border-color:#8b5cc9;color:var(--ink)}
-/* Ties a feature's max uses to the proficiency-bonus stat instead of a fixed number, for
-   traits like Orc's Adrenaline Rush or Harengon's Rabbit Hop ("uses = proficiency bonus") —
-   recalc() keeps it in sync automatically whenever profBonus changes (e.g. leveling up). */
-.uses-prof-toggle{
-  background:var(--panel3);border:1px solid var(--border-lt);color:var(--faint);
-  border-radius:7px;padding:5px 10px;cursor:pointer;font-size:.72rem;font-weight:700;
-  letter-spacing:.03em;-webkit-tap-highlight-color:transparent;
-  transition:background .12s ease,border-color .12s ease,color .12s ease;
-}
-.uses-prof-toggle:hover{border-color:var(--gold-dim);color:var(--muted)}
-.uses-prof-toggle.on{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+/* Ties a feature's max uses to a live stat instead of a fixed number, for traits like Orc's
+   Adrenaline Rush (proficiency bonus) or Bardic Inspiration (Charisma modifier) — recalc() keeps
+   it in sync automatically whenever that stat changes (leveling up, an ASI, etc.). */
 .prof-uses-val{
   min-width:50px;text-align:center;color:var(--gold-lt);font-weight:700;
   font-family:'Cinzel',serif;font-size:.95rem;

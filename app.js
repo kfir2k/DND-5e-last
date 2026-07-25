@@ -86,6 +86,25 @@ function asiBonus(k){
 }
 function score(k){ return (Number(S.abilities[k])||0)+racialBonus(k)+asiBonus(k); }
 function amod(k){ return mod(score(k)); }
+// Uses-scale: ties a feature's max uses to a live stat instead of a fixed number that goes
+// stale the moment you level up or bump an ability score. 'prof' = proficiency bonus; any
+// ABILITIES key = that ability's modifier (Bardic Inspiration, Rabbit Hop, etc.). usesScaleBonus
+// adds a flat amount on top for the handful of features phrased "1 + mod" (Divine Sense).
+// Always floored at 1 so a scaled feature never silently shows "0 uses" from a bad modifier.
+function usesScaleBase(scale){
+  if(scale==='prof') return num(S.profBonus);
+  if(ABILITIES.some(([k])=>k===scale)) return amod(scale);
+  return null;
+}
+function usesScaleValue(scale,bonus){
+  const base=usesScaleBase(scale);
+  return base==null ? null : Math.max(1,base+num(bonus));
+}
+function usesScaleLabel(scale){
+  if(scale==='prof') return 'your proficiency bonus';
+  const ab=ABILITIES.find(([k])=>k===scale);
+  return ab ? `your ${ab[1]} modifier` : '';
+}
 
 // ----- Feature effects -----
 // Each feature can carry effects: {t:'stat',stat,n} flat bonus,
@@ -1420,11 +1439,18 @@ function renderFeatures(){
         ${f.combat?`
         <div class="fx-addrow" style="margin:4px 0 0">
           <span class="prep-note" style="margin:0">Uses</span>
-          ${f.usesScale==='prof'
-            ? `<span class="prof-uses-val" title="Auto-set from your proficiency bonus (+${num(S.profBonus)}) — updates when you level up">= ${num(S.profBonus)}</span>`
+          ${f.usesScale
+            ? `<span class="prof-uses-val" title="Auto-set from ${usesScaleLabel(f.usesScale)}${num(f.usesScaleBonus)?` + ${num(f.usesScaleBonus)}`:''} (min 1) — updates when the stat changes">= ${num(f.usesMax)}</span>`
             : `<input type="number" min="0" style="width:50px" value="${num(f.usesMax)}" data-uses="${i}" title="0 = not tracked (passive/at-will)">`}
           <select data-usesper="${i}"><option value="short" ${f.usesPer!=='long'?'selected':''}>per short rest</option><option value="long" ${f.usesPer==='long'?'selected':''}>per long rest</option></select>
-          <button class="uses-prof-toggle ${f.usesScale==='prof'?'on':''}" data-usesprof="${i}" title="${f.usesScale==='prof'?'Tap to set a fixed number of uses instead':'Tap to auto-scale uses with your proficiency bonus (updates on level up)'}">= PROF</button>
+          <select class="uses-scale-sel" data-usesscale="${i}" title="Tie max uses to a stat instead of typing a fixed number">
+            <option value="">Fixed number</option>
+            <option value="prof" ${f.usesScale==='prof'?'selected':''}>= Proficiency</option>
+            ${ABILITIES.map(([k,l])=>`<option value="${k}" ${f.usesScale===k?'selected':''}>= ${l} mod</option>`).join('')}
+          </select>
+          ${f.usesScale?`<select data-usesbonus="${i}" title="Flat amount added on top, if any — e.g. Divine Sense is 1 + CHA mod">
+            ${[0,1,2,3].map(n=>`<option value="${n}" ${num(f.usesScaleBonus)===n?'selected':''}>${n?'+'+n:'+0'}</option>`).join('')}
+          </select>`:''}
         </div>`:''}
         ${chips?`<div style="margin-top:6px">${chips}</div>`:''}
         ${d.t||d._pickerOpen?`
@@ -2135,13 +2161,14 @@ function wireLibrary(){
     if(ent.n==='Tough') fx=[{t:'stat',stat:'hpmax',n:2*Math.max(1,num(S.level))}];
     // "smart" add: library entries already know if they're combat-relevant and how many uses per rest,
     // so a feature like Action Surge shows up on the Combat tab immediately, no manual setup needed.
-    // A few (uses = proficiency bonus) carry usesScale:'prof' so their max stays synced on level-up.
+    // A few carry usesScale (proficiency bonus or an ability mod, e.g. Bardic Inspiration = CHA)
+    // so their max stays synced automatically as you level up or raise that ability.
     const usesScale=ent.usesScale||'';
-    const usesMax = usesScale==='prof' ? Math.max(1,num(S.profBonus)) : (ent.usesMax||0);
+    const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
     // Tag where this came from — class feature vs. feat — so the card can wear its source
     // as a colored wax seal instead of every feature looking identical.
     const source = ent.g==='Feats' ? {kind:'feat'} : {kind:'class',classId:classIdFromGroupName(ent.g),className:ent.g};
-    S.features.push({title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,source});
+    S.features.push({title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source});
     input.value=''; close();
     fxRefresh();
   });
@@ -2175,12 +2202,12 @@ function wireRaceLibrary(){
     // deep-copy effects; Dwarven Toughness scales with current level
     let fx=(ent.fx||[]).map(x=>({...x}));
     if(ent.n==='Dwarven Toughness (Hill Dwarf)') fx=[{t:'stat',stat:'hpmax',n:Math.max(1,num(S.level))}];
-    // Traits like Orc's Adrenaline Rush or Harengon's Rabbit Hop carry usesScale:'prof' so their
-    // max uses stay synced to your proficiency bonus automatically as you level up.
+    // Traits like Orc's Adrenaline Rush (proficiency) or a CHA/WIS/etc-scaled one carry usesScale
+    // so their max uses stay synced to that stat automatically as you level up.
     const usesScale=ent.usesScale||'';
-    const usesMax = usesScale==='prof' ? Math.max(1,num(S.profBonus)) : (ent.usesMax||0);
+    const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
     const source={kind:'race',raceName:ent.g};
-    S.features.push({title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,source});
+    S.features.push({title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source});
     input.value=''; close();
     fxRefresh();
   });
@@ -2258,14 +2285,20 @@ function wireFx(){
     S.features[+el.dataset.usesper].usesPer=el.value;
     renderCombatFeatures(); save();
   }));
-  // Toggle: tie this feature's max uses to the proficiency-bonus stat instead of a fixed number
-  $$('[data-usesprof]').forEach(el=>el.addEventListener('click',()=>{
-    const f=S.features[+el.dataset.usesprof];
-    f.usesScale = f.usesScale==='prof' ? '' : 'prof';
-    if(f.usesScale==='prof'){
-      f.usesMax=Math.max(1,num(S.profBonus));
-      f.usesUsed=Math.min(num(f.usesUsed),f.usesMax);
-    }
+  // Tie this feature's max uses to a live stat (proficiency or an ability modifier) instead of a
+  // fixed number that goes stale the moment you level up or bump that ability.
+  $$('[data-usesscale]').forEach(el=>el.addEventListener('change',()=>{
+    const f=S.features[+el.dataset.usesscale];
+    f.usesScale=el.value;
+    const sv=usesScaleValue(f.usesScale,f.usesScaleBonus);
+    if(sv!=null){ f.usesMax=sv; f.usesUsed=Math.min(num(f.usesUsed),f.usesMax); }
+    renderFeatures(); renderCombatFeatures(); save();
+  }));
+  $$('[data-usesbonus]').forEach(el=>el.addEventListener('change',()=>{
+    const f=S.features[+el.dataset.usesbonus];
+    f.usesScaleBonus=num(el.value);
+    const sv=usesScaleValue(f.usesScale,f.usesScaleBonus);
+    if(sv!=null){ f.usesMax=sv; f.usesUsed=Math.min(num(f.usesUsed),f.usesMax); }
     renderFeatures(); renderCombatFeatures(); save();
   }));
   // "+ Effect" ghost button — collapsed by default so a card with no effect in progress stays
@@ -2577,18 +2610,20 @@ function focusLast(container){
 function recalc(){
   renderBuildTheme();
   const P=num(S.profBonus);
-  // features whose uses-per-rest are tied to proficiency bonus (e.g. Orc's Adrenaline Rush,
-  // Harengon's Rabbit Hop) auto-rescale here, so leveling up (which changes profBonus) keeps
-  // their max uses correct without the player having to edit the number by hand.
-  let profUsesChanged=false;
+  // Features whose uses-per-rest are tied to a stat (proficiency bonus — Orc's Adrenaline Rush,
+  // Harengon's Rabbit Hop — or an ability modifier — Bardic Inspiration, Divine Sense) auto-rescale
+  // here, so leveling up or raising that ability keeps their max uses correct without the player
+  // having to edit the number by hand.
+  let scaledUsesChanged=false;
   S.features.forEach(f=>{
-    if(f.usesScale==='prof'){
-      const p=Math.max(1,P);
-      if(num(f.usesMax)!==p){ f.usesMax=p; profUsesChanged=true; }
-      if(num(f.usesUsed)>f.usesMax){ f.usesUsed=f.usesMax; profUsesChanged=true; }
-    }
+    const sv=usesScaleValue(f.usesScale,f.usesScaleBonus);
+    if(sv==null) return;
+    if(num(f.usesMax)!==sv){ f.usesMax=sv; scaledUsesChanged=true; }
+    if(num(f.usesUsed)>f.usesMax){ f.usesUsed=f.usesMax; scaledUsesChanged=true; }
   });
-  if(profUsesChanged) renderCombatFeatures();
+  // Both views read the same f.usesMax — without renderFeatures() here, the Features tab's own
+  // "= N" badge went stale after an ability score change until something else forced a re-render.
+  if(scaledUsesChanged){ renderFeatures(); renderCombatFeatures(); }
   // ability modifiers (base score + racial bonus)
   ABILITIES.forEach(([k])=>{
     $$(`[data-abmod="${k}"]`).forEach(el=>el.textContent=fmt(amod(k)));

@@ -11,7 +11,7 @@ const FEATURE_LIB=[
  {n:'Feral Instinct',g:'Barbarian',l:7,d:'Advantage on initiative rolls; act normally when surprised if you rage first.',combat:true},
  {n:'Brutal Critical',g:'Barbarian',l:9,d:'Roll one extra weapon damage die on a critical hit.',combat:true},
  // Bard
- {n:'Bardic Inspiration',g:'Bard',l:1,d:'Bonus action: give a creature a d6 (grows with level) to add to one roll. CHA mod uses per long rest.',combat:true},
+ {n:'Bardic Inspiration',g:'Bard',l:1,d:'Bonus action: give a creature a d6 (grows with level) to add to one roll. CHA mod uses per long rest.',combat:true,usesPer:'long',usesScale:'cha'},
  {n:'Jack of All Trades',g:'Bard',l:2,d:'Add half proficiency (rounded down) to ability checks that don\'t already include it.'},
  {n:'Song of Rest',g:'Bard',l:2,d:'Party regains extra 1d6 HP when spending hit dice on a short rest.'},
  {n:'Expertise (Bard)',g:'Bard',l:3,d:'Choose two skill proficiencies: double proficiency. Set those skills to expertise (tap dot twice).'},
@@ -42,7 +42,7 @@ const FEATURE_LIB=[
  {n:'Evasion (Monk)',g:'Monk',l:7,d:'DEX save for half damage → no damage on success, half on failure.',combat:true},
  {n:'Purity of Body',g:'Monk',l:10,d:'Immune to disease and poison.'},
  // Paladin
- {n:'Divine Sense',g:'Paladin',l:1,d:'Action: detect celestials, fiends, undead within 60 ft. 1+CHA uses per long rest.'},
+ {n:'Divine Sense',g:'Paladin',l:1,d:'Action: detect celestials, fiends, undead within 60 ft. 1+CHA uses per long rest.',combat:true,usesPer:'long',usesScale:'cha',usesScaleBonus:1},
  {n:'Lay on Hands',g:'Paladin',l:1,d:'Healing pool = 5 × paladin level per long rest.',combat:true},
  {n:'Fighting Style (Paladin)',g:'Paladin',l:2,d:'Pick a style: Defense (+1 AC in armor — add a stat effect), Dueling, Great Weapon Fighting, Protection.'},
  {n:'Divine Smite',g:'Paladin',l:2,d:'Spend a slot on melee hit: +2d8 radiant (+1d8 per slot level above 1st, +1d8 vs undead/fiends).',combat:true},
