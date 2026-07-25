@@ -850,6 +850,11 @@ function renderWeaponResults(i){
 // away instead of permanently taking up floor space. A brand-new, still-unnamed attack always
 // opens automatically — nothing to glance at yet, only something to configure.
 const ATK_OPEN=new Set();
+function refocusNameInput(i,cursor){
+  const el=$(`[data-nameinput="${i}"]`); if(!el) return;
+  el.focus();
+  try{ el.setSelectionRange(cursor,cursor); }catch(e){}
+}
 function attackRowHTML(a,i){
   const c=atkSummary(a);
   const isCustom=a.weapon==='custom'||!WEAPONS[a.weapon];
@@ -951,17 +956,26 @@ function renderAttacks(){
     inp.addEventListener('input',()=>{
       const i=+inp.dataset.nameinput, a=S.attacks[i];
       a.name=inp.value;
+      // A card only shows this field while open — either explicitly (ATK_OPEN) or because it's
+      // still unnamed. The moment typing gives it a name, that second reason stops applying, so
+      // without this, a re-render triggered mid-keystroke (below) would collapse the card out
+      // from under the cursor. Mark it explicitly open for as long as you're typing in it.
+      ATK_OPEN.add(i);
       renderWeaponResults(i);
       inp.nextElementSibling.classList.add('open');
       const norm=inp.value.trim().toLowerCase();
       const matchId=Object.keys(WEAPONS).find(id=>WEAPONS[id].n.toLowerCase()===norm);
+      // Locking in / dropping a built-in weapon changes the die + stat select, which forces a
+      // full re-render — that swaps in a fresh <input>, so refocus it (cursor where it was) or
+      // every keystroke that crosses this boundary would silently eat the next one.
+      const cursor=inp.selectionStart;
       if(matchId && a.weapon!==matchId){
         a.weapon=matchId; a.die=WEAPONS[matchId].d; a.dmgStat='auto';
-        renderAttacks(); save(); return;
+        renderAttacks(); save(); refocusNameInput(i,cursor); return;
       }
       if(!matchId && a.weapon!=='custom'){
         a.weapon='custom';
-        renderAttacks(); save(); return;
+        renderAttacks(); save(); refocusNameInput(i,cursor); return;
       }
       save();
     });
@@ -1455,9 +1469,17 @@ function wireFeaturesLock(){
 // elsewhere (attacks, spellbook, combat-flagged features) plus free-form custom cards. Paper
 // rule: every derived field is overridable per card (action type, condition), every card can be
 // pinned/hidden, and nothing is enforced — the cockpit reminds and tracks, the player decides.
-const CK_TYPES=[['action','Action'],['bonus','Bonus Action'],['item','Item'],['other','Other']];
-const CK_TYPE_ORDER={action:0,bonus:1,item:2,other:3};
-const CK_PILL={action:'pill-action',bonus:'pill-bonus',item:'pill-item',other:'pill-cast'};
+// A card can hold MORE THAN ONE action-economy tag at once (e.g. an off-hand light weapon is
+// both an Action and a Bonus Action attack depending on the moment) — cards[].types is always
+// an array; cards[].type is just its first/primary tag, used only for the spine color and sort.
+const CK_TYPES=[['action','Action'],['bonus','Bonus Action'],['reaction','Reaction'],['item','Item'],['other','Other']];
+const CK_TYPE_ORDER={action:0,bonus:1,reaction:2,item:3,other:4};
+const CK_PILL={action:'pill-action',bonus:'pill-bonus',reaction:'pill-react',item:'pill-item',other:'pill-cast'};
+// New tag list for a card, or the single-value legacy field wrapped in an array if it was
+// never migrated — every card format has always stored one of these two shapes.
+function ckTypesOf(obj,legacyVal,fallback){
+  return Array.isArray(obj.actionTypes)&&obj.actionTypes.length ? obj.actionTypes : [legacyVal||fallback];
+}
 let CK_FILTER='all', CK_UNDO=null;
 const CK_OPEN=new Set(), CK_RULES_OPEN=new Set();
 // Older saves may lack the cockpit fields entirely — normalize on every access.
@@ -1490,12 +1512,12 @@ function ckRef(key){
 function spellActionType(sp){
   if(sp.actionType) return sp.actionType;
   const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
-  if(db){
-    const b=db.t.endsWith('r')?db.t.slice(0,-1):db.t;
-    return b==='A'?'action':b==='B'?'bonus':'other';
-  }
+  if(db) return db.t==='A'?'action':db.t==='B'?'bonus':db.t==='R'?'reaction':'other';
   const m=(sp.meta||'').toLowerCase();
-  return m.startsWith('bonus')?'bonus':m.includes('action')&&!m.startsWith('reaction')?'action':'other';
+  if(m.startsWith('bonus')) return 'bonus';
+  if(m.startsWith('reaction')) return 'reaction';
+  if(m.includes('action')) return 'action';
+  return 'other';
 }
 function spellIsConc(sp){
   const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
@@ -1507,27 +1529,31 @@ function cockpitCards(){
   const c=ck(), cards=[];
   (S.attacks||[]).forEach((a,i)=>{
     if(!(a.name||'').trim()) return;
-    cards.push({key:'atk:'+i,kind:'atk',i,name:a.name,type:a.actionType||'action',cond:a.cond||''});
+    const types=ckTypesOf(a,a.actionType,'action');
+    cards.push({key:'atk:'+i,kind:'atk',i,name:a.name,types,type:types[0],cond:a.cond||''});
   });
   const anyPrep=S.spellLevels.some((lv,L)=>L>0&&lv.spells.some(s=>s.prep));
   S.spellLevels.forEach((lv,L)=>lv.spells.forEach((sp,i)=>{
     if(!(sp.name||'').trim()) return;
     if(L>0&&anyPrep&&!c.showAllSpells&&!sp.prep) return;
-    cards.push({key:`sp:${L}.${i}`,kind:'sp',L,i,name:sp.name,type:spellActionType(sp),cond:sp.cond||'',conc:spellIsConc(sp)});
+    const types=Array.isArray(sp.actionTypes)&&sp.actionTypes.length?sp.actionTypes:[spellActionType(sp)];
+    cards.push({key:`sp:${L}.${i}`,kind:'sp',L,i,name:sp.name,types,type:types[0],cond:sp.cond||'',conc:spellIsConc(sp)});
   }));
   S.features.forEach((f,gi)=>{
     if(!f.combat) return;
-    cards.push({key:'ft:'+gi,kind:'ft',gi,name:f.title||'Feature',
-      type:f.actionType||(num(f.usesMax)>0?'action':'other'),cond:f.cond||''});
+    const types=ckTypesOf(f,f.actionType,num(f.usesMax)>0?'action':'other');
+    cards.push({key:'ft:'+gi,kind:'ft',gi,name:f.title||'Feature',types,type:types[0],cond:f.cond||''});
   });
   S.customCards.forEach((cc,i)=>{
-    cards.push({key:'cc:'+i,kind:'cc',i,name:cc.title||'Custom',type:cc.type||'action',cond:cc.cond||''});
+    const types=ckTypesOf(cc,cc.type,'action');
+    cards.push({key:'cc:'+i,kind:'cc',i,name:cc.title||'Custom',types,type:types[0],cond:cc.cond||''});
   });
   (S.equipment||[]).forEach((e,i)=>{
     if(!e.combat||!(e.name||'').trim()) return;
     // Blank qty = untracked (always usable); only an explicit 0 counts as "out of stock".
     const tracked=String(e.qty??'').trim()!=='';
-    cards.push({key:'it:'+i,kind:'it',i,name:e.name,type:e.actionType||'item',cond:e.cond||'',out:tracked&&num(e.qty)<=0});
+    const types=ckTypesOf(e,e.actionType,'item');
+    cards.push({key:'it:'+i,kind:'it',i,name:e.name,types,type:types[0],cond:e.cond||'',out:tracked&&num(e.qty)<=0});
   });
   cards.forEach(x=>{ x.pin=c.pins.includes(x.key); });
   return cards;
@@ -1537,16 +1563,34 @@ function ckSlotPips(L){
   return `<span class="pips ck-pips">${Array.from({length:lv.total},(_,k)=>
     `<button class="pip ${k<lv.used?'used':''}" data-ckslot="${L}.${k}"></button>`).join('')}</span>`;
 }
-function ckGearRow(card){
+// stepIdx present → this open body is a turn-plan step, not the "Do Something" grid card.
+// Same weapon, two different questions: the card's tags say every economy slot it *could* fill
+// (drives where it shows up when browsing); a step's own type says what it *is*, right here, in
+// this one planned turn — so "Shortsword" attacked three times in a row can have its third swing
+// marked as the Bonus Action without relabeling the other two, or the card everywhere else.
+function ckGearRow(card,stepIdx){
   const obj=ckRef(card.key); if(!obj) return '';
+  let typePicker,label;
+  if(stepIdx!=null){
+    const step=ckPlan().steps[stepIdx], stepType=step.type||card.type;
+    label='This step:';
+    typePicker=CK_TYPES.map(([v,l])=>
+      `<button type="button" class="ck-typechip ${CK_PILL[v]} ${stepType===v?'on':''}" data-ckstept="${stepIdx}::${v}" title="Mark this one step as ${l}">${l}</button>`
+    ).join('');
+  }else{
+    label='Shows under:';
+    typePicker=CK_TYPES.map(([v,l])=>
+      `<button type="button" class="ck-typechip ${CK_PILL[v]} ${card.types.includes(v)?'on':''}" data-cktoggletype="${card.key}::${v}" title="${card.types.includes(v)?`Tap to stop showing this under ${l}`:`Tap to also show this under ${l}`}">${l}</button>`
+    ).join('');
+  }
   return `<div class="ck-gear">
-    <select data-cktype="${card.key}">${CK_TYPES.map(([v,l])=>`<option value="${v}" ${card.type===v?'selected':''}>${l}</option>`).join('')}</select>
+    <div class="ck-typepick"><span class="ck-gear-label">${label}</span>${typePicker}</div>
     <input type="text" value="${esc(obj.cond||'')}" data-ckcond="${card.key}" placeholder="Condition — e.g. first turn of combat, once per turn">
     <button data-ckpin="${card.key}">${card.pin?'📌 Unpin':'📌 Pin'}</button>
   </div>`;
 }
-function ckCardOpenHTML(card){
-  const g=ckGearRow(card);
+function ckCardOpenHTML(card,stepIdx){
+  const g=ckGearRow(card,stepIdx);
   if(card.kind==='atk'){
     const i=card.i, a=S.attacks[i], cSum=atkSummary(a);
     return `<div class="ck-body">
@@ -1606,7 +1650,7 @@ function ckSubHTML(card,withRoll){
     // withRoll (plan steps): type what the damage dice showed, the total auto-calcs live —
     // same S.attacks[i].rolled the attack editor uses, so the two stay in sync.
     const roll=withRoll?` <span class="ck-roll">🎲<input type="number" value="${esc(a.rolled)}" data-ckroll="${i}" placeholder="${esc(cSum.die||'roll')}" title="What the damage dice showed — total adds your modifiers and active buffs">= <b data-atkfinal="${i}">${cSum.finalDamage!=null?cSum.finalDamage:'—'}</b></span>`:'';
-    return `Hit <b data-atkview="${i}">${esc(cSum.bonus)}</b> · <span data-atkdmg="${i}">${esc(cSum.dmg)}</span>${roll}`;
+    return `Hit <b class="ck-atkhit" data-atkview="${i}">${esc(cSum.bonus)}</b> · <span class="ck-atkdmg" data-atkdmg="${i}">${esc(cSum.dmg)}</span>${roll}`;
   }
   if(card.kind==='sp'){
     const sp=ckRef(card.key);
@@ -1634,11 +1678,14 @@ function ckCardHTML(card){
   const open=CK_OPEN.has(card.key);
   const sub=ckSubHTML(card);
   const tl=Object.fromEntries(CK_TYPES);
+  // One pill per tag — usually just one, but a card tagged for more than one economy slot
+  // (Action + Bonus Action) shows both right here, no need to open it to see where it lives.
+  const pills=card.types.map(v=>`<span class="sp-pill ${CK_PILL[v]||'pill-cast'}">${tl[v]||'Other'}</span>`).join('');
   return `<div class="ck-card ck-card-${card.type||'other'} ${card.kind==='sp'?'ck-card-spell':''} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${open?'open':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
     <div class="ck-card-head">
       <span class="ck-drag-handle" data-ckdraghandle title="Drag to place in your turn plan">⠿</span>
       <span class="ck-card-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</span>
-      <span class="sp-pill ${CK_PILL[card.type]||'pill-cast'}">${tl[card.type]||'Other'}</span>
+      <span class="ck-pillgroup">${pills}</span>
       ${card.kind==='it'&&!card.out?`<button class="ck-quickuse" data-ckituse="${card.i}" title="Use one — no need to open the card">Use</button>`:''}
       <button class="ck-plan-add" data-ckplan="${card.key}" title="Add to end of turn plan (or drag the ⠿ handle to place it precisely)">⤵</button>
     </div>
@@ -1652,12 +1699,14 @@ function renderCockpitCards(){
   const c=ck();
   let cards=cockpitCards();
   const counts={all:cards.length,spell:cards.filter(x=>x.kind==='sp').length};
-  CK_TYPES.forEach(([v])=>counts[v]=cards.filter(x=>x.type===v).length);
+  // A card tagged with more than one economy slot counts (and shows up) under every tab it's
+  // tagged for, same idea as the spell facet below — nothing is forced into one exclusive bucket.
+  CK_TYPES.forEach(([v])=>counts[v]=cards.filter(x=>x.types.includes(v)).length);
   // "Spells" is a source facet (kind), not an action-type facet — it sits alongside Action/Bonus/
   // etc. rather than replacing them, so a spell that's also an Action (e.g. Fireball) shows up
   // under either filter instead of being forced into one exclusive bucket.
   if(CK_FILTER==='spell') cards=cards.filter(x=>x.kind==='sp');
-  else if(CK_FILTER!=='all') cards=cards.filter(x=>x.type===CK_FILTER);
+  else if(CK_FILTER!=='all') cards=cards.filter(x=>x.types.includes(CK_FILTER));
   cards.sort((a,b)=>(b.pin-a.pin)||(CK_TYPE_ORDER[a.type]-CK_TYPE_ORDER[b.type])||((a.cond?1:0)-(b.cond?1:0))||a.name.localeCompare(b.name));
   $('#ckFilters').innerHTML=[['all','All'],...CK_TYPES,['spell','🔮 Spells']].map(([v,l])=>
     `<button class="ck-filter ${v==='spell'?'ck-filter-spell':''} ${CK_FILTER===v?'on':''}" data-ckfilter="${v}">${l}${counts[v]?` <i>${counts[v]}</i>`:''}</button>`).join('');
@@ -1702,18 +1751,21 @@ function renderCockpitPlan(){
           ${noteIn}
           <span class="ck-ps-sub">source card was removed — step kept as a note</span></div>
           <button data-plandel="${i}" title="Remove step">✕</button></div>`;
-        return `<div class="ck-plan-step ck-ps-${card.type} ${card.kind==='sp'?'ck-card-spell':''} ${open?'open':''}" data-planstep="${i}">
+        // A step's own type (set independently below) wins over the card's — the same weapon can
+        // be one step's Action and another step's Bonus Action within the same planned turn.
+        const stepType=p.type||card.type;
+        return `<div class="ck-plan-step ck-ps-${stepType} ${card.kind==='sp'?'ck-card-spell':''} ${open?'open':''}" data-planstep="${i}">
           <span class="ck-drag-handle" data-ckdraghandle title="Drag to reorder">⠿</span>
           <i>${i+1}</i>
           <div class="ck-ps-main">
             <div class="ck-ps-head">
               <span class="ck-ps-name">${card.conc?'◉ ':''}${esc(card.name)}</span>
               ${noteIn}
-              <span class="sp-pill ${CK_PILL[card.type]||'pill-cast'}">${tl[card.type]||'Other'}</span>
+              <span class="sp-pill ${CK_PILL[stepType]||'pill-cast'}">${tl[stepType]||'Other'}</span>
             </div>
             <div class="ck-ps-sub">${ckSubHTML(card,true)}</div>
             ${card.cond?`<div class="ck-card-cond">⏱ ${esc(card.cond)}</div>`:''}
-            ${open?ckCardOpenHTML(card):''}
+            ${open?ckCardOpenHTML(card,i):''}
           </div>
           <button data-plandel="${i}" title="Remove step">✕</button>
         </div>`;
@@ -1814,7 +1866,9 @@ function wireCombatFeatures(){
     const plan=t.closest('[data-ckplan]');
     if(plan){ const key=plan.dataset.ckplan;
       const c=cockpitCards().find(x=>x.key===key);
-      ckPlan().steps.push({key,name:c?c.name:key});
+      // Seeded from the card's current type, then independent — editing this step later never
+      // touches the card, or any other step that happens to reference the same card.
+      ckPlan().steps.push({key,name:c?c.name:key,type:c?c.type:'action'});
       CK_PLAN_OPEN.clear();
       renderCockpitPlan(); save(); return; }
     const pdel=t.closest('[data-plandel]');
@@ -1837,15 +1891,21 @@ function wireCombatFeatures(){
           CK_PLAN_OPEN.clear();
           renderCockpitPlan(); save();
         }); } return; }
-    const pstep=t.closest('[data-planstep]');
-    if(pstep){ // tap a step → unfold its full info right here in the timeline
-      if(t.closest('input,select,textarea,button,a,.pips,.ck-body')) return;
-      const i=+pstep.dataset.planstep;
-      CK_PLAN_OPEN.has(i)?CK_PLAN_OPEN.delete(i):CK_PLAN_OPEN.add(i);
-      renderCockpitPlan(); return; }
     const pin=t.closest('[data-ckpin]');
     if(pin){ const c=ck(), key=pin.dataset.ckpin;
       c.pins=c.pins.includes(key)?c.pins.filter(x=>x!==key):[...c.pins,key]; refresh(); return; }
+    const tt=t.closest('[data-cktoggletype]');
+    if(tt){ const [key,val]=tt.dataset.cktoggletype.split('::');
+      const obj=ckRef(key); const card=cockpitCards().find(x=>x.key===key);
+      if(!obj||!card) return;
+      const cur=card.types;
+      if(cur.includes(val)){ if(cur.length<=1) return; obj.actionTypes=cur.filter(x=>x!==val); } // always keep at least one tag
+      else obj.actionTypes=[...cur,val];
+      refresh(); return; }
+    const st=t.closest('[data-ckstept]');
+    if(st){ const [idx,val]=st.dataset.ckstept.split('::');
+      const step=ckPlan().steps[+idx]; if(!step) return;
+      step.type=val; renderCockpitPlan(); save(); return; }
     const del=t.closest('[data-ccdel]');
     if(del){ uiConfirm('Delete this custom card?',{title:'Delete card',ok:'Delete',danger:true}).then(ok=>{
         if(!ok) return;
@@ -1860,13 +1920,20 @@ function wireCombatFeatures(){
     if(t.closest('[data-ckconcdrop]')){ S.concentration=null; renderCockpitExtras(); save(); return; }
     const sdel=t.closest('[data-stdel]');
     if(sdel){ S.states.splice(+sdel.dataset.stdel,1); renderCockpitExtras(); save(); return; }
-    // Card head tap toggles open — but not when the tap landed on a control or inside the
-    // opened body (accidental scroll-taps on a tablet shouldn't slam the card shut).
+    // Card/step head tap toggles open — but not when the tap landed on a control or inside the
+    // opened body (accidental scroll-taps on a tablet shouldn't slam the card shut). This has to
+    // run after every specific data-ck* handler above, not before: it matches any click inside a
+    // [data-planstep], so checking it first was swallowing clicks meant for the pin/type-tag/
+    // condition controls that live inside an open step (they're buttons/inputs too).
     if(t.closest('input,select,textarea,button,a,.pips,.ck-body')) return;
     const cardEl=t.closest('[data-ckopen]');
     if(cardEl){ const key=cardEl.dataset.ckopen;
       CK_OPEN.has(key)?CK_OPEN.delete(key):CK_OPEN.add(key);
       renderCockpitCards(); return; }
+    const pstep=t.closest('[data-planstep]');
+    if(pstep){ const i=+pstep.dataset.planstep;
+      CK_PLAN_OPEN.has(i)?CK_PLAN_OPEN.delete(i):CK_PLAN_OPEN.add(i);
+      renderCockpitPlan(); return; }
   });
   // Typing fields save without re-rendering (keeps focus); selects re-render (they re-sort).
   $('#page-combat').addEventListener('input',e=>{
@@ -1881,12 +1948,8 @@ function wireCombatFeatures(){
     if(t.dataset.ccu!=null){ const cc=S.customCards[+t.dataset.ccu];
       cc.usesMax=Math.max(0,num(t.value)); cc.usesUsed=Math.min(num(cc.usesUsed),cc.usesMax); save(); return; }
   });
-  $('#page-combat').addEventListener('change',e=>{
-    const t=e.target;
-    if(t.dataset.cktype!=null){ const o=ckRef(t.dataset.cktype); if(o){o.actionType=t.value; renderCombatFeatures(); save();} }
-  });
   $('#ckAddCustom').addEventListener('click',()=>{
-    ck(); S.customCards.push({title:'',body:'',type:'action',cond:'',usesMax:0,usesUsed:0});
+    ck(); S.customCards.push({title:'',body:'',actionTypes:['action'],cond:'',usesMax:0,usesUsed:0});
     CK_OPEN.add('cc:'+(S.customCards.length-1));
     renderCockpitCards(); save();
   });
@@ -1999,7 +2062,7 @@ function initCkDrag(){
       const steps=ckPlan().steps;
       if(drag.kind==='card'){
         const c=cockpitCards().find(x=>x.key===drag.key);
-        steps.splice(drag.dropIndex,0,{key:drag.key,name:c?c.name:drag.key});
+        steps.splice(drag.dropIndex,0,{key:drag.key,name:c?c.name:drag.key,type:c?c.type:'action'});
       }else{
         // dropIndex already came from indexAtPoint(), which measures against the step list
         // with the dragged step filtered out — so it's already the correct target index in
@@ -2770,7 +2833,7 @@ function renderOverview(){
 
 // ---------- Add buttons (attacks / equipment / features / notes) ----------
 const ADD_TEMPLATES = {
-  attacks:()=>({name:'Longsword',weapon:'longsword',die:'1d8',dmgStat:'auto',magic:0,miscAtk:0,miscDmg:0,rolled:'',buffs:[]}),
+  attacks:()=>({name:'',weapon:'custom',die:'',dmgStat:'auto',magic:0,miscAtk:0,miscDmg:0,rolled:'',buffs:[]}),
   features:()=>({title:'',desc:'',fx:[],combat:false,usesMax:0,usesPer:'short',usesUsed:0,usesScale:'',source:{kind:'custom'}}),
   notes:()=>({title:'',body:''})
 };

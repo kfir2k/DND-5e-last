@@ -3,10 +3,10 @@
   "classLevel": "Ranger 6",
   "background": "",
   "playerName": "Kfir Kotler",
-  "race": "",
+  "race": "Shadar-Kai",
   "alignment": "",
   "xp": "",
-  "inspiration": true,
+  "inspiration": false,
   "profBonus": 3,
   "classId": "ranger",
   "level": 6,
@@ -70,7 +70,7 @@
   "speed": "30 ft.",
   "vision": "60 ft.",
   "hpMax": 52,
-  "hpCurrent": 35,
+  "hpCurrent": 8,
   "hpTemp": 0,
   "hdTotal": "6d10",
   "hd": "",
@@ -98,28 +98,36 @@
       "buffs": []
     },
     {
-      "name": "Shortsword right",
-      "weapon": "custom",
+      "name": "Shortsword",
+      "weapon": "shortsword",
       "die": "1d6",
-      "dmgStat": "dex",
+      "dmgStat": "auto",
       "magic": 0,
       "miscAtk": 1,
       "miscDmg": 1,
-      "rolled": "",
+      "rolled": "4",
       "buffs": [],
-      "actionType": "action"
+      "actionType": "action",
+      "actionTypes": [
+        "action",
+        "bonus"
+      ]
     },
     {
-      "name": "Shortsword left",
-      "weapon": "custom",
+      "name": "Shortsword",
+      "weapon": "shortsword",
       "die": "1d6",
-      "dmgStat": "dex",
+      "dmgStat": "auto",
       "magic": 0,
       "miscAtk": 1,
       "miscDmg": 1,
-      "rolled": "",
+      "rolled": "3",
       "buffs": [],
-      "actionType": "bonus"
+      "actionType": "bonus",
+      "actionTypes": [
+        "action",
+        "bonus"
+      ]
     },
     {
       "name": "Poisned Dagger",
@@ -156,9 +164,20 @@
       "miscDmg": 0,
       "rolled": "",
       "buffs": []
+    },
+    {
+      "name": "Javelin",
+      "weapon": "javelin",
+      "die": "1d6",
+      "dmgStat": "auto",
+      "magic": 0,
+      "miscAtk": 0,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": []
     }
   ],
-  "atkNotes": "",
+  "atkNotes": "Armor: Light armor, medium armor, shields\nWeapons: Simple weapons, martial weapons",
   "equip": {
     "armor": "breastplate",
     "armorMagic": 0,
@@ -232,7 +251,7 @@
       "att": false
     },
     {
-      "qty": "3",
+      "qty": "2",
       "name": "Potion of Healing 2d4+2",
       "type": "C",
       "desc": "Drink (action): regain 2d4+2 HP.",
@@ -358,6 +377,14 @@
       "desc": "פגיון מהשוק השחור עם רעל",
       "combat": false,
       "att": false
+    },
+    {
+      "qty": "1",
+      "name": "Potion of Greater Healing",
+      "type": "C",
+      "desc": "Drink (action): regain 4d4+4 HP.",
+      "combat": true,
+      "att": false
     }
   ],
   "treasure": "",
@@ -417,8 +444,11 @@
       "combat": true,
       "usesMax": 3,
       "usesPer": "long",
-      "usesUsed": 0,
-      "usesScale": "prof"
+      "usesUsed": 2,
+      "usesScale": "prof",
+      "actionTypes": [
+        "bonus"
+      ]
     },
     {
       "title": "Darkvision",
@@ -518,7 +548,7 @@
     },
     {
       "total": 4,
-      "used": 4,
+      "used": 2,
       "spells": [
         {
           "name": "Zephyr Strike",
@@ -628,7 +658,8 @@
         },
         {
           "key": "atk:2",
-          "name": "Shortsword"
+          "name": "Shortsword",
+          "type": "bonus"
         }
       ]
     },
@@ -638,7 +669,8 @@
         {
           "key": "ft:3",
           "name": "Blessing of the Raven Queen",
-          "note": ""
+          "note": "",
+          "type": "bonus"
         },
         {
           "key": "atk:1",
@@ -651,12 +683,12 @@
       ]
     },
     {
-      "name": "Multiply attackers",
+      "name": "התקפה שניה",
       "steps": [
         {
           "key": "sp:1.0",
           "name": "Hunter's Mark",
-          "note": "1d6 Damage each hit"
+          "note": "1d6 first hit Damage "
         },
         {
           "key": "atk:1",
@@ -667,9 +699,30 @@
           "name": "Shortsword right"
         }
       ]
+    },
+    {
+      "name": "BOW First ATTACK",
+      "steps": [
+        {
+          "key": "ft:7",
+          "name": "Dread Ambusher"
+        },
+        {
+          "key": "atk:5",
+          "name": "Longbow"
+        },
+        {
+          "key": "atk:5",
+          "name": "Longbow"
+        },
+        {
+          "key": "atk:5",
+          "name": "Longbow"
+        }
+      ]
     }
   ],
-  "turnPlanIdx": 0,
+  "turnPlanIdx": 1,
   "cockpit": {
     "hidden": [
       "cc:1",
@@ -703,6 +756,10 @@
     {
       "title": "Team names",
       "body": "ג'ק - רוני\nלילה - בר\nאליירה - ניקה\nמרשל - עומר\nאובה - ניקו"
+    },
+    {
+      "title": "כספים",
+      "body": "חייב ללילה 2700"
     }
   ],
   "eqCollapse": {

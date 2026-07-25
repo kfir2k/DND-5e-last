@@ -591,6 +591,7 @@ label.fld span{
 }
 .ck-card-action{border-left-color:#7fd6a4}
 .ck-card-bonus{border-left-color:#e8c25b}
+.ck-card-reaction{border-left-color:#e0876f}
 .ck-card-item{border-left-color:#6fd0c4}
 .ck-card-other{border-left-color:#7db8e8}
 /* Spells carry a second, independent signal — a faint violet wash on top of whichever
@@ -602,6 +603,7 @@ label.fld span{
 .ck-card.open.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.12),var(--panel2) 75%)}
 .ck-card.open.ck-card-action{border-left-color:#7fd6a4}
 .ck-card.open.ck-card-bonus{border-left-color:#e8c25b}
+.ck-card.open.ck-card-reaction{border-left-color:#e0876f}
 .ck-card.open.ck-card-item{border-left-color:#6fd0c4}
 .ck-card.open.ck-card-other{border-left-color:#7db8e8}
 .ck-card.ck-cond{background:rgba(232,194,91,.05)}
@@ -615,6 +617,9 @@ label.fld span{
 .ck-card-name{flex:1 1 90px;min-width:80px;color:var(--text);font-weight:600;font-size:.92rem;overflow-wrap:break-word}
 .ck-card-sub{color:var(--muted);font-size:.78rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
 .ck-card-sub b{color:var(--text)}
+/* Hit and Damage are the numbers you actually need mid-swing — give them the same gold, bold
+   treatment as the Attacks tab so they don't blend into the rest of the subtitle line. */
+.ck-card-sub .ck-atkhit,.ck-card-sub .ck-atkdmg{color:var(--gold-lt);font-weight:700}
 .ck-card-cond{color:#e8c25b;font-size:.76rem;margin-top:3px;font-style:italic}
 .ck-pips{display:inline-flex;gap:3px;vertical-align:middle}
 /* Unfolding a card breathes instead of snapping */
@@ -639,12 +644,32 @@ label.fld span{
   color:var(--gold-lt);padding:6px 14px;font-size:.84rem;cursor:pointer;min-height:36px;
 }
 .ck-gear{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;border-top:1px dashed var(--border);padding-top:8px}
-.ck-gear select,.ck-gear input{font-size:.78rem}
-.ck-gear input{flex:1 1 160px;min-width:0}
+.ck-gear input{font-size:.78rem;flex:1 1 160px;min-width:0}
 .ck-gear button{
   background:transparent;border:1px solid var(--border-lt);border-radius:7px;
   color:var(--muted);padding:4px 10px;font-size:.76rem;cursor:pointer;
 }
+/* Multi-select action-type tags — a light off-hand weapon really is both an Action and a Bonus
+   Action attack, so more than one chip can be lit at once. Each keeps its own pill color when
+   on (matching the collapsed card's pills) instead of a uniform "selected" color, so the tag
+   you're toggling is recognizable at a glance from the filter row / card pills elsewhere. */
+.ck-typepick{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%;align-items:center}
+/* Distinguishes the two different pickers that can appear here: a card's own (global, "shows
+   under") vs. one turn-plan step's (local, "this step is") — same chip style, different scope,
+   easy to conflate without a label since a step's open body can show either one. */
+.ck-gear-label{color:var(--faint);font-size:.68rem;letter-spacing:.5px;text-transform:uppercase;margin-right:2px}
+.ck-gear .ck-typechip{
+  background:transparent;border:1px solid var(--border-lt);border-radius:999px;
+  color:var(--faint);padding:3px 12px;font-size:.68rem;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+  cursor:pointer;transition:background .12s ease,border-color .12s ease,color .12s ease;
+}
+.ck-gear .ck-typechip:hover{border-color:var(--muted);color:var(--muted)}
+.ck-typechip.pill-action.on{background:rgba(127,214,164,.18);border-color:#7fd6a4;color:#7fd6a4}
+.ck-typechip.pill-bonus.on{background:rgba(232,194,91,.18);border-color:#e8c25b;color:#e8c25b}
+.ck-typechip.pill-react.on{background:rgba(224,135,111,.18);border-color:#e0876f;color:#e0876f}
+.ck-typechip.pill-item.on{background:rgba(111,208,196,.18);border-color:#6fd0c4;color:#6fd0c4}
+.ck-typechip.pill-cast.on{background:rgba(125,184,232,.18);border-color:#7db8e8;color:#7db8e8}
+.ck-pillgroup{display:inline-flex;flex-wrap:wrap;gap:4px}
 .ck-body input[type=text],.ck-body textarea{width:100%;margin-top:4px}
 .ck-undo{
   display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--gold-dim);
@@ -718,6 +743,7 @@ label.fld span{
 .ck-roll b[data-atkfinal]{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:.95rem}
 .ck-plan-step.ck-ps-action{border-left-color:#7fd6a4}
 .ck-plan-step.ck-ps-bonus{border-left-color:#e8c25b}
+.ck-plan-step.ck-ps-reaction{border-left-color:#e0876f}
 .ck-plan-step.ck-ps-item{border-left-color:#6fd0c4}
 .ck-plan-step.ck-ps-other{border-left-color:#7db8e8}
 .ck-plan-step.ck-ps-gone{opacity:.6;border-left-color:var(--border-lt)}
@@ -1290,13 +1316,15 @@ input.atk-tiny{text-align:center;font-size:.88rem;padding:6px 4px}
 .atk-hit{flex:0 0 82px;text-align:center;padding-top:1px}
 .atk-dmg{flex:1 1 190px;min-width:160px;border-left:1px solid var(--border-lt);padding-left:10px}
 .atk-label{color:var(--muted);font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;display:block}
-/* The two numbers a player actually needs mid-swing — to-hit and final damage — read at a glance
-   now instead of blending into the surrounding labels/breakdowns. */
+/* The two numbers a player actually needs mid-swing — to-hit and damage — read at a glance now
+   instead of blending into the surrounding labels/breakdowns, in both the collapsed strip
+   (what you see during play) and the expanded editor. */
 .atk-hit .big,.atk-final{
   color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:1.6rem;white-space:nowrap;
 }
 .atk-hit .big{display:block}
-.atk-formula{color:var(--text);font-size:1.15rem;font-weight:600;display:block}
+.atk-mini-hit .big{color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:1.05rem}
+.atk-formula{color:var(--gold-lt);font-size:1.15rem;font-weight:700;display:block}
 .atk-breakdown{color:var(--faint);font-size:.66rem;display:block;margin-top:1px;white-space:nowrap}
 .atk-roll{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .atk-roll input{width:56px;text-align:center;font-size:.92rem;padding:6px 4px}
