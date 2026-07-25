@@ -617,9 +617,12 @@ label.fld span{
 .ck-card-name{flex:1 1 90px;min-width:80px;color:var(--text);font-weight:600;font-size:.92rem;overflow-wrap:break-word}
 .ck-card-sub{color:var(--muted);font-size:.78rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
 .ck-card-sub b{color:var(--text)}
-/* Hit and Damage are the numbers you actually need mid-swing — give them the same gold, bold
-   treatment as the Attacks tab so they don't blend into the rest of the subtitle line. */
-.ck-card-sub .ck-atkhit,.ck-card-sub .ck-atkdmg{color:var(--gold-lt);font-weight:700}
+/* Hit and Damage are the numbers you actually need mid-swing — give them the same bold
+   treatment as the Attacks tab (gold = will it land, red = how much it hurts) so they don't
+   blend into the rest of the subtitle line. Shared with .ck-ps-sub (Turn Plan steps) below —
+   same sub-line markup, same two numbers, same reason to make them pop. */
+.ck-card-sub .ck-atkhit,.ck-ps-sub .ck-atkhit{color:var(--gold-lt);font-weight:700}
+.ck-card-sub .ck-atkdmg,.ck-ps-sub .ck-atkdmg{color:var(--red);font-weight:700}
 .ck-card-cond{color:#e8c25b;font-size:.76rem;margin-top:3px;font-style:italic}
 .ck-pips{display:inline-flex;gap:3px;vertical-align:middle}
 /* Unfolding a card breathes instead of snapping */
@@ -740,7 +743,7 @@ label.fld span{
   color:var(--text);font-size:.8rem;padding:2px 6px;text-align:center;
 }
 .ck-roll input:focus{border-color:var(--gold);outline:none}
-.ck-roll b[data-atkfinal]{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:.95rem}
+.ck-roll b[data-atkfinal]{color:var(--red);font-family:'Cinzel',serif;font-weight:700;font-size:.95rem}
 .ck-plan-step.ck-ps-action{border-left-color:#7fd6a4}
 .ck-plan-step.ck-ps-bonus{border-left-color:#e8c25b}
 .ck-plan-step.ck-ps-reaction{border-left-color:#e0876f}
@@ -1101,13 +1104,20 @@ label.fld.sug-wrap{display:block}
   border-radius:10px;padding:9px 16px 7px;margin-bottom:14px;
   box-shadow:0 6px 20px rgba(0,0,0,.5),inset 0 40px 34px -34px rgba(201,162,39,.1);
 }
-.chud-primary{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:center}
+/* space-between (not center): HP anchors the left edge, AC/Init/states dock to the right — the
+   strip actually spans the panel now instead of clumping in the middle with dead space either side. */
+.chud-primary{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between}
 /* HP lives in the HUD: damage buttons on the left of the numbers, heals on the right —
    hit the side you mean. Temp sits apart in blue; the bar underlines the whole station. */
-.chud-hp{flex:1 1 380px;min-width:300px;max-width:560px}
-.chud-hpline{display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:nowrap}
+.chud-hp{flex:1 1 380px;min-width:300px;max-width:760px}
+.chud-hpline{display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;row-gap:6px}
 .chud-nums{display:inline-flex;align-items:baseline;gap:1px}
-.chud-in{
+/* input.chud-in, not just .chud-in: the global input[type=number]{width:100%} rule is an
+   element+attribute selector, which outweighs a bare class — a lone .chud-in was losing that
+   specificity fight and quietly rendering at the browser's default number-input width. It went
+   unnoticed while chud-hp was capped small enough for flex-shrink to mask it; widening that box
+   (below) gave the real 100%-width input room to show up. */
+input.chud-in{
   width:52px;background:transparent;border:none;color:var(--text);height:auto;box-shadow:none;
   font-family:'Cinzel',serif;font-weight:700;font-size:1.25rem;text-align:center;padding:0;margin:0;
 }
@@ -1115,7 +1125,12 @@ label.fld.sug-wrap{display:block}
 .chud-slash{color:var(--faint);font-size:1.1rem}
 .chud-temp{display:inline-flex;align-items:center;gap:2px;border-left:1px solid var(--border);padding-left:10px}
 .chud-templbl{color:#5aa9e0;font-size:.6rem;letter-spacing:1.2px;text-transform:uppercase}
-.chud-tempin{width:34px;color:#5aa9e0;font-size:.95rem}
+input.chud-tempin{width:34px;color:#5aa9e0;font-size:.95rem}
+/* Same shape as the preset dmg/heal buttons either side of it, just wrapped around a free-typed
+   number instead of a fixed one — for anything the ±1/5/10 presets don't cover. */
+.chud-custom{display:inline-flex;align-items:center;gap:5px;border-left:1px solid var(--border);padding-left:10px}
+input.chud-customin{width:42px;font-size:.95rem}
+.chud-custom .hp-btn{padding:3px 0;font-size:.85rem;width:26px;min-width:26px}
 .chud-bar{margin-top:4px;height:8px}
 .chud-btns{display:inline-flex;gap:3px;flex-shrink:0}
 .chud-btns .hp-btn{padding:3px 0;font-size:.7rem;width:34px;min-width:34px}
@@ -1128,7 +1143,7 @@ label.fld.sug-wrap{display:block}
   padding:3px 8px;min-width:64px;min-height:46px;flex:0 0 auto;
   justify-content:flex-start;gap:0;
 }
-.combat-hud .chud-hp{flex:1 1 300px;max-width:470px}
+.combat-hud .chud-hp{flex:1 1 300px;max-width:760px}
 .chud-hp .fx-note{min-height:0;text-align:center;font-size:.62rem;margin-top:2px}
 .chud-hp .fx-rems{justify-content:center;margin-top:2px}
 /* Reminder badges shrink to fit these compact cells — full-size .sk-fx is sized for roomy

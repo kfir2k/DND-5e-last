@@ -191,6 +191,11 @@ function combatHudHTML(){
           <button class="hp-btn heal" data-hp="10">+10</button>
         </span>
         <span class="chud-temp" title="Temporary HP — soaked before real HP"><span class="chud-templbl">temp</span><input type="number" class="chud-in chud-tempin" data-bind="hpTemp"></span>
+        <span class="chud-custom" title="Type any amount, then apply it as damage or healing">
+          <button class="hp-btn dmg" data-hpcustom="-1" title="Apply as damage">−</button>
+          <input type="number" min="0" class="chud-in chud-customin" placeholder="0">
+          <button class="hp-btn heal" data-hpcustom="1" title="Apply as healing">+</button>
+        </span>
       </div>
       <div class="hp-bar chud-bar"><div class="hp-fill"></div><span class="hp-temp-fill"></span></div>
       <span class="fx-note" data-fxnote="hpmax"></span><span class="fx-rems" data-fxrem="hpmax"></span>
@@ -2847,18 +2852,26 @@ function wireAddButtons(){
 }
 
 // ---------- HP quick buttons ----------
+function applyHpDelta(d){
+  if(d<0){ // damage soaks temp HP first (5e rule)
+    let dmg=-d;
+    const soak=Math.min(num(S.hpTemp),dmg);
+    S.hpTemp=num(S.hpTemp)-soak; dmg-=soak;
+    S.hpCurrent=Math.max(0,num(S.hpCurrent)-dmg);
+  }else{
+    S.hpCurrent=Math.min(num(S.hpMax)+fxStat('hpmax'),num(S.hpCurrent)+d);
+  }
+  syncBound(); recalc(); save();
+}
 function wireHpButtons(){
-  $$('[data-hp]').forEach(b=>b.addEventListener('click',()=>{
-    let d=num(b.dataset.hp);
-    if(d<0){ // damage soaks temp HP first (5e rule)
-      let dmg=-d;
-      const soak=Math.min(num(S.hpTemp),dmg);
-      S.hpTemp=num(S.hpTemp)-soak; dmg-=soak;
-      S.hpCurrent=Math.max(0,num(S.hpCurrent)-dmg);
-    }else{
-      S.hpCurrent=Math.min(num(S.hpMax)+fxStat('hpmax'),num(S.hpCurrent)+d);
-    }
-    syncBound(); recalc(); save();
+  $$('[data-hp]').forEach(b=>b.addEventListener('click',()=>applyHpDelta(num(b.dataset.hp))));
+  // The preset ±1/5/10 buttons cover the common cases; this is the escape hatch for anything
+  // else — type the number a hit/heal actually did, apply it either direction, done.
+  $$('[data-hpcustom]').forEach(b=>b.addEventListener('click',()=>{
+    const inp=b.closest('.chud-custom')?.querySelector('.chud-customin'); if(!inp) return;
+    const amt=Math.abs(num(inp.value)); if(!amt) return;
+    applyHpDelta(num(b.dataset.hpcustom)*amt);
+    inp.value='';
   }));
 }
 
