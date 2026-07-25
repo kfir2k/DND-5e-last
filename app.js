@@ -698,6 +698,25 @@ function renderSaves(){
     renderSaves(); recalc(); save();
   }));
 }
+// Terse feature badges for a skill — permanent grants (✦, green) and situational reminders
+// (★, gold, tap to unfold the "when" condition). Shared by the Skills tab's own rows and
+// Overview's Trained Skills chips, so a reminder is never visible in one place and silently
+// missing from the other.
+function skillBadgesHTML(k,ab){
+  const man=S.skills[k], g=fxSkillGrant(k);
+  const badges=[];
+  if(g>man){
+    const srcs=allFx().filter(x=>x.t==='skill'&&xSkills(x).includes(k)).map(x=>x.src).join(', ');
+    badges.push(`<span class="sk-fx perm">✦ ${esc(srcs)}<span class="sk-tip">Always active — already counted in the bonus</span></span>`);
+  }
+  fxNotes(k).forEach(n=>{
+    const b=noteBadge(k,ab,n);
+    if(b==null) return; // effect makes no difference here (e.g. already at expertise) — nothing to show
+    const tip=n.cond?`<span class="sk-tip">${esc(n.cond)}</span>`:'';
+    badges.push(`<span class="sk-fx" data-notemath="${k}">★ ${esc(n.src)} <b>${esc(b)}</b>${tip}</span>`);
+  });
+  return badges.join('');
+}
 function renderSkills(){
   // Grouped by ability score (STR, DEX, CON, INT, WIS, CHA) — matches the paper sheet's layout
   // and reads cleaner than one long A-Z list. The ability is shown once per group header instead
@@ -711,17 +730,7 @@ function renderSkills(){
       if(g>man){ dotCls='grant'+(g===2?' expg':''); dotTitle='Granted by a feature — tap to set manually'; }
       // terse feature badges, on their own second line under the row. Hovering rises a small
       // animated tooltip with just the "when" condition (e.g. "in favored terrain") — kept short.
-      const badges=[];
-      if(g>man){
-        const srcs=allFx().filter(x=>x.t==='skill'&&xSkills(x).includes(k)).map(x=>x.src).join(', ');
-        badges.push(`<span class="sk-fx perm">✦ ${esc(srcs)}<span class="sk-tip">Always active — already counted in the bonus</span></span>`);
-      }
-      fxNotes(k).forEach(n=>{
-        const b=noteBadge(k,abKey,n);
-        if(b==null) return; // effect makes no difference here (e.g. already at expertise) — nothing to show
-        const tip=n.cond?`<span class="sk-tip">${esc(n.cond)}</span>`:'';
-        badges.push(`<span class="sk-fx" data-notemath="${k}">★ ${esc(n.src)} <b>${esc(b)}</b>${tip}</span>`);
-      });
+      const badges=skillBadgesHTML(k,abKey);
       return `
       <div class="skill-item">
         <div class="skill-row">
@@ -729,7 +738,7 @@ function renderSkills(){
           <span class="bonus" data-skillbonus="${k}">+0</span>
           <span class="sk-name">${label}</span>
         </div>
-        ${badges.length?`<div class="skill-fx-row">${badges.join('')}</div>`:''}
+        ${badges?`<div class="skill-fx-row">${badges}</div>`:''}
       </div>`;
     }).join('');
     return `<div class="skill-group ab-${abKey}"><div class="skill-group-head"><span class="sgh-icon">${AB_ICON[abKey]||''}</span>${abLabel}</div>${rows}</div>`;
@@ -778,17 +787,45 @@ function renderWeaponResults(i){
     list.map(([id,w])=>`<div class="item" data-wpick="${i}.${id}">${esc(w.n)}</div>`).join('');
   panel.innerHTML = grp('Melee',items.filter(([,w])=>!w.rng)) + grp('Ranged',items.filter(([,w])=>w.rng));
 }
-// One compact strip per attack: weapon identity, then Hit (left) and Damage (right) — that
-// reading order never changes — with buffs tucked into a slim line underneath.
+// Cards default collapsed — a glance-only strip (name, Hit, Damage, roll → Final) is what you
+// actually need mid-fight; full editing (stat/die/type, misc bonuses, buffs, notes) is one tap
+// away instead of permanently taking up floor space. A brand-new, still-unnamed attack always
+// opens automatically — nothing to glance at yet, only something to configure.
+const ATK_OPEN=new Set();
 function attackRowHTML(a,i){
   const c=atkSummary(a);
   const isCustom=a.weapon==='custom'||!WEAPONS[a.weapon];
+  const icon=isCustom?'✏':(c.w&&c.w.rng?'🏹':'⚔');
+  const open=ATK_OPEN.has(i)||!(a.name||'').trim();
+  const roll=`
+    <div class="atk-roll">
+      <input type="number" value="${esc(a.rolled)}" placeholder="roll" data-rolled="${i}" title="What you rolled on the weapon's damage dice">
+      ${(a.buffs||[]).map((b,j)=>({b,j})).filter(({b})=>b.on&&(b.dice||'').trim()).map(({b,j})=>`
+      <span class="atk-plus">+</span>
+      <input type="number" class="atk-buffroll" value="${esc(b.rolled)}" placeholder="${esc(b.dice)}" data-buffrolled="${i}.${j}" title="What you rolled on ${esc(b.name||'this buff')}'s ${esc(b.dice)} damage dice">`).join('')}
+      <span class="atk-eq">=</span>
+      <span class="atk-final" data-atkfinal="${i}">${c.finalDamage!=null?c.finalDamage:'—'}</span>
+    </div>`;
+  if(!open){
+    return `
+    <div class="atk-card atk-collapsed">
+      <div class="atk-mini-head" data-atkopen="${i}" title="Tap for full editing">
+        <span class="atk-icon">${icon}</span>
+        <span class="atk-mini-name">${esc(a.name)}</span>
+        <span class="atk-mini-hit"><span class="atk-label">Hit</span><span class="big" data-atkview="${i}">${c.bonus}</span></span>
+        <span class="atk-mini-dmg"><span class="atk-label">Damage</span><span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span></span>
+        <span class="atk-chevron">▸</span>
+      </div>
+      ${roll}
+      <button class="del-btn" data-del="attacks.${i}" title="Remove this attack">✕</button>
+    </div>`;
+  }
   const statOpts=ATK_STATS.map(([v,l])=>`<option value="${v}" ${(a.dmgStat||'auto')===v?'selected':''}>${l}</option>`).join('');
   const buffs=a.buffs||[];
-  const icon=isCustom?'✏':(c.w&&c.w.rng?'🏹':'⚔');
   return `
-  <div class="atk-card">
+  <div class="atk-card atk-open">
   <div class="atk-row">
+    <button class="atk-collapse" data-atkopen="${i}" title="Collapse to a summary strip">▾</button>
     <span class="atk-icon" title="${isCustom?'Custom weapon':(c.w&&c.w.rng?'Ranged weapon':'Melee weapon')}">${icon}</span>
     <div class="atk-id">
       <input type="text" class="atk-combo" autocomplete="off" value="${esc(a.name)}" data-nameinput="${i}"
@@ -818,14 +855,7 @@ function attackRowHTML(a,i){
       <span class="atk-label">Damage</span>
       <span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span>
       <span class="atk-breakdown" data-atkdmgbreak="${i}">${c.dmgBreakdown}</span>
-      <div class="atk-roll">
-        <input type="number" value="${esc(a.rolled)}" placeholder="roll" data-rolled="${i}" title="What you rolled on the weapon's damage dice">
-        ${buffs.map((b,j)=>({b,j})).filter(({b})=>b.on&&(b.dice||'').trim()).map(({b,j})=>`
-        <span class="atk-plus">+</span>
-        <input type="number" class="atk-buffroll" value="${esc(b.rolled)}" placeholder="${esc(b.dice)}" data-buffrolled="${i}.${j}" title="What you rolled on ${esc(b.name||'this buff')}'s ${esc(b.dice)} damage dice">`).join('')}
-        <span class="atk-eq">=</span>
-        <span class="atk-final" data-atkfinal="${i}">${c.finalDamage!=null?c.finalDamage:'—'}</span>
-      </div>
+      ${roll}
     </div>
     <button class="del-btn" data-del="attacks.${i}" title="Remove this attack">✕</button>
   </div>
@@ -838,12 +868,17 @@ function attackRowHTML(a,i){
       <option value="custom">✏ Custom buff…</option>
     </select>
   </div>
-  <input type="text" class="atk-note" value="${esc(a.note||'')}" data-li="attacks.${i}.note" placeholder="✎ notes — reach, thrown 20/60, silvered, two-handed…">
+  <textarea class="atk-note" data-li="attacks.${i}.note" placeholder="✎ notes — reach, thrown 20/60, silvered, two-handed, or anything else worth writing down…">${esc(a.note||'')}</textarea>
   </div>`;
 }
 function renderAttacks(){
   $('#attackList').innerHTML = S.attacks.map((a,i)=>attackRowHTML(a,i)).join('');
   wireList('#attackList');
+  $$('[data-atkopen]').forEach(el=>el.addEventListener('click',()=>{
+    const i=+el.dataset.atkopen;
+    ATK_OPEN.has(i)?ATK_OPEN.delete(i):ATK_OPEN.add(i);
+    renderAttacks();
+  }));
   // Selects & structural changes (add/remove/toggle) re-render fully — cheap for a handful of
   // rows and none of these are continuous-typing fields, so there's no focus to preserve.
   // The combo field is both the weapon picker and the name: typing a name that exactly matches
@@ -2414,15 +2449,21 @@ function recalc(){
   }else{
     setCalc('spellDC','—'); setCalc('spellAtk','—');
   }
-  // attack rows stay in sync with ability/proficiency/magic/buff/roll changes
-  $$('[data-atkview]').forEach(el=>{
-    const i=+el.dataset.atkview, a=S.attacks[i]; if(!a) return;
+  // Attack rows stay in sync with ability/proficiency/magic/buff/roll changes. Each of these
+  // data-atk* markers can appear more than once for the same attack at the same time (the
+  // Attacks panel row, its "Do Something" grid card, and — if queued up — its Turn Plan step
+  // all show Hit/Damage; the grid card and plan step skip the roll/Final bit). A single `$`
+  // lookup only touches the first match in DOM order, so whichever of those happened to render
+  // first silently "won" and the rest went stale — most visibly Final never updating in the
+  // Attacks panel itself once that same attack was also queued on the turn plan. `$$` updates
+  // every instance instead.
+  S.attacks.forEach((a,i)=>{
     const s=atkSummary(a);
-    el.textContent=s.bonus;
-    const brk=$(`[data-atkbreak="${i}"]`); if(brk) brk.textContent=s.breakdown;
-    const dmgEl=$(`[data-atkdmg="${i}"]`); if(dmgEl) dmgEl.textContent=s.dmg;
-    const dmgBrk=$(`[data-atkdmgbreak="${i}"]`); if(dmgBrk) dmgBrk.textContent=s.dmgBreakdown;
-    const finalEl=$(`[data-atkfinal="${i}"]`); if(finalEl) finalEl.textContent=s.finalDamage!=null?s.finalDamage:'—';
+    $$(`[data-atkview="${i}"]`).forEach(el=>el.textContent=s.bonus);
+    $$(`[data-atkbreak="${i}"]`).forEach(el=>el.textContent=s.breakdown);
+    $$(`[data-atkdmg="${i}"]`).forEach(el=>el.textContent=s.dmg);
+    $$(`[data-atkdmgbreak="${i}"]`).forEach(el=>el.textContent=s.dmgBreakdown);
+    $$(`[data-atkfinal="${i}"]`).forEach(el=>el.textContent=s.finalDamage!=null?s.finalDamage:'—');
   });
   // hp bar + clamp (effective max includes feature bonuses like Tough)
   const max=Math.max(0,num(S.hpMax)+fxStat('hpmax'));
@@ -2498,13 +2539,15 @@ function renderOverviewSkillChips(){
   const box=$('#ovSkillChips'); if(!box) return;
   S.favSkills=S.favSkills||[];
   const P=num(S.profBonus);
-  const withBonus=([k,label,ab])=>({k,label,eff:effSkill(k),b:amod(ab)+effSkill(k)*P});
+  const withBonus=([k,label,ab])=>({k,label,ab,eff:effSkill(k),b:amod(ab)+effSkill(k)*P});
   const trained=SKILLS.map(withBonus).filter(r=>r.eff>0);
   // A favorite that later becomes proficient just shows through the "trained" row above instead
   // of a second copy — favSkills itself is left untouched so it re-appears here if un-trained.
   const pinned=SKILLS.filter(([k])=>S.favSkills.includes(k)).map(withBonus).filter(r=>r.eff===0);
-  const chipHtml=r=>`<button class="ov-skchip" data-ovsktab>${esc(r.label)} <span>${fmt(r.b)}</span> ${r.eff===2?'●●':'●'}</button>`;
-  const pinHtml=r=>`<span class="ov-skchip fav">${esc(r.label)} <span>${fmt(r.b)}</span><button data-ovskunfav="${r.k}" title="Unpin from Overview">✕</button></span>`;
+  // Same ✦/★ feature badges as the Skills tab, right next to the chip — a granted proficiency or
+  // situational reminder is exactly the kind of thing this title page shouldn't let you forget.
+  const chipHtml=r=>`<button class="ov-skchip" data-ovsktab>${esc(r.label)} <span>${fmt(r.b)}</span> ${r.eff===2?'●●':'●'}</button>${skillBadgesHTML(r.k,r.ab)}`;
+  const pinHtml=r=>`<span class="ov-skchip fav">${esc(r.label)} <span>${fmt(r.b)}</span><button data-ovskunfav="${r.k}" title="Unpin from Overview">✕</button></span>${skillBadgesHTML(r.k,r.ab)}`;
   const rows=trained.map(chipHtml).join('')+pinned.map(pinHtml).join('');
   const pickable=SKILLS.filter(([k])=>!S.favSkills.includes(k)&&effSkill(k)===0);
   box.innerHTML = (rows||'<p class="prep-note" style="margin:0 0 6px">No trained skills yet — pick proficiencies on the Skills tab, or pin a favorite below.</p>')
