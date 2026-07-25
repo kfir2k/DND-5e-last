@@ -1,0 +1,683 @@
+{
+  "name": "Din Karter",
+  "classLevel": "Ranger 6",
+  "background": "",
+  "playerName": "Kfir Kotler",
+  "race": "",
+  "alignment": "",
+  "xp": "",
+  "inspiration": true,
+  "profBonus": 3,
+  "classId": "ranger",
+  "level": 6,
+  "subclass": "Gloom Stalker",
+  "raceId": "shadarkai",
+  "subraceId": "",
+  "flexBonus": [
+    "",
+    ""
+  ],
+  "asi": {
+    "4": {
+      "choice": "",
+      "a": "dex",
+      "b": "",
+      "feat": ""
+    }
+  },
+  "abilities": {
+    "str": 14,
+    "dex": 16,
+    "con": 13,
+    "int": 10,
+    "wis": 14,
+    "cha": 14
+  },
+  "saveProf": {
+    "str": true,
+    "dex": true,
+    "con": false,
+    "int": false,
+    "wis": false,
+    "cha": false
+  },
+  "skills": {
+    "acrobatics": 0,
+    "animal": 0,
+    "arcana": 0,
+    "athletics": 0,
+    "deception": 0,
+    "history": 0,
+    "insight": 1,
+    "intimidation": 0,
+    "investigation": 1,
+    "medicine": 0,
+    "nature": 0,
+    "perception": 1,
+    "performance": 0,
+    "persuasion": 0,
+    "religion": 0,
+    "sleight": 0,
+    "stealth": 1,
+    "survival": 0
+  },
+  "favSkills": [
+    "investigation"
+  ],
+  "ac": 16,
+  "initiativeMisc": 0,
+  "speed": "30 ft.",
+  "vision": "60 ft.",
+  "hpMax": 65,
+  "hpCurrent": 65,
+  "hpTemp": 0,
+  "hdTotal": "6d10",
+  "hd": "",
+  "hdUsed": 0,
+  "deathS": [
+    false,
+    false,
+    false
+  ],
+  "deathF": [
+    false,
+    false,
+    false
+  ],
+  "attacks": [
+    {
+      "name": "Dagger",
+      "weapon": "dagger",
+      "die": "1d4",
+      "dmgStat": "dex",
+      "magic": 0,
+      "miscAtk": 0,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": []
+    },
+    {
+      "name": "Shortsword right",
+      "weapon": "custom",
+      "die": "1d6",
+      "dmgStat": "dex",
+      "magic": 0,
+      "miscAtk": 1,
+      "miscDmg": 1,
+      "rolled": "",
+      "buffs": [],
+      "actionType": "action"
+    },
+    {
+      "name": "Shortsword left",
+      "weapon": "custom",
+      "die": "1d6",
+      "dmgStat": "dex",
+      "magic": 0,
+      "miscAtk": 1,
+      "miscDmg": 1,
+      "rolled": "",
+      "buffs": [],
+      "actionType": "bonus"
+    },
+    {
+      "name": "Poisned Dagger",
+      "weapon": "custom",
+      "die": "1d4",
+      "dmgStat": "dex",
+      "magic": 0,
+      "miscAtk": 1,
+      "miscDmg": 1,
+      "rolled": "",
+      "buffs": [],
+      "dmgType": "poison",
+      "note": "Poisoned 2d10 once a day -> 15+ constitution save "
+    },
+    {
+      "name": "Dagger",
+      "weapon": "dagger",
+      "die": "1d4",
+      "dmgStat": "dex",
+      "magic": 0,
+      "miscAtk": 0,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": [],
+      "note": ""
+    },
+    {
+      "name": "Longbow",
+      "weapon": "longbow",
+      "die": "1d8",
+      "dmgStat": "dex",
+      "magic": 0,
+      "miscAtk": 0,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": []
+    }
+  ],
+  "atkNotes": "",
+  "equip": {
+    "armor": "breastplate",
+    "armorMagic": 0,
+    "shield": false,
+    "shieldMagic": 0,
+    "acAuto": true,
+    "head": "",
+    "neck": "",
+    "cloak": "",
+    "hands": "",
+    "ring1": "",
+    "ring2": "",
+    "boots": "",
+    "mainhand": "",
+    "offhand": ""
+  },
+  "money": {
+    "cp": 0,
+    "sp": 30,
+    "ep": 0,
+    "gp": 4968,
+    "pp": 0
+  },
+  "equipment": [
+    {
+      "qty": "1",
+      "name": "שרשרת",
+      "type": "G",
+      "desc": "נמצאה בגופה שחיפשתי",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "2",
+      "name": "פגיון",
+      "type": "A",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "קשת ארוכה",
+      "type": "A",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "שריון קל עד בינוני",
+      "type": "G",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "שיקוי הענקים",
+      "type": "C",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "2",
+      "name": "חרב קצרה",
+      "type": "A",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "3",
+      "name": "Potion of Healing 2d4+2",
+      "type": "C",
+      "desc": "Drink (action): regain 2d4+2 HP.",
+      "combat": true,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "רעל לטאה",
+      "type": "C",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "מפה",
+      "type": "S",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "10",
+      "name": "לפיד",
+      "type": "T",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "נאד מים",
+      "type": "C",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "מצית",
+      "type": "T",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "10",
+      "name": "מנת מזון",
+      "type": "C",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "10",
+      "name": "יתד",
+      "type": "T",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "תיק",
+      "type": "T",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "פטיש",
+      "type": "T",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "מצפן",
+      "type": "T",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "",
+      "name": "",
+      "type": "G",
+      "desc": "",
+      "combat": false,
+      "att": false
+    }
+  ],
+  "treasure": "",
+  "features": [
+    {
+      "title": "Natural Explorer",
+      "desc": "In favored terrain: double proficiency on INT/WIS checks, no difficult-terrain slowdown, can't get lost, always alert.",
+      "fx": [
+        {
+          "t": "note",
+          "skills": [
+            "insight",
+            "investigation",
+            "perception"
+          ],
+          "kind": "dprof",
+          "cond": "City and desert"
+        }
+      ]
+    },
+    {
+      "title": "Favored Enemy",
+      "desc": "Advantage on Survival to track and INT checks to recall info about your favored enemies.",
+      "fx": [
+        {
+          "t": "note",
+          "skills": [
+            "arcana",
+            "history",
+            "investigation",
+            "nature",
+            "religion",
+            "survival"
+          ],
+          "kind": "adv",
+          "cond": "tracking your favored enemies, ORCs Humanoids, beasts"
+        }
+      ],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0
+    },
+    {
+      "title": "Fighting Style (Ranger)",
+      "desc": "Pick a style:  Two-Weapon. \nTwo-Weapon Fighting. When you engage in two-weapon fighting, you can add your ability modifier to the damage of the second attack.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0
+    },
+    {
+      "title": "Blessing of the Raven Queen",
+      "desc": "Bonus action: teleport up to 30 ft. to an unoccupied space you can see; until the end of the turn you have resistance to all damage. 1/short or long rest.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 3,
+      "usesPer": "long",
+      "usesUsed": 0,
+      "usesScale": "prof"
+    },
+    {
+      "title": "Darkvision",
+      "desc": "See in dim light within 60 ft. as if bright, and in darkness as if dim (no color).",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": ""
+    },
+    {
+      "title": "Necrotic Resistance",
+      "desc": "Resistance to necrotic damage.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": ""
+    },
+    {
+      "title": "Fey Ancestry",
+      "desc": "Advantage on saving throws against being charmed; magic can't put you to sleep.",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": ""
+    },
+    {
+      "title": "Dread Ambusher",
+      "desc": "At 3rd level, you master the art of the ambush. You can give yourself a bonus to your initiative rolls equal to your Wisdom modifier.\nAt the start of your first turn of each combat, your walking speed increases by 10 feet, which lasts until the end of that turn. If you take the Attack action on that turn, you can make one additional weapon attack as part of that action. If that attack hits, the target takes an extra 1d8 damage of the weapon's damage type.",
+      "fx": [
+        {
+          "t": "statnote",
+          "stat": "init",
+          "cond": "Start of the fight",
+          "n": "WIS"
+        },
+        {
+          "t": "statnote",
+          "stat": "speed",
+          "cond": "Start of the fight",
+          "n": 10
+        }
+      ],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "source": {
+        "kind": "class",
+        "classId": "ranger",
+        "className": "Ranger — Gloom Stalker"
+      },
+      "cond": ""
+    },
+    {
+      "title": "Umbral Sight",
+      "desc": "Darkvision 60 ft. (or +30 ft. if you already have it); invisible to creatures relying on darkvision to see you in darkness.",
+      "fx": [
+        {
+          "t": "stat",
+          "stat": "vision",
+          "n": 30
+        }
+      ],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "source": {
+        "kind": "class",
+        "classId": "ranger",
+        "className": "Ranger — Gloom Stalker"
+      }
+    }
+  ],
+  "profLang": "",
+  "languages": [
+    "Common",
+    "Orc",
+    "Elvish"
+  ],
+  "featuresLocked": true,
+  "spellClass": "Ranger",
+  "spellAbility": "wis",
+  "spellLevels": [
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 4,
+      "used": 4,
+      "spells": [
+        {
+          "name": "Zephyr Strike",
+          "prep": false,
+          "meta": "1 Bonus Action · Self · Conc., up to 1 min",
+          "desc": "Movement does not provoke opportunity attacks. One attack can gain advantage and +1d8 force damage."
+        },
+        {
+          "name": "Cure Wounds",
+          "prep": false,
+          "meta": "1 Action · Touch · Instantaneous",
+          "desc": "Touch heals 1d8 + spellcasting modifier HP."
+        },
+        {
+          "name": "Hunter's Mark",
+          "prep": false,
+          "meta": "1 Bonus Action · 90 ft · Conc., up to 1 hour",
+          "desc": "Add 1d6 damage to each weapon hit against the marked target."
+        },
+        {
+          "name": "Disguise Self",
+          "prep": false,
+          "meta": "1 Action · Self · 1 hour",
+          "desc": "Illusory change to appearance, clothing, armor, weapons, and carried gear."
+        }
+      ]
+    },
+    {
+      "total": 2,
+      "used": 0,
+      "spells": [
+        {
+          "name": "Rope Trick",
+          "prep": false,
+          "meta": "1 Action · Touch · 1 hour",
+          "desc": "60 feet long. One end of the rope then rises into the air until the whole rope hangs perpendicular to the ground. At the upper end of the rope, an invisible entrance opens to an extradimensional space that lasts until the spell ends.\nAttacks and spells can’t cross through the entrance \n\nAnything inside the extradimensional space drops out when the spell ends."
+        },
+        {
+          "name": "Protection from Poison",
+          "prep": false,
+          "meta": "1 Action · Touch · 1 hour",
+          "desc": "Neutralize one poison; target gains advantage on saves vs poison and resistance to poison damage."
+        }
+      ]
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    }
+  ],
+  "eqTab": "ALL",
+  "eqCollapse": {
+    "M": false,
+    "G": false,
+    "A": false,
+    "C": false,
+    "T": false
+  },
+  "invEqOpen": true,
+  "customCards": [],
+  "states": [],
+  "concentration": null,
+  "turnPlans": [
+    {
+      "name": "First attack",
+      "steps": [
+        {
+          "key": "ft:7",
+          "name": "Dread Ambusher",
+          "note": "1d8 + action attack"
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword"
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword right"
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword right"
+        },
+        {
+          "key": "atk:2",
+          "name": "Shortsword"
+        }
+      ]
+    },
+    {
+      "name": "Defance",
+      "steps": [
+        {
+          "key": "ft:3",
+          "name": "Blessing of the Raven Queen",
+          "note": ""
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword right"
+        },
+        {
+          "key": "atk:2",
+          "name": "Shortsword left"
+        }
+      ]
+    },
+    {
+      "name": "Multiply attackers",
+      "steps": [
+        {
+          "key": "sp:1.0",
+          "name": "Hunter's Mark",
+          "note": "1d6 Damage each hit"
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword right"
+        },
+        {
+          "key": "atk:1",
+          "name": "Shortsword right"
+        }
+      ]
+    }
+  ],
+  "turnPlanIdx": 0,
+  "cockpit": {
+    "hidden": [
+      "cc:1",
+      "cc:0",
+      "sp:2.0",
+      "ft:2"
+    ],
+    "pins": [],
+    "showAllSpells": false,
+    "showDeath": true,
+    "atkOpen": true
+  },
+  "age": "25",
+  "height": "1.85",
+  "weight": "",
+  "eyes": "",
+  "skin": "",
+  "hair": "",
+  "personality": "",
+  "ideals": "",
+  "bonds": "",
+  "flaws": "",
+  "allies": "",
+  "factionName": "",
+  "backstory": "",
+  "notes": [
+    {
+      "title": "Session notes",
+      "body": "אלנת'יר\nסולתהייבן\n\nשער צפוני דראגון בורן 300 אורקים בערך"
+    },
+    {
+      "title": "Team names",
+      "body": "ג'ק - רוני\nלילה - בר\nאליירה - ניקה\nמרשל - עומר\nאובה - ניקו"
+    }
+  ],
+  "turnPlan": []
+}
