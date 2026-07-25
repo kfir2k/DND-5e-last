@@ -1,6 +1,6 @@
 {
   "name": "Cassian Starfall",
-  "classLevel": "Bard 1",
+  "classLevel": "Bard 2",
   "background": "",
   "playerName": "Kfir Kotler",
   "race": "Changeling Fey",
@@ -9,7 +9,7 @@
   "inspiration": false,
   "profBonus": 2,
   "classId": "bard",
-  "level": 1,
+  "level": 2,
   "subclass": "",
   "raceId": "changeling",
   "subraceId": "",
@@ -59,10 +59,10 @@
   "initiativeMisc": 0,
   "speed": "30 ft.",
   "vision": "None",
-  "hpMax": 10,
-  "hpCurrent": 10,
+  "hpMax": 21,
+  "hpCurrent": 21,
   "hpTemp": 0,
-  "hdTotal": "1d8",
+  "hdTotal": "2d8",
   "hd": "",
   "hdUsed": 0,
   "deathS": [
@@ -145,11 +145,6 @@
   "treasure": "",
   "features": [
     {
-      "title": "",
-      "desc": "",
-      "fx": []
-    },
-    {
       "title": "Shapechanger",
       "desc": "Action: change your appearance (not size) — another humanoid's face, voice, body type, hair, etc. Lasts until you use this again or die.",
       "fx": [],
@@ -161,6 +156,58 @@
       "source": {
         "kind": "race",
         "raceName": "Changeling"
+      }
+    },
+    {
+      "title": "Bardic Inspiration",
+      "desc": "Bonus action: give a creature a d6 (grows with level) to add to one roll. CHA mod uses per long rest.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 4,
+      "usesPer": "long",
+      "usesUsed": 0,
+      "usesScale": "cha",
+      "source": {
+        "kind": "class",
+        "classId": "bard",
+        "className": "Bard"
+      }
+    },
+    {
+      "title": "Jack of All Trades",
+      "desc": "Add half proficiency (rounded down) to ability checks that don't already include it.",
+      "fx": [
+        {
+          "t": "note",
+          "skills": [
+            "acrobatics",
+            "animal",
+            "arcana",
+            "athletics",
+            "history",
+            "intimidation",
+            "medicine",
+            "nature",
+            "performance",
+            "religion",
+            "sleight",
+            "survival"
+          ],
+          "kind": "flat",
+          "cond": "",
+          "n": 1
+        }
+      ],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "class",
+        "classId": "bard",
+        "className": "Bard"
       }
     }
   ],
@@ -192,7 +239,7 @@
       ]
     },
     {
-      "total": 2,
+      "total": 3,
       "used": 0,
       "spells": [
         {
