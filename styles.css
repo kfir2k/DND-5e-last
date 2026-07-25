@@ -1555,17 +1555,36 @@ input.ov-id-field:focus{border-bottom-color:var(--gold)}
    actually makes the two sit at the same size instead of Saving Throws reading as an
    afterthought under the bigger ability cards. */
 .save-list-mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
-.ov-skchip{
-  display:inline-flex;align-items:center;gap:6px;margin:0 6px 6px 0;
+/* A skill's chip and its ✦/★ badge(s) are grouped into one inline-flex unit (.ov-skrow) sitting
+   inside a flex-wrap container — that makes the whole group wrap together as a single piece when
+   the line breaks, instead of plain inline flow letting a badge drift onto the next line next to
+   a different skill's chip. Stays horizontal and compact rather than one skill per line.
+   The group itself now carries the pill (carved-plaque look, inset shadow like the inventory
+   slots) and the chip inside goes borderless/transparent — one solid plaque per skill instead of
+   a chip nested inside another box, which read as flat/administrative rather than in-world. */
+#ovSkillChips{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
+.ov-skrow{
+  display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 8px;max-width:100%;
   background:var(--panel2);border:1px solid var(--border-lt);border-radius:999px;
-  color:var(--text);padding:5px 12px;font-size:.85rem;cursor:pointer;
+  padding:4px 6px 4px 12px;
+  box-shadow:inset 0 1px 8px rgba(0,0,0,.4);
+  transition:border-color .15s ease;
 }
-.ov-skchip:hover{border-color:var(--gold-dim)}
+.ov-skrow:has(.ov-skchip:hover){border-color:var(--gold-dim)}
+.ov-skfx-row{display:contents}
+.ov-skchip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:transparent;border:none;
+  color:var(--text);padding:1px 0;font-size:.85rem;cursor:pointer;
+}
 .ov-skchip span{color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700}
 /* Pinned favorites (not actually proficient) are a <span> — nothing to tap for navigation, only
    the ✕ removes the pin — so no pointer cursor and a violet dash instead of a real proficiency
    dot, keeping it visually distinct from the auto-shown proficient/expertise chips. */
-.ov-skchip.fav{cursor:default;border-style:dashed;border-color:#8b5cc9}
+/* Pinned favorites: the dashed violet boundary now lives on the plaque (.ov-skrow.fav) since the
+   chip itself went borderless — keeps the plaque as the one visual container per skill. */
+.ov-skrow.fav{border-style:dashed;border-color:#8b5cc9}
+.ov-skchip.fav{cursor:default}
 .ov-skchip.fav button{
   background:transparent;border:none;color:var(--faint);cursor:pointer;
   font-size:.85rem;line-height:1;padding:0;margin-left:2px;

@@ -2544,10 +2544,23 @@ function renderOverviewSkillChips(){
   // A favorite that later becomes proficient just shows through the "trained" row above instead
   // of a second copy — favSkills itself is left untouched so it re-appears here if un-trained.
   const pinned=SKILLS.filter(([k])=>S.favSkills.includes(k)).map(withBonus).filter(r=>r.eff===0);
-  // Same ✦/★ feature badges as the Skills tab, right next to the chip — a granted proficiency or
-  // situational reminder is exactly the kind of thing this title page shouldn't let you forget.
-  const chipHtml=r=>`<button class="ov-skchip" data-ovsktab>${esc(r.label)} <span>${fmt(r.b)}</span> ${r.eff===2?'●●':'●'}</button>${skillBadgesHTML(r.k,r.ab)}`;
-  const pinHtml=r=>`<span class="ov-skchip fav">${esc(r.label)} <span>${fmt(r.b)}</span><button data-ovskunfav="${r.k}" title="Unpin from Overview">✕</button></span>${skillBadgesHTML(r.k,r.ab)}`;
+  // Same ✦/★ feature badges as the Skills tab, but each skill now gets its own row (chip on top,
+  // one plaque per skill) instead of every chip and badge flowing loose in one wrapping line —
+  // sharing a line let a badge drift next to the wrong skill once the row wrapped.
+  const chipHtml=r=>{
+    const badges=skillBadgesHTML(r.k,r.ab);
+    return `<div class="ov-skrow">
+      <button class="ov-skchip" data-ovsktab>${esc(r.label)} <span>${fmt(r.b)}</span> ${r.eff===2?'●●':'●'}</button>
+      ${badges?`<div class="ov-skfx-row">${badges}</div>`:''}
+    </div>`;
+  };
+  const pinHtml=r=>{
+    const badges=skillBadgesHTML(r.k,r.ab);
+    return `<div class="ov-skrow fav">
+      <span class="ov-skchip fav">${esc(r.label)} <span>${fmt(r.b)}</span><button data-ovskunfav="${r.k}" title="Unpin from Overview">✕</button></span>
+      ${badges?`<div class="ov-skfx-row">${badges}</div>`:''}
+    </div>`;
+  };
   const rows=trained.map(chipHtml).join('')+pinned.map(pinHtml).join('');
   const pickable=SKILLS.filter(([k])=>!S.favSkills.includes(k)&&effSkill(k)===0);
   box.innerHTML = (rows||'<p class="prep-note" style="margin:0 0 6px">No trained skills yet — pick proficiencies on the Skills tab, or pin a favorite below.</p>')
