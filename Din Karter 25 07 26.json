@@ -62,14 +62,15 @@
     "survival": 0
   },
   "favSkills": [
-    "investigation"
+    "investigation",
+    "survival"
   ],
   "ac": 16,
   "initiativeMisc": 0,
   "speed": "30 ft.",
   "vision": "60 ft.",
-  "hpMax": 65,
-  "hpCurrent": 65,
+  "hpMax": 52,
+  "hpCurrent": 35,
   "hpTemp": 0,
   "hdTotal": "6d10",
   "hd": "",
@@ -325,6 +326,38 @@
       "desc": "",
       "combat": false,
       "att": false
+    },
+    {
+      "qty": "1",
+      "name": "לום",
+      "type": "T",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "כלי גילוף עץ",
+      "type": "T",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "carpenter kit",
+      "type": "T",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "name": "פגיון מורעל",
+      "qty": "1",
+      "type": "A",
+      "desc": "פגיון מהשוק השחור עם רעל",
+      "combat": false,
+      "att": false
     }
   ],
   "treasure": "",
@@ -568,13 +601,6 @@
     }
   ],
   "eqTab": "ALL",
-  "eqCollapse": {
-    "M": false,
-    "G": false,
-    "A": false,
-    "C": false,
-    "T": false
-  },
   "invEqOpen": true,
   "customCards": [],
   "states": [],
@@ -672,12 +698,19 @@
   "notes": [
     {
       "title": "Session notes",
-      "body": "אלנת'יר\nסולתהייבן\n\nשער צפוני דראגון בורן 300 אורקים בערך"
+      "body": "אלנת'יר\nסולתהייבן\nשער צפוני דראגון בורן 300 אורקים בערך"
     },
     {
       "title": "Team names",
       "body": "ג'ק - רוני\nלילה - בר\nאליירה - ניקה\nמרשל - עומר\nאובה - ניקו"
     }
   ],
+  "eqCollapse": {
+    "M": false,
+    "G": false,
+    "A": false,
+    "C": false,
+    "T": false
+  },
   "turnPlan": []
 }
