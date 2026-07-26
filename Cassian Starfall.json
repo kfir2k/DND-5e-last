@@ -1,15 +1,15 @@
 {
   "name": "Cassian Starfall",
-  "classLevel": "Bard 2",
+  "classLevel": "Bard 6",
   "background": "",
   "playerName": "Kfir Kotler",
   "race": "Changeling Fey",
   "alignment": "",
   "xp": "",
   "inspiration": false,
-  "profBonus": 2,
+  "profBonus": 3,
   "classId": "bard",
-  "level": 2,
+  "level": 6,
   "subclass": "",
   "raceId": "changeling",
   "subraceId": "",
@@ -17,7 +17,14 @@
     "cha",
     "dex"
   ],
-  "asi": {},
+  "asi": {
+    "4": {
+      "choice": "asi",
+      "a": "dex",
+      "b": "cha",
+      "feat": ""
+    }
+  },
   "abilities": {
     "str": 9,
     "dex": 17,
@@ -39,7 +46,7 @@
     "animal": 0,
     "arcana": 0,
     "athletics": 0,
-    "deception": 1,
+    "deception": 2,
     "history": 0,
     "insight": 1,
     "intimidation": 0,
@@ -48,7 +55,7 @@
     "nature": 0,
     "perception": 1,
     "performance": 0,
-    "persuasion": 1,
+    "persuasion": 2,
     "religion": 0,
     "sleight": 0,
     "stealth": 1,
@@ -59,10 +66,10 @@
   "initiativeMisc": 0,
   "speed": "30 ft.",
   "vision": "None",
-  "hpMax": 21,
-  "hpCurrent": 21,
+  "hpMax": 38,
+  "hpCurrent": 38,
   "hpTemp": 0,
-  "hdTotal": "2d8",
+  "hdTotal": "6d8",
   "hd": "",
   "hdUsed": 0,
   "deathS": [
@@ -159,12 +166,12 @@
       }
     },
     {
-      "title": "Bardic Inspiration",
-      "desc": "Bonus action: give a creature a d6 (grows with level) to add to one roll. CHA mod uses per long rest.",
+      "title": "Bardic Inspiration \\ Font of Inspiration \\ Unfailing Inspiration",
+      "desc": "Bonus action -  give a creature a d8 (grows with level) to add to one roll. CHA mod uses per short rest.\n\nWhen a creature adds one of your Bardic Inspiration dice to its ability check, attack roll, or saving throw and the roll fails, the creature can keep the Bardic Inspiration die.",
       "fx": [],
       "combat": true,
-      "usesMax": 4,
-      "usesPer": "long",
+      "usesMax": 5,
+      "usesPer": "short",
       "usesUsed": 0,
       "usesScale": "cha",
       "source": {
@@ -209,6 +216,90 @@
         "classId": "bard",
         "className": "Bard"
       }
+    },
+    {
+      "title": "Song of Rest",
+      "desc": "Party regains extra 1d6 HP when spending hit dice on a short rest.",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "class",
+        "classId": "bard",
+        "className": "Bard"
+      }
+    },
+    {
+      "title": "Silver Tongue (Eloquence)",
+      "desc": "When you make a Charisma (Persuasion) or Charisma (Deception) check, you can treat a d20 roll of 9 or lower as a 10.\n",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "source": {
+        "kind": "custom"
+      }
+    },
+    {
+      "title": "Unsettling Words (Eloquence)",
+      "desc": "As a bonus action, you can expend one use of your Bardic Inspiration and choose one creature you can see within 60 feet of you. Roll the Bardic Inspiration die. The creature must subtract the number rolled from the next saving throw it makes before the start of your next turn.",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "source": {
+        "kind": "custom"
+      }
+    },
+    {
+      "title": "Expertise",
+      "desc": "At 3rd level, choose two of your skill proficiencies. Your proficiency bonus is doubled for any ability check you make that uses either of the chosen proficiencies.",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "source": {
+        "kind": "custom"
+      }
+    },
+    {
+      "title": "Countercharm",
+      "desc": "start a performance that lasts until the end of your next turn. During that time, you and any friendly creatures within 30 feet of you have advantage on saving throws against being frightened or charmed. A creature must be able to hear you to gain this benefit. The performance ends early if you are incapacitated or silenced or if you voluntarily end it (no action required).",
+      "fx": [],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "class",
+        "classId": "bard",
+        "className": "Bard"
+      }
+    },
+    {
+      "title": "Universal Speech",
+      "desc": "you have gained the ability to make your speech intelligible to any creature. As an action, choose one or more creatures within 60 feet of you, up to a number equal to your Charisma modifier (minimum of one creature). The chosen creatures can magically understand you, regardless of the language you speak, for 1 hour.\n\nOnce you use this feature, you can't use it again until you finish a long rest, unless you expend a spell slot to use it again.",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "source": {
+        "kind": "custom"
+      }
     }
   ],
   "profLang": "",
@@ -216,7 +307,7 @@
     "Common",
     "Elvish"
   ],
-  "featuresLocked": false,
+  "featuresLocked": true,
   "spellClass": "Bard",
   "spellAbility": "cha",
   "spellLevels": [
@@ -235,11 +326,17 @@
           "prep": false,
           "meta": "1 Action · 30 ft · 1 minute",
           "desc": "Create a sound or a small static image for 1 minute."
+        },
+        {
+          "name": "Message",
+          "prep": false,
+          "meta": "1 Action · 120 ft · 1 round",
+          "desc": "Whisper a message to a creature within range; only it hears and can reply."
         }
       ]
     },
     {
-      "total": 3,
+      "total": 4,
       "used": 0,
       "spells": [
         {
@@ -255,32 +352,45 @@
           "desc": "3d6 psychic damage; target must use its reaction to flee you (Wis save)."
         },
         {
-          "name": "Dissonant Whispers",
-          "prep": false,
-          "meta": "1 Action · 60 ft · Instantaneous",
-          "desc": "3d6 psychic damage; target must use its reaction to flee you (Wis save)."
-        },
-        {
           "name": "Silvery Barbs",
           "prep": false,
           "meta": "1 Reaction · 60 ft · Instantaneous",
           "desc": "Reaction: force a reroll on a success must reroll the d20 and use the lower roll, and give someone else advantage."
         },
         {
-          "name": "Tasha's Hideous Laughter",
+          "name": "Command",
           "prep": false,
-          "meta": "1 Action · 30 ft · Conc., up to 1 min",
-          "desc": "Target collapses laughing - prone and incapacitated (Wis save).\n A creature with an Intelligence score of 4 or less isn’t affected.\nOne practical warning: your party should avoid repeatedly damaging the affected enemy unless necessary, because every hit gives it another chance to escape the spell."
+          "meta": "1 Action · 60 ft · 1 round",
+          "desc": "One-word command a creature must obey - halt, flee, drop, grovel (Wis save)."
         }
       ]
     },
     {
-      "total": 0,
+      "total": 3,
       "used": 0,
-      "spells": []
+      "spells": [
+        {
+          "name": "Suggestion",
+          "prep": false,
+          "meta": "1 Action · 30 ft · Conc., up to 8 hours",
+          "desc": "If you or any of your companions damage the target, the spell ends (Wis save)."
+        },
+        {
+          "name": "Invisibility",
+          "prep": false,
+          "meta": "1 Action · Touch · Conc., up to 1 hour",
+          "desc": "Target turns invisible until it attacks or casts a spell."
+        },
+        {
+          "name": "Heat Metal",
+          "prep": false,
+          "meta": "1 Action · 60 ft · Conc., up to 1 min",
+          "desc": "A metal object glows red-hot; 2d8 fire, holders drop it or suffer."
+        }
+      ]
     },
     {
-      "total": 0,
+      "total": 3,
       "used": 0,
       "spells": []
     },
