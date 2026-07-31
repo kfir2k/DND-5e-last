@@ -14,6 +14,8 @@
   --red:#c05046;
   --green:#6f9e63;
   --ink:#0e0b07;
+  --ember:#ff8a3d;
+  --ember-lt:#ffd08a;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -1830,6 +1832,218 @@ input.ov-id-field:focus{border-bottom-color:var(--gold)}
 .ui-dlg-ok:hover{background:var(--gold);color:var(--ink)}
 .ui-dlg-ok.danger{background:rgba(192,80,70,.18);border-color:var(--red);color:#e08a80}
 .ui-dlg-ok.danger:hover{background:var(--red);color:var(--text)}
+
+/* ---------- Turn Wizard: "The Reckoning Table" — a candlelit, wax-sealed guided
+   roll-through of a whole planned turn. Deckle-edged card in place of a plain modal,
+   a rune-stone die input that settles and glows, ember bursts + a card shake on a
+   crit, wax-medallion progress that doubles as a live per-step summary, and a
+   stamped seal revealing the turn's total on the closing report. ---------- */
+#ckPlanWizard{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-lt)}
+#ckPlanWizard:hover{background:var(--gold);color:var(--ink)}
+.turn-wiz-bg.open{
+  background:
+    radial-gradient(ellipse 640px 460px at 50% 40%, rgba(240,207,110,.08), transparent 60%),
+    rgba(0,0,0,.68);
+  animation:twFlicker 6s ease-in-out infinite;
+}
+@keyframes twFlicker{0%,100%{opacity:1}42%{opacity:.95}46%{opacity:1}61%{opacity:.97}}
+.turn-wiz{
+  max-width:440px;position:relative;padding:32px 26px 24px;
+  background:linear-gradient(155deg, rgba(240,207,110,.05), transparent 40%), var(--panel2);
+  border:1px solid var(--border-lt);
+  clip-path:polygon(16px 0,calc(100% - 16px) 0,100% 16px,100% calc(100% - 16px),calc(100% - 16px) 100%,16px 100%,0 calc(100% - 16px),0 16px);
+  box-shadow:0 26px 64px rgba(0,0,0,.6), inset 0 0 0 1px rgba(201,162,39,.06);
+  animation:twModalIn .2s ease;
+}
+.turn-wiz::before{
+  content:''; position:absolute; inset:8px; pointer-events:none;
+  border:1px solid rgba(201,162,39,.22);
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);
+}
+@keyframes twModalIn{from{opacity:0;transform:scale(.96) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.tw-corner{position:absolute;color:var(--gold-dim);font-size:.62rem;opacity:.85;pointer-events:none}
+.tw-corner.tl{top:6px;left:15px} .tw-corner.tr{top:6px;right:15px}
+.tw-corner.bl{bottom:6px;left:15px} .tw-corner.br{bottom:6px;right:15px}
+.tw-close{
+  position:absolute;top:14px;right:16px;background:transparent;border:none;color:var(--faint);
+  font-size:1rem;cursor:pointer;padding:4px 8px;line-height:1;z-index:1;
+}
+.tw-close:hover{color:var(--gold-lt)}
+.tw-title{
+  color:var(--gold-lt);font-family:'Cinzel',serif;font-size:.94rem;letter-spacing:1.5px;
+  text-transform:uppercase;text-align:center;margin-bottom:16px;
+}
+
+/* Progress medallions — a wax-sealed chain that doubles as a live per-attack summary */
+.tw-medallions{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:22px;flex-wrap:wrap;row-gap:6px}
+.tw-medal{
+  width:32px;height:32px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%, var(--panel3), var(--panel));
+  border:1.5px solid var(--border-lt); color:var(--faint);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif; font-size:.76rem; font-variant-numeric:tabular-nums;
+  transition:transform .3s ease, border-color .3s ease, color .3s ease, box-shadow .3s ease;
+  flex:0 0 auto;
+}
+.tw-medal-link{width:22px;height:1px;background:var(--border-lt);opacity:.6;flex:0 0 auto}
+.tw-medal.cur{border-color:var(--gold-lt); color:var(--gold-lt); transform:scale(1.16); box-shadow:0 0 12px rgba(240,207,110,.4)}
+.tw-medal.tw-hit{border-color:var(--green); color:var(--green); background:radial-gradient(circle at 34% 30%, #213421, var(--panel))}
+.tw-medal.tw-miss{border-color:var(--red); color:var(--red); background:radial-gradient(circle at 34% 30%, #332120, var(--panel))}
+.tw-medal.tw-crit{border-color:var(--ember); color:var(--ember-lt); background:radial-gradient(circle at 34% 30%, #432a12, var(--panel)); box-shadow:0 0 14px rgba(255,138,61,.5)}
+.tw-medal.tw-skip{color:var(--faint); border-style:dashed}
+
+/* The card — one attack (or the closing report) at a time, dealt in and out */
+.tw-cardwrap{position:relative; perspective:1200px}
+.tw-card.enter{animation:twCardEnter .45s cubic-bezier(.2,.7,.25,1)}
+.tw-card.leave{animation:twCardLeave .28s cubic-bezier(.5,0,.75,0) forwards}
+@keyframes twCardEnter{from{opacity:0;transform:rotateY(-14deg) translateX(36px) scale(.95)}to{opacity:1;transform:rotateY(0) translateX(0) scale(1)}}
+@keyframes twCardLeave{to{opacity:0;transform:rotateY(14deg) translateX(-36px) scale(.95)}}
+.tw-card.shake{animation:twShake .4s ease}
+@keyframes twShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+
+.tw-eyebrow{text-align:center;font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.18em;font-size:.64rem;color:var(--faint);margin-bottom:6px}
+.tw-name{text-align:center;font-family:'Cinzel',serif;font-size:1.28rem;color:var(--gold-lt);margin:0 0 10px;text-wrap:balance}
+.tw-flourish{width:110px;height:13px;margin:0 auto 16px;position:relative}
+.tw-flourish::before,.tw-flourish::after{content:'';position:absolute;top:50%;width:40px;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim))}
+.tw-flourish::before{left:0} .tw-flourish::after{right:0;transform:scaleX(-1)}
+.tw-flourish span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(45deg);width:6px;height:6px;background:var(--gold);box-shadow:0 0 6px rgba(201,162,39,.7)}
+.tw-ref{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:18px;line-height:1.5}
+.tw-ref b{color:var(--text);font-weight:600}
+
+.tw-critrow{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:18px;font-size:.78rem;color:var(--muted)}
+.tw-critrow select{padding:4px 6px;font-size:.78rem}
+
+/* The rune stone — the natural-roll input, which settles and glows on entry */
+.tw-rune-label{text-align:center;font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.16em;font-size:.62rem;color:var(--faint);margin-bottom:10px}
+.tw-rune-stage{display:flex;justify-content:center;margin-bottom:12px}
+.tw-rune{position:relative;width:88px;height:88px;display:flex;align-items:center;justify-content:center}
+.tw-rune::before{
+  content:''; position:absolute; inset:0; border-radius:50%;
+  background:radial-gradient(circle at 34% 28%, var(--panel3), var(--ink) 76%);
+  border:2px solid var(--border-lt);
+  box-shadow:inset 0 0 16px rgba(0,0,0,.6), 0 5px 16px rgba(0,0,0,.5);
+  transition:border-color .3s ease, box-shadow .3s ease;
+}
+.tw-rune.filled::before{border-color:var(--gold); box-shadow:inset 0 0 16px rgba(0,0,0,.5), 0 0 20px rgba(201,162,39,.4)}
+.tw-rune.tw-crit::before{border-color:var(--ember); box-shadow:inset 0 0 16px rgba(0,0,0,.4), 0 0 28px rgba(255,138,61,.6)}
+.tw-rune.tw-miss::before{border-color:var(--red); box-shadow:inset 0 0 16px rgba(0,0,0,.6), 0 0 16px rgba(193,91,79,.4)}
+input.tw-nat-in{
+  position:relative; z-index:1; width:64px; height:64px; text-align:center; background:none; border:none;
+  color:var(--text); font-family:'Cinzel',serif; font-size:1.7rem; font-variant-numeric:tabular-nums;
+  outline:none; caret-color:var(--gold-lt);
+}
+input.tw-nat-in::placeholder{color:var(--faint); font-size:.9rem}
+.tw-rune.settle{animation:twSettle .5s cubic-bezier(.34,1.7,.4,1)}
+@keyframes twSettle{0%{transform:rotate3d(1,1,0,55deg) scale(.7)}55%{transform:rotate3d(1,-1,0,-12deg) scale(1.08)}100%{transform:rotate3d(0,0,0,0deg) scale(1)}}
+
+/* Ember burst — plays once when a roll first turns out to be a crit */
+.tw-embers{position:absolute; inset:0; pointer-events:none}
+.tw-ember-bit{
+  position:absolute; left:50%; top:50%; width:5px; height:5px; border-radius:50%;
+  background:radial-gradient(circle, var(--ember-lt), var(--ember)); opacity:0;
+  animation:twEmberFly .85s ease-out forwards;
+}
+@keyframes twEmberFly{
+  0%{opacity:1; transform:translate(-50%,-50%) translate(0,0) scale(1)}
+  100%{opacity:0; transform:translate(-50%,-50%) translate(var(--ex),var(--ey)) scale(.3)}
+}
+
+.tw-verdict-wrap{min-height:2.3em; display:flex; align-items:center; justify-content:center; margin-bottom:10px}
+.tw-verdict{font-family:'Cinzel',serif; font-size:1rem; font-weight:700; text-align:center; opacity:0}
+.tw-verdict.show{animation:twVerdictIn .4s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes twVerdictIn{from{opacity:0;letter-spacing:.4em;filter:blur(6px);transform:scale(.85)}to{opacity:1;letter-spacing:.02em;filter:blur(0);transform:scale(1)}}
+.tw-verdict.tw-hit{color:var(--green)}
+.tw-verdict.tw-miss{color:var(--red)}
+.tw-verdict.tw-crit{color:var(--ember-lt); text-shadow:0 0 16px rgba(255,138,61,.55)}
+.tw-verdict.tw-neutral{color:var(--muted); font-weight:400}
+
+/* Dice tray */
+.tw-dmgbox{background:var(--panel3);border-radius:6px;padding:12px 14px;margin-bottom:14px;animation:twSlideDown .18s ease}
+@keyframes twSlideDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.tw-dmg-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 0;font-size:.88rem;color:var(--text)}
+.tw-dmg-row+.tw-dmg-row{border-top:1px solid var(--border)}
+.tw-dmg-label{display:flex;flex-direction:column;gap:1px}
+.tw-dmg-label i{font-style:normal;color:var(--faint);font-size:.74rem}
+.tw-dice-inputs{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+/* input.tw-die-in, not just .tw-die-in: the global input[type=number]{width:100%} rule is an
+   element+attribute selector, which outweighs a bare class (see .chud-in above for the same fix). */
+input.tw-die-in{width:38px;text-align:center;padding:5px 2px;font-size:.82rem}
+input.tw-die-wide{width:70px}
+.tw-dmg-total{
+  display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:6px;
+  padding-top:6px;font-family:'Cinzel',serif;color:var(--text);
+}
+.tw-dmg-total b{color:var(--gold-lt)}
+
+.tw-skipbtn{
+  display:block;margin:0 auto;background:transparent;border:none;color:var(--faint);
+  font-size:.78rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--gold-dim);font-style:italic;padding:4px;
+}
+.tw-skipbtn:hover{color:var(--gold-lt)}
+.tw-skip-note{color:var(--muted);text-align:center;font-style:italic;margin-bottom:16px}
+
+.tw-nav{display:flex;gap:10px;margin-top:18px}
+.tw-nav button{
+  flex:1;border-radius:3px;padding:12px 16px;font-size:.86rem;cursor:pointer;min-height:44px;
+  font-family:'Cinzel',serif;letter-spacing:.06em;text-transform:uppercase;
+  transition:transform .15s ease, box-shadow .2s ease, filter .2s ease;
+}
+.tw-nav button:active{transform:translateY(1px)}
+.tw-back{background:var(--panel);border:1px solid var(--border-lt);color:var(--muted)}
+.tw-back:hover:not(:disabled){border-color:var(--gold-dim);color:var(--text)}
+.tw-back:disabled{opacity:.3;cursor:default}
+.tw-next{
+  background:linear-gradient(180deg, var(--gold-lt), var(--gold) 60%, var(--gold-dim));
+  color:#241c0c;border:1px solid var(--gold-lt);
+  animation:twPulseGlow 2.6s ease-in-out infinite;
+}
+.tw-next:hover{filter:brightness(1.08)}
+@keyframes twPulseGlow{0%,100%{box-shadow:0 4px 16px rgba(201,162,39,.22)}50%{box-shadow:0 4px 24px rgba(240,207,110,.45)}}
+
+/* The closing report — unfurls, then the seal stamps down on the total */
+.tw-summary{display:flex;flex-direction:column;margin-bottom:6px}
+.tw-srow{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 2px;
+  border-bottom:1px solid rgba(201,162,39,.15);font-size:.9rem;
+}
+.tw-srow:last-child{border-bottom:none}
+.tw-sname{color:var(--text);flex:1}
+.tw-sverdict{font-family:'Cinzel',serif;font-size:.76rem}
+.tw-sverdict.tw-hit{color:var(--green)}
+.tw-sverdict.tw-miss{color:var(--red)}
+.tw-sverdict.tw-crit{color:var(--ember-lt)}
+.tw-sverdict.tw-skip,.tw-sverdict.tw-neutral{color:var(--faint)}
+.tw-sdmg{color:var(--gold-lt);font-family:'Cinzel',serif;font-variant-numeric:tabular-nums;min-width:2.2em;text-align:right}
+.tw-seal-wrap{display:flex;flex-direction:column;align-items:center;margin:22px 0 4px}
+.tw-seal{
+  width:96px;height:96px;border-radius:50%;
+  background:radial-gradient(circle at 32% 28%, #9c3f34, #6f241c 70%);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  border:2px solid #4a1712;box-shadow:0 10px 22px rgba(0,0,0,.5), inset 0 0 10px rgba(0,0,0,.4);
+  transform:scale(2.2) rotate(-14deg);opacity:0;
+}
+.tw-seal.stamp{animation:twStampDown .5s cubic-bezier(.2,.8,.2,1) forwards .1s}
+@keyframes twStampDown{
+  0%{transform:scale(2.2) rotate(-14deg);opacity:0}
+  70%{transform:scale(.94) rotate(-2deg);opacity:1}
+  85%{transform:scale(1.05) rotate(0)}
+  100%{transform:scale(1) rotate(0);opacity:1}
+}
+.tw-seal b{font-family:'Cinzel',serif;font-size:1.55rem;color:var(--text);font-variant-numeric:tabular-nums}
+.tw-seal i{font-style:normal;font-family:'Cinzel',serif;font-size:.54rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(233,221,199,.75)}
+.tw-seal-caption{margin-top:8px;text-align:center;color:var(--faint);font-size:.8rem;font-style:italic}
+
+@media (max-width:640px){
+  .turn-wiz{max-width:none;padding:28px 18px 20px}
+  .tw-rune{width:78px;height:78px}
+  input.tw-nat-in{width:56px;height:56px;font-size:1.5rem}
+}
+@media (prefers-reduced-motion: reduce){
+  .turn-wiz-bg *,.turn-wiz-bg *::before,.turn-wiz-bg *::after{
+    animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important;
+  }
+}
 /* The option sheet: one column of full-width rows, current choice marked with a gold ✦ */
 .sel-sheet{
   background:var(--panel);border:1px solid var(--border-lt);border-top:2px solid var(--gold-dim);

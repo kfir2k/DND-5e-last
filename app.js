@@ -322,7 +322,7 @@ combat:`
       </div>
     </div>
     <div class="panel ck-plan-panel"><h2>🗺 Turn Plan</h2>
-      <div class="ck-plan-head"><div class="ck-plan-tabs" id="ckPlanTabs"></div><button id="ckPlanClear" style="display:none">Clear</button></div>
+      <div class="ck-plan-head"><div class="ck-plan-tabs" id="ckPlanTabs"></div><button id="ckPlanWizard" style="display:none">🧙 Roll This Turn</button><button id="ckPlanClear" style="display:none">Clear</button></div>
       <div class="ck-plan" id="ckPlan"></div>
     </div>
   </div>
@@ -1804,6 +1804,8 @@ function renderCockpitPlan(){
     : '<div class="ck-plan-empty">Script your ideal turn: drag a card\'s ⠿ handle up here, or tap ⤵ on a card — e.g. Dread Ambusher → Shortsword → Hunter\'s Mark. Tap a step for its full info and cast/use buttons. Make templates (+) for different situations: boss fight, defensive, stealth...</div>';
   const clr=$('#ckPlanClear');
   if(clr) clr.style.display=cur.steps.length?'':'none';
+  const wiz=$('#ckPlanWizard');
+  if(wiz) wiz.style.display=cur.steps.some(p=>p.key.startsWith('atk:'))?'':'none';
 }
 // Concentration banner, state chips, ★ reminders feed, rules drawer. Concentration/top-states/
 // full-states-list each render into every instance found (Combat's HUD + reference zone, and
@@ -1984,6 +1986,7 @@ function wireCombatFeatures(){
     CK_OPEN.add('cc:'+(S.customCards.length-1));
     renderCockpitCards(); save();
   });
+  $('#ckPlanWizard').addEventListener('click',openTurnWizard);
   $('#ckPlanClear').addEventListener('click',()=>{
     const n=ckPlan().steps.length;
     const go=()=>{ ckPlan().steps=[]; CK_PLAN_OPEN.clear(); renderCockpitPlan(); save(); };
@@ -3229,6 +3232,340 @@ function openSelectSheet(sel){
   document.addEventListener('keydown',onKey);
   document.body.appendChild(wrap);
   const on=wrap.querySelector('.sel-opt.on'); if(on) on.scrollIntoView({block:'center'});
+}
+// ---------- Turn Wizard: "The Reckoning Table" — guided physical-dice resolution for a whole
+// planned turn. Walks the current Turn Plan's attack steps in order, asking what the player
+// rolled on the d20 (never rolls anything itself — same physical-dice-in, math-out philosophy as
+// the rest of the app) and on the damage dice, doubling every die (weapon + active buffs) on a
+// crit. Entirely self-contained: reads S.attacks/S.turnPlans but never writes back to them —
+// closing the wizard discards its state, so it can never disagree with what the Attacks panel
+// already shows. No target-AC field: a player rarely knows a monster's AC, so the wizard only
+// ever calls a nat 1 / nat-in-crit-range automatically — anything else is just "here's your
+// total," and the DM's own "hit" or "blocked" call is recorded via the skip toggle.
+let TURN_WIZ=null;
+// "1d8" -> {count:1,size:8}. Notation the app can't parse (custom text) returns null — those
+// fall back to a single "type the total" box since there's no way to know how many dice to split.
+function parseDice(dieStr){
+  const m=/^(\d+)d(\d+)$/i.exec(String(dieStr||'').trim());
+  return m?{count:+m[1],size:+m[2]}:null;
+}
+// Pads/trims a per-die roll array to exactly `count` entries, keeping whatever was already typed.
+function ensureDiceArray(res,key,count){
+  let arr=res.dmgRolls[key];
+  if(!Array.isArray(arr)) arr=[];
+  else arr=arr.slice(0,count);
+  while(arr.length<count) arr.push('');
+  res.dmgRolls[key]=arr;
+  return arr;
+}
+function sumDice(arr){ return Array.isArray(arr)?arr.reduce((n,v)=>n+num(v),0):0; }
+function openTurnWizard(){
+  const cur=ckPlan();
+  const steps=cur.steps.map((p,i)=>({p,i})).filter(({p})=>p.key.startsWith('atk:'))
+    .map(({p,i})=>({stepIdx:i,atkIdx:+p.key.split(':')[1],name:p.name}));
+  if(!steps.length) return;
+  const wrap=document.createElement('div');
+  wrap.className='ui-dlg-bg turn-wiz-bg open';
+  TURN_WIZ={
+    wrap, steps, cur:0,
+    results:steps.map(()=>({nat:'',critRange:20,skipped:false,dmgRolls:{},_dmgShown:false,_dmgCrit:false}))
+  };
+  const onKey=e=>{ if(e.key==='Escape') closeTurnWizard(); };
+  TURN_WIZ.onKey=onKey;
+  wrap.addEventListener('click',turnWizOnClick);
+  wrap.addEventListener('input',turnWizOnInput);
+  wrap.addEventListener('change',turnWizOnChange);
+  document.addEventListener('keydown',onKey);
+  wrap.innerHTML=`<div class="ui-dlg turn-wiz" role="dialog" aria-modal="true">
+    <span class="tw-corner tl">◆</span><span class="tw-corner tr">◆</span>
+    <span class="tw-corner bl">◆</span><span class="tw-corner br">◆</span>
+    <button type="button" class="tw-close" data-twclose title="Close">✕</button>
+    <h2 class="tw-title">🕯 Roll This Turn</h2>
+    <div class="tw-medallions" id="twMedallions"></div>
+    <div class="tw-cardwrap"><div class="tw-card" id="twCard"></div></div>
+  </div>`;
+  document.body.appendChild(wrap);
+  paintTurnWizard(false);
+}
+function closeTurnWizard(){
+  if(!TURN_WIZ) return;
+  document.removeEventListener('keydown',TURN_WIZ.onKey);
+  TURN_WIZ.wrap.remove();
+  TURN_WIZ=null;
+}
+// Everything the current step needs to know, derived fresh from S.attacks each time — never
+// cached across renders, so an edited buff or magic bonus mid-wizard is picked up immediately.
+function turnWizResolve(idx){
+  const st=TURN_WIZ.steps[idx], res=TURN_WIZ.results[idx];
+  const a=S.attacks[st.atkIdx];
+  if(!a) return {missing:true};
+  const c=atkSummary(a);
+  const nat=(res.nat===''||res.nat==null)?null:Number(res.nat);
+  const isNum=nat!=null&&!isNaN(nat);
+  const critRange=num(res.critRange)||20;
+  let hit=null,crit=false,total=null,label='',cls='tw-neutral';
+  if(isNum){
+    total=nat+c.toHit;
+    if(nat<=1){ hit=false; label='Fate turns aside — a critical miss.'; cls='tw-miss'; }
+    else if(nat>=critRange){ hit=true; crit=true; label='A masterstroke — critical hit!'; cls='tw-crit'; }
+    else{ label=`The die shows ${total}, all told.`; cls='tw-neutral'; }
+  }
+  return {a,c,nat,isNum,critRange,hit,crit,total,label,cls};
+}
+function turnWizDamage(idx){
+  const r=turnWizResolve(idx); if(r.missing||!r.isNum||r.hit===false) return null;
+  const res=TURN_WIZ.results[idx];
+  const buffs=(r.a.buffs||[]).filter(b=>b.on&&(b.dice||'').trim());
+  let sum=sumDice(res.dmgRolls.base);
+  buffs.forEach((b,j)=>{ sum+=sumDice(res.dmgRolls['b'+j]); });
+  return sum+r.c.dmgMod;
+}
+// One dice source (the weapon's own die, or one buff's die) as a row of small per-die boxes —
+// "2d8" on a crit means two physical d8s, so it's two boxes to add, not mental math the player
+// has to do before typing one number. Notation the app can't parse (free-text custom dice) falls
+// back to a single wide "total" box, since there's no die count to split it into.
+function diceRowHTML(res,key,label,dieStr,crit){
+  const p=parseDice(dieStr);
+  if(!p){
+    const arr=ensureDiceArray(res,key,1);
+    return `<div class="tw-dmg-row">
+      <span class="tw-dmg-label">${label}<i>${esc(dieStr)}${crit?' ×2':''}</i></span>
+      <div class="tw-dice-inputs"><input type="number" class="tw-die-in tw-die-wide" data-twdmg="${key}.0" value="${esc(arr[0]||'')}" placeholder="total"></div>
+    </div>`;
+  }
+  const count=crit?p.count*2:p.count;
+  const arr=ensureDiceArray(res,key,count);
+  const inputs=Array.from({length:count},(_,k)=>
+    `<input type="number" class="tw-die-in" data-twdmg="${key}.${k}" value="${esc(arr[k]||'')}" placeholder="d${p.size}">`).join('');
+  return `<div class="tw-dmg-row">
+    <span class="tw-dmg-label">${label}<i>${count}d${p.size}${crit?' crit':''}</i></span>
+    <div class="tw-dice-inputs">${inputs}</div>
+  </div>`;
+}
+function twDmgBoxHTML(idx,r){
+  const res=TURN_WIZ.results[idx], a=r.a, c=r.c;
+  const buffs=(a.buffs||[]).filter(b=>b.on&&(b.dice||'').trim());
+  const d=turnWizDamage(idx);
+  return `<div class="tw-dmgbox">
+    ${diceRowHTML(res,'base',c.dmgType?esc(c.dmgType):'Weapon',c.die,r.crit)}
+    ${buffs.map((b,j)=>diceRowHTML(res,'b'+j,`+ ${esc(b.name||'buff')}${b.type?' '+esc(b.type):''}`,b.dice,r.crit)).join('')}
+    <div class="tw-dmg-total">Damage: <b id="twDmgTotal">${d!=null?d:'—'}</b></div>
+  </div>`;
+}
+// Every attack's current status, purely derived (never stored) — cheap enough to recompute for
+// the whole plan on every keystroke, and what drives both the medallion chain and the closing
+// report, so the player never has to wait for the final screen to see where the turn stands.
+function turnWizStepStatus(i){
+  const res=TURN_WIZ.results[i];
+  if(res.skipped) return {icon:'—',cls:'tw-skip',dmg:null};
+  const r=turnWizResolve(i);
+  if(r.missing||!r.isNum) return {icon:'·',cls:'',dmg:null};
+  if(r.hit===false) return {icon:'✕',cls:'tw-miss',dmg:null};
+  return {icon:r.crit?'✸':'✓',cls:r.crit?'tw-crit':'tw-hit',dmg:turnWizDamage(i)};
+}
+function turnWizRunningTotal(){
+  return TURN_WIZ.steps.reduce((n,_,i)=>n+(turnWizStepStatus(i).dmg||0),0);
+}
+// The medallion chain above the card — progress marker and live per-attack summary in one,
+// so the player never needs the final report just to see how the turn is going so far.
+function twMedallionsHTML(){
+  const N=TURN_WIZ.steps.length, bits=[];
+  TURN_WIZ.steps.forEach((st,i)=>{
+    if(i>0) bits.push('<span class="tw-medal-link"></span>');
+    const s=turnWizStepStatus(i), isCur=i===TURN_WIZ.cur&&TURN_WIZ.cur<N;
+    bits.push(`<span class="tw-medal ${s.cls} ${isCur?'cur':''}" id="twMedal${i}" title="${esc(st.name)}">${s.dmg!=null?s.dmg:s.icon}</span>`);
+  });
+  return bits.join('');
+}
+function twRepaintMedallions(){
+  const box=TURN_WIZ.wrap.querySelector('#twMedallions');
+  if(box) box.innerHTML=twMedallionsHTML();
+}
+function twUpdateDmgTotal(idx){
+  const el=TURN_WIZ.wrap.querySelector('#twDmgTotal');
+  if(el){ const d=turnWizDamage(idx); el.textContent=d!=null?d:'—'; }
+  twRepaintMedallions();
+}
+// Scatters a handful of embers out from a crit's rune stone — plays once, right when a roll
+// first turns out to be a crit (not on every repaint, so it doesn't replay while the player
+// keeps typing digits or flips back and forth on the crit-range select).
+function twEmberBurst(container){
+  if(!container) return;
+  const wrap=document.createElement('div');
+  wrap.className='tw-embers';
+  for(let k=0;k<10;k++){
+    const b=document.createElement('span');
+    b.className='tw-ember-bit';
+    const angle=Math.random()*Math.PI*2, dist=36+Math.random()*40;
+    b.style.setProperty('--ex',Math.cos(angle)*dist+'px');
+    b.style.setProperty('--ey',Math.sin(angle)*dist+'px');
+    b.style.animationDelay=(Math.random()*0.12)+'s';
+    wrap.appendChild(b);
+  }
+  container.appendChild(wrap);
+  setTimeout(()=>wrap.remove(),1100);
+}
+// Cheap path for every keystroke in the nat-roll / crit-range fields: repaint only the rune
+// glow + verdict text, and only rebuild the damage box (destroying whatever was typed into it)
+// when the hit/crit state actually flips — a same-state total change never touches the damage
+// inputs, so the player never loses a damage roll they already typed.
+function twComputeAndPaint(){
+  if(!TURN_WIZ||TURN_WIZ.cur>=TURN_WIZ.steps.length) return;
+  const idx=TURN_WIZ.cur, res=TURN_WIZ.results[idx];
+  const r=turnWizResolve(idx);
+  const runeBox=TURN_WIZ.wrap.querySelector('#twRune');
+  if(runeBox) runeBox.className='tw-rune '+(r.isNum?'filled ':'')+(r.crit?'tw-crit ':'')+(r.hit===false?'tw-miss':'');
+  const vEl=TURN_WIZ.wrap.querySelector('#twVerdict');
+  if(vEl){ vEl.className='tw-verdict '+(r.isNum?'show '+r.cls:''); vEl.textContent=r.isNum?r.label:''; }
+  const showDmg=r.isNum&&r.hit!==false;
+  if(showDmg!==res._dmgShown||(showDmg&&r.crit!==res._dmgCrit)){
+    const slot=TURN_WIZ.wrap.querySelector('#twDmgSlot');
+    if(slot) slot.innerHTML=showDmg?twDmgBoxHTML(idx,r):'';
+    res._dmgShown=showDmg; res._dmgCrit=r.crit;
+  }else if(showDmg){
+    twUpdateDmgTotal(idx);
+  }
+  twRepaintMedallions();
+}
+function twStepHTML(idx){
+  const st=TURN_WIZ.steps[idx], res=TURN_WIZ.results[idx], N=TURN_WIZ.steps.length;
+  if(res.skipped){
+    return `
+      <div class="tw-eyebrow">Attack ${idx+1} of ${N} · opponent blocked</div>
+      <h2 class="tw-name" style="opacity:.55">${esc(st.name)}</h2>
+      <p class="tw-skip-note">The opponent blocked this attack — no roll needed.</p>
+      <button type="button" class="tw-skipbtn" data-twskip>↺ Undo — it wasn't blocked</button>
+      <div class="tw-nav">
+        <button type="button" class="tw-back" data-twback ${idx===0?'disabled':''}>← Back</button>
+        <button type="button" class="tw-next" data-twnext>${idx===N-1?'See the Reckoning →':'Next Strike →'}</button>
+      </div>`;
+  }
+  const r=turnWizResolve(idx);
+  if(r.missing){
+    return `<p class="prep-note">This attack was removed from your character sheet.</p>
+      <button type="button" class="tw-skipbtn" data-twskip>Skip</button>`;
+  }
+  const {c}=r;
+  const showDmg=r.isNum&&r.hit!==false;
+  res._dmgShown=showDmg; res._dmgCrit=r.crit;
+  return `
+    <div class="tw-eyebrow">Attack ${idx+1} of ${N}</div>
+    <h2 class="tw-name">${esc(st.name)}</h2>
+    <div class="tw-flourish"><span></span></div>
+    <p class="tw-ref">Strikes true on <b>${esc(c.bonus)}</b> · deals <b>${esc(c.dmg)}</b></p>
+    <div class="tw-critrow"><span>Crits on natural</span>
+      <select data-twcrit>
+        <option value="20" ${res.critRange==20?'selected':''}>20</option>
+        <option value="19" ${res.critRange==19?'selected':''}>19-20</option>
+        <option value="18" ${res.critRange==18?'selected':''}>18-20</option>
+      </select>
+    </div>
+    <div class="tw-rune-label">Cast the die, then speak its number</div>
+    <div class="tw-rune-stage"><div class="tw-rune ${r.isNum?'filled':''} ${r.crit?'tw-crit':''} ${r.hit===false?'tw-miss':''}" id="twRune">
+      <input type="number" min="1" max="20" class="tw-nat-in" data-twnat value="${esc(res.nat)}" placeholder="1–20" autocomplete="off">
+    </div></div>
+    <div class="tw-verdict-wrap"><div class="tw-verdict ${r.isNum?'show '+r.cls:''}" id="twVerdict">${r.isNum?r.label:''}</div></div>
+    <div id="twDmgSlot">${showDmg?twDmgBoxHTML(idx,r):''}</div>
+    <button type="button" class="tw-skipbtn" data-twskip>Opponent blocked this attack</button>
+    <div class="tw-nav">
+      <button type="button" class="tw-back" data-twback ${idx===0?'disabled':''}>← Back</button>
+      <button type="button" class="tw-next" data-twnext>${idx===N-1?'See the Reckoning →':'Next Strike →'}</button>
+    </div>`;
+}
+function twReportHTML(){
+  const rows=TURN_WIZ.steps.map((st,i)=>{
+    const s=turnWizStepStatus(i);
+    const label=s.cls==='tw-skip'?'Opponent blocked':s.cls==='tw-crit'?'Critical hit':s.cls==='tw-hit'?'Struck true':s.cls==='tw-miss'?'Missed':'Not cast';
+    return `<div class="tw-srow"><span class="tw-sname">${esc(st.name)}</span><span class="tw-sverdict ${s.cls}">${label}</span><span class="tw-sdmg">${s.dmg!=null?s.dmg:'—'}</span></div>`;
+  }).join('');
+  const hits=TURN_WIZ.steps.filter((_,i)=>['tw-hit','tw-crit'].includes(turnWizStepStatus(i).cls)).length;
+  const crits=TURN_WIZ.steps.filter((_,i)=>turnWizStepStatus(i).cls==='tw-crit').length;
+  const misses=TURN_WIZ.steps.filter((_,i)=>turnWizStepStatus(i).cls==='tw-miss').length;
+  return `
+    <div class="tw-eyebrow">The turn is spent</div>
+    <h2 class="tw-name">The Reckoning</h2>
+    <div class="tw-flourish"><span></span></div>
+    <div class="tw-summary">${rows}</div>
+    <div class="tw-seal-wrap">
+      <div class="tw-seal stamp" id="twSeal"><b id="twSealTotal">0</b><i>Damage</i></div>
+      <p class="tw-seal-caption">${hits} strike${hits===1?'':'s'} landed${crits?`, ${crits} of them critical`:''}${misses?`, ${misses} missed`:''}.</p>
+    </div>
+    <div class="tw-nav">
+      <button type="button" class="tw-back" data-twback>← Revisit</button>
+      <button type="button" class="tw-next" data-twclose>Close</button>
+    </div>`;
+}
+// Repaints the card (step or closing report) in place; withEnter plays the "dealt in" animation
+// — used after navigation, never after a plain keystroke (see twComputeAndPaint for that path).
+function paintTurnWizard(withEnter){
+  if(!TURN_WIZ) return;
+  const N=TURN_WIZ.steps.length, isSummary=TURN_WIZ.cur>=N;
+  const cardEl=TURN_WIZ.wrap.querySelector('#twCard');
+  cardEl.className='tw-card'+(withEnter?' enter':'');
+  cardEl.innerHTML=isSummary?twReportHTML():twStepHTML(TURN_WIZ.cur);
+  twRepaintMedallions();
+  if(isSummary){
+    const total=turnWizRunningTotal();
+    requestAnimationFrame(()=>{
+      const t=TURN_WIZ.wrap.querySelector('#twSealTotal'); if(!t) return;
+      let shown=0; const step=Math.max(1,Math.round(total/16));
+      const tick=()=>{ shown=Math.min(total,shown+step); t.textContent=shown; if(shown<total) requestAnimationFrame(tick); };
+      setTimeout(()=>requestAnimationFrame(tick),300);
+    });
+  }else{
+    const natEl=TURN_WIZ.wrap.querySelector('[data-twnat]'); if(natEl) natEl.focus();
+    const r=turnWizResolve(TURN_WIZ.cur);
+    if(r.crit) twEmberBurst(TURN_WIZ.wrap.querySelector('#twRune'));
+  }
+}
+function twGoTo(next){
+  const cardEl=TURN_WIZ.wrap.querySelector('#twCard');
+  cardEl.classList.add('leave');
+  setTimeout(()=>{ TURN_WIZ.cur=next; paintTurnWizard(true); },280);
+}
+function turnWizOnClick(e){
+  if(!TURN_WIZ) return;
+  if(e.target===TURN_WIZ.wrap) return closeTurnWizard();
+  if(e.target.closest('[data-twclose]')) return closeTurnWizard();
+  if(e.target.closest('[data-twback]')){ if(TURN_WIZ.cur>0) twGoTo(TURN_WIZ.cur-1); return; }
+  if(e.target.closest('[data-twnext]')){ if(TURN_WIZ.cur<TURN_WIZ.steps.length) twGoTo(TURN_WIZ.cur+1); return; }
+  if(e.target.closest('[data-twskip]')){ TURN_WIZ.results[TURN_WIZ.cur].skipped=!TURN_WIZ.results[TURN_WIZ.cur].skipped; paintTurnWizard(false); return; }
+}
+function turnWizOnInput(e){
+  if(!TURN_WIZ) return;
+  const t=e.target;
+  if(t.dataset.twnat!=null){
+    const wasCrit=turnWizResolve(TURN_WIZ.cur).crit;
+    TURN_WIZ.results[TURN_WIZ.cur].nat=t.value;
+    twComputeAndPaint();
+    const r=turnWizResolve(TURN_WIZ.cur);
+    if(r.isNum){
+      const runeBox=TURN_WIZ.wrap.querySelector('#twRune');
+      if(runeBox){
+        runeBox.classList.remove('settle'); void runeBox.offsetWidth; runeBox.classList.add('settle');
+        if(r.crit&&!wasCrit){
+          twEmberBurst(runeBox);
+          const cardEl=TURN_WIZ.wrap.querySelector('#twCard');
+          cardEl.classList.add('shake'); setTimeout(()=>cardEl.classList.remove('shake'),400);
+        }
+      }
+    }
+    return;
+  }
+  if(t.dataset.twdmg!=null){
+    const dot=t.dataset.twdmg.lastIndexOf('.');
+    const key=t.dataset.twdmg.slice(0,dot), ix=+t.dataset.twdmg.slice(dot+1);
+    const res=TURN_WIZ.results[TURN_WIZ.cur];
+    const arr=Array.isArray(res.dmgRolls[key])?res.dmgRolls[key]:(res.dmgRolls[key]=[]);
+    arr[ix]=t.value;
+    twUpdateDmgTotal(TURN_WIZ.cur);
+    return;
+  }
+}
+function turnWizOnChange(e){
+  if(!TURN_WIZ) return;
+  const t=e.target;
+  if(t.dataset.twcrit!=null){ TURN_WIZ.results[TURN_WIZ.cur].critRange=+t.value; twComputeAndPaint(); return; }
 }
 function wireSelectSheets(){
   // Preventing the compat 'mousedown' is the one reliable way to stop the OS dropdown for both
