@@ -30,6 +30,7 @@
   <div class="header-right">
     <span id="saveStatus">saved</span>
     <button class="icon-btn" id="charsBtn" title="Choose or manage characters">🎭 Characters</button>
+    <button class="icon-btn" id="mapBtn" title="Open the battle map">🗺 Map</button>
     <button class="icon-btn" id="settingsBtn">⚙ Settings</button>
   </div>
 </header>
@@ -55,6 +56,47 @@
   </div>
 </div>
 
+<div class="modal-bg map-modal-bg" id="battleMap">
+  <div class="map-shell">
+    <div class="map-toolbar">
+      <div class="map-toolbar-group">
+        <div class="map-add-ally">
+          <button class="icon-btn sm" id="mapAddAllyBtn">+ Ally ▾</button>
+          <div class="map-dropdown" id="mapAllyDropdown"></div>
+        </div>
+        <button class="icon-btn sm" id="mapAddEnemyBtn">+ Enemy</button>
+        <div class="map-enemy-form" id="mapEnemyForm">
+          <input type="text" id="mapEnemyName" placeholder="Enemy name" maxlength="30">
+          <input type="color" id="mapEnemyColor" value="#b0392f" title="Token color">
+          <select id="mapEnemySize" title="Size"></select>
+          <input type="number" id="mapEnemyCount" value="1" min="1" max="20" title="How many">
+          <button class="icon-btn sm" id="mapEnemyAdd">Add</button>
+          <button class="icon-btn sm" id="mapEnemyCancel">Cancel</button>
+        </div>
+      </div>
+      <div class="map-toolbar-group">
+        <button class="icon-btn sm" id="mapMeasureBtn" title="Measure distance without moving a token">📏 Measure</button>
+        <button class="icon-btn sm" id="mapZoomOut" title="Zoom out">−</button>
+        <button class="icon-btn sm" id="mapZoomReset" title="Fit to screen">Reset view</button>
+        <button class="icon-btn sm" id="mapZoomIn" title="Zoom in">+</button>
+        <button class="icon-btn sm danger" id="mapClearBtn">Clear map</button>
+      </div>
+      <button class="close-x" id="mapClose">✕</button>
+    </div>
+    <div class="map-stage" id="mapStage">
+      <div class="map-viewport" id="mapViewport">
+        <svg id="mapSvg" class="map-svg"></svg>
+        <div id="mapTokenLayer" class="map-token-layer"></div>
+      </div>
+    </div>
+    <div class="map-selected-bar" id="mapSelectedBar">
+      <span id="mapSelectedName"></span>
+      <span class="map-hint">Tap a hex to move here</span>
+      <button class="icon-btn sm danger" id="mapRemoveBtn">Remove</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="settingsModal">
   <div class="modal">
     <button class="close-x" id="settingsClose">✕</button>
@@ -74,6 +116,7 @@
 <script src="data-equipment.js"></script>
 <script src="data-libraries.js"></script>
 <script src="app.js"></script>
+<script src="map.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
