@@ -2159,6 +2159,15 @@ circle.map-ruler{fill:var(--ember);stroke:none}
 .map-ruler.map-dist-label rect{stroke:var(--ember)}
 .map-ruler.map-dist-label text{fill:var(--ember-lt)}
 
+.map-move-badge{
+  position:absolute;display:none;pointer-events:none;z-index:10;white-space:nowrap;
+  background:var(--ink);border:1px solid var(--gold-dim);border-radius:8px;
+  color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:.95rem;
+  padding:5px 10px;box-shadow:0 4px 14px rgba(0,0,0,.5);
+}
+.map-move-badge.in-budget{border-color:var(--green);color:#a8d19c}
+.map-move-badge.over-budget{border-color:var(--red);color:#e6a49c}
+
 .map-token-layer{position:absolute;top:0;left:0}
 .map-token{
   position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;

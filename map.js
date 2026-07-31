@@ -3,7 +3,7 @@
 // Own localStorage key, independent of character-sheet state.
 
 // ---- Grid geometry (flat-top hexes, "odd-q" offset columns) ----
-const MAP_COLS = 40, MAP_ROWS = 30;
+const MAP_COLS = 61, MAP_ROWS = 45; // a 60-hex span across = a clean 300 ft, at 5 ft/hex
 const HEX_S = 34;                       // center-to-vertex size, in unscaled map-space px
 const HEX_H = Math.sqrt(3) * HEX_S;     // flat-to-flat height
 const COL_SPACING = HEX_S * 1.5;
@@ -119,6 +119,17 @@ function populateSizeSelect(sel) {
   sel.innerHTML = SIZES.map(s => `<option value="${s}"${s === 'medium' ? ' selected' : ''}>${sizeLabel(s)}</option>`).join('');
 }
 
+// Best-effort read of a saved character's speed, so the movement-preview badge can flag "too far"
+// (a plain 5 ft/hex distance doesn't know a token's budget without this).
+function characterSpeedFt(charId) {
+  try {
+    const raw = localStorage.getItem(charKey(charId));
+    if (!raw) return null;
+    const m = String(JSON.parse(raw).speed || '').match(/(\d+)/);
+    return m ? Number(m[1]) : null;
+  } catch (e) { return null; }
+}
+
 function initials(name) {
   return (name || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 }
@@ -151,6 +162,7 @@ function addPlayerToken(charId, summary) {
   addToken({
     id: newTokenId(), name: summary.name, initials: initials(summary.name),
     color: summary.color || '#c9a227', team: 'party', charId, size: 'medium',
+    speedFt: characterSpeedFt(charId),
     col: spot.col, row: spot.row,
   });
 }
@@ -185,11 +197,22 @@ function removeToken(id) {
 }
 
 function tokenEl(id) { return $(`.map-token[data-id="${id}"]`); }
+// Multiple creatures sharing a hex (grapples, mounts, a crowded doorway) is legal in 5e — rather
+// than blocking the move, fan overlapping tokens out a little so each stays visible and clickable.
+function stackOffset(t) {
+  const group = MAP_TOKENS.filter(x => x.col === t.col && x.row === t.row).sort((a, b) => a.id < b.id ? -1 : 1);
+  if (group.length <= 1) return { dx: 0, dy: 0 };
+  const idx = group.findIndex(x => x.id === t.id);
+  const radius = Math.min(tokenRadius(t) * 0.55, HEX_S * 0.4);
+  const angle = (Math.PI * 2 * idx) / group.length - Math.PI / 2;
+  return { dx: Math.cos(angle) * radius, dy: Math.sin(angle) * radius };
+}
 function positionTokenEl(el, t) {
   const { x, y } = hexPixel(t.col, t.row);
   const r = tokenRadius(t);
-  el.style.left = (x - r) + 'px';
-  el.style.top = (y - r) + 'px';
+  const off = stackOffset(t);
+  el.style.left = (x + off.dx - r) + 'px';
+  el.style.top = (y + off.dy - r) + 'px';
 }
 function renderTokens() {
   const layer = $('#mapTokenLayer');
@@ -213,6 +236,7 @@ function renderTokens() {
 
 // ---- Selection / distance labels ----
 let selectedId = null;
+let moveOrigin = null; // token's hex at the moment it was selected, for the movement-preview badge
 function selectToken(id) {
   selectedId = id;
   $$('.map-token').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
@@ -221,10 +245,34 @@ function selectToken(id) {
     const t = MAP_TOKENS.find(x => x.id === id);
     bar.classList.add('open');
     $('#mapSelectedName').textContent = t ? t.name : '';
+    moveOrigin = t ? { col: t.col, row: t.row } : null;
   } else {
     bar.classList.remove('open');
+    moveOrigin = null;
+    $('#mapMoveBadge').style.display = 'none';
   }
   updateDistanceLabels();
+}
+// Live "how far would this move be" readout that follows the cursor while a token is selected —
+// covers both the hover-before-tap and mid-drag cases, so you can see the ft before committing.
+function updateMoveBadge(clientX, clientY) {
+  const badge = $('#mapMoveBadge');
+  if (!selectedId || !moveOrigin) { badge.style.display = 'none'; return; }
+  const rect = $('#mapStage').getBoundingClientRect();
+  if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+    badge.style.display = 'none';
+    return;
+  }
+  const m = clientToMap(clientX, clientY);
+  const hex = nearestHex(m.x, m.y);
+  const ft = hexDistance(moveOrigin, hex) * FT_PER_HEX;
+  const t = MAP_TOKENS.find(x => x.id === selectedId);
+  badge.textContent = ft + ' ft';
+  badge.classList.remove('in-budget', 'over-budget');
+  if (t && t.speedFt) badge.classList.add(ft > t.speedFt ? 'over-budget' : 'in-budget');
+  badge.style.left = (clientX - rect.left + 16) + 'px';
+  badge.style.top = (clientY - rect.top - 32) + 'px';
+  badge.style.display = 'block';
 }
 function updateDistanceLabels() {
   const g = $('#mapMeasureLayer');
@@ -312,23 +360,34 @@ function wireTokenPointer(el, t) {
       const hex = nearestHex(m.x, m.y);
       live.col = hex.col; live.row = hex.row;
       updateDistanceLabels();
+      updateMoveBadge(e.clientX, e.clientY);
     }
   });
   el.addEventListener('pointerup', e => {
     if (!el.hasPointerCapture(e.pointerId)) return;
     el.releasePointerCapture(e.pointerId);
     if (dragging) {
-      const live = MAP_TOKENS.find(x => x.id === t.id);
-      positionTokenEl(el, live);
       mapSave();
       dragging = false;
+      renderTokens(); // re-lay-out everyone in case the drop landed on an occupied hex
       selectToken(null); // a completed drag is a finished move, not a pending tap-to-move
       return;
     }
     // Plain tap: measure-mode -> pick point; else toggle selection for tap-to-move.
     if (measureMode) { measureTap(t.col, t.row); return; }
-    if (selectedId === t.id) selectToken(null);
-    else selectToken(t.id);
+    if (selectedId === t.id) { selectToken(null); return; }
+    if (selectedId) {
+      // Another token is already pending a move — tapping this one completes the move onto its
+      // hex (sharing a space is legal in 5e) instead of just switching selection to it, since this
+      // token's element would otherwise swallow every tap aimed at an occupied destination.
+      const moving = MAP_TOKENS.find(x => x.id === selectedId);
+      moving.col = t.col; moving.row = t.row;
+      mapSave();
+      renderTokens();
+      selectToken(null);
+      return;
+    }
+    selectToken(t.id);
   });
 }
 
@@ -364,9 +423,8 @@ function wireStagePointer() {
     if (selectedId) {
       const t = MAP_TOKENS.find(x => x.id === selectedId);
       t.col = hex.col; t.row = hex.row;
-      positionTokenEl(tokenEl(t.id), t);
-      updateDistanceLabels();
       mapSave();
+      renderTokens(); // re-lay-out everyone in case the destination hex was occupied
       selectToken(null);
     }
   });
@@ -375,6 +433,10 @@ function wireStagePointer() {
     const rect = stage.getBoundingClientRect();
     zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.1 : 1 / 1.1);
   }, { passive: false });
+
+  // Movement-preview badge: hovering with a token selected previews the ft before you commit.
+  stage.addEventListener('pointermove', e => updateMoveBadge(e.clientX, e.clientY));
+  stage.addEventListener('pointerleave', () => { $('#mapMoveBadge').style.display = 'none'; });
 }
 
 // ---- Toolbar wiring ----
