@@ -490,10 +490,11 @@ inventory:`
   <div class="panel eq-panel"><h2>Inventory</h2>
     <div class="eq-chips" id="eqTabs"></div>
     <div class="fx-addrow" style="margin:0 0 12px;position:relative">
-      <div style="position:relative;flex:1 1 300px;max-width:420px">
-        <input type="text" id="itemSearch" dir="auto" style="width:100%" placeholder="Search your pack or the gear index…" autocomplete="off">
-        <div id="itemResults" class="lib-results"></div>
+      <div style="position:relative;flex:1 1 220px;max-width:300px">
+        <input type="text" id="packSearch" dir="auto" style="width:100%" placeholder="Filter your pack…" autocomplete="off">
       </div>
+      <button class="eq-newbtn eq-packbtn" id="eqIndexBtn" type="button">📖 Gear Index</button>
+      <button class="eq-newbtn eq-packbtn" id="eqPackBtn" type="button">🎒 Starting Pack</button>
       <button class="eq-newbtn" id="eqNewItemBtn" type="button">+ New Item</button>
     </div>
     <div id="equipList" class="eq-list"></div>
@@ -557,6 +558,22 @@ inventory:`
     <div class="eq-drawer-foot">
       <button class="eq-delbtn" id="eqDelBtn" type="button" style="display:none">Delete</button>
       <button class="eq-savebtn" id="eqSaveBtn" type="button">Add to pack</button>
+    </div>
+  </div>
+  <div class="modal-bg" id="itemIndexModal">
+    <div class="modal eq-index-modal">
+      <button class="close-x" id="itemIndexClose" type="button">✕</button>
+      <h2>Gear Index</h2>
+      <input type="text" id="itemIndexSearch" dir="auto" placeholder="Search the gear index…" autocomplete="off">
+      <div id="itemIndexList" class="eq-index-list"></div>
+    </div>
+  </div>
+  <div class="modal-bg" id="packModal">
+    <div class="modal eq-index-modal">
+      <button class="close-x" id="packModalClose" type="button">✕</button>
+      <h2>Starting Packs</h2>
+      <input type="text" id="packModalSearch" dir="auto" placeholder="Search packs…" autocomplete="off">
+      <div id="packModalList" class="eq-index-list"></div>
     </div>
   </div>
   <div class="eq-toast" id="eqToast"></div>`,
@@ -1160,7 +1177,10 @@ function renderEquipment(){
   list.style.display=treasure?'none':'';
   if(treasure){ const ta=$('#eqTreasure textarea'); if(ta) autoGrow(ta); return; }
 
-  const rows=(S.eqTab==='ALL'?present:present.filter(e=>e.type===S.eqTab)).map(e=>({e,i:S.equipment.indexOf(e)}));
+  const base=(S.eqTab==='ALL'?present:present.filter(e=>e.type===S.eqTab));
+  const q=EQ_SEARCH_Q.trim().toLowerCase();
+  const filtered=q?base.filter(e=>(e.name||'').toLowerCase().includes(q)||(e.desc||'').toLowerCase().includes(q)):base;
+  const rows=filtered.map(e=>({e,i:S.equipment.indexOf(e)}));
   list.innerHTML = rows.length ? rows.map(({e,i})=>{
     const cat=ITEM_TYPES[e.type]||ITEM_TYPES.G;
     let flags='';
@@ -1179,7 +1199,7 @@ function renderEquipment(){
       </div>
       <span class="eq-chev">›</span>
     </div>`;
-  }).join('') : `<p class="prep-note" style="margin:0">${S.eqTab==='ALL'?'Empty pack — search the gear index above or “+ New Item” for a custom one.':`No ${ITEM_TYPES[S.eqTab][1].toLowerCase()} yet — “+ New Item” creates one right in this category.`}</p>`;
+  }).join('') : `<p class="prep-note" style="margin:0">${q?`No items in your pack match “${esc(EQ_SEARCH_Q.trim())}”.`:(S.eqTab==='ALL'?'Empty pack — search the gear index above or “+ New Item” for a custom one.':`No ${ITEM_TYPES[S.eqTab][1].toLowerCase()} yet — “+ New Item” creates one right in this category.`)}</p>`;
 
   $$('[data-eqopen]').forEach(card=>card.addEventListener('click',e=>{
     if(e.target.closest('[data-eqstep]')) return;
@@ -1198,6 +1218,7 @@ function renderEquipment(){
 // ---------- Item drawer (add / edit one item, or paste a whole list) ----------
 let EQ_DRAWER_MODE='single';
 let EQ_EDIT_IDX=null; // null while adding a new item
+let EQ_SEARCH_Q=''; // live filter over the pack list — separate from the gear-index dropdown
 function eqCatPickerHTML(selected){
   return Object.keys(ITEM_TYPES).map(ty=>
     `<button type="button" class="eq-catopt ${ty===selected?'on':''}" data-eqcat="${ty}">${eqIcon(ty)}${ITEM_TYPES[ty][1]}</button>`
@@ -1307,38 +1328,51 @@ function wireEquipmentDrawer(){
     closeEqDrawer(); renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
   });
 }
-// Item index search — same tap-to-add pattern as the spellbook and feature libraries.
-function wireItemLibrary(){
-  const input=$('#itemSearch'), panel=$('#itemResults'); if(!input) return;
-  const list=Object.values(ITEM_DB);
+// Gear index browser — a real modal (like Settings) instead of a focus/blur dropdown, which
+// was flaky to open reliably and closed itself before a second pick. Opens on a plain click,
+// stays open across multiple adds, and only closes when you say so.
+function wireItemIndexModal(){
+  const btn=$('#eqIndexBtn'), modal=$('#itemIndexModal'), input=$('#itemIndexSearch'), list=$('#itemIndexList');
+  if(!btn||!modal) return;
+  document.body.appendChild(modal); // survives the tab-fade transform, same reason as the eq drawer
+  const allItems=Object.values(ITEM_DB);
   function renderResults(){
     const q=input.value.trim().toLowerCase();
-    const items=list.filter(it=>!q||it.n.toLowerCase().includes(q)||(it.d||'').toLowerCase().includes(q));
-    if(!items.length){ panel.innerHTML='<div class="empty">No matches — "+ New Item" makes it a custom entry</div>'; return; }
+    const items=allItems.filter(it=>!q||it.n.toLowerCase().includes(q)||(it.d||'').toLowerCase().includes(q));
+    if(!items.length){ list.innerHTML='<div class="empty">No matches — close this and use "+ New Item" for a custom entry</div>'; return; }
     let html='';
     Object.keys(ITEM_TYPES).forEach(ty=>{
       const g=items.filter(it=>it.t===ty);
       if(!g.length) return;
       html+=`<div class="grp">${ITEM_TYPES[ty][1]}</div>`+
-        g.map(it=>`<div class="item" data-itempick="${esc(it.n)}">${it.cb?'⚔ ':''}${esc(it.n)}<small>${esc(it.d)}</small></div>`).join('');
+        g.map(it=>`<div class="item" data-itempick="${esc(it.n)}">${it.cb?'⚔ ':''}${esc(it.n)}${KITS[it.n]?' 🛠':''}<small>${esc(it.d)}</small></div>`).join('');
     });
-    panel.innerHTML=html;
+    list.innerHTML=html;
   }
-  const open=()=>{ renderResults(); panel.classList.add('open'); };
-  const close=()=>panel.classList.remove('open');
-  input.addEventListener('focus',open);
-  input.addEventListener('input',open);
-  panel.addEventListener('click',e=>{
+  const open=()=>{ input.value=''; renderResults(); modal.classList.add('open'); setTimeout(()=>input.focus(),50); };
+  const close=()=>modal.classList.remove('open');
+  btn.addEventListener('click',open);
+  $('#itemIndexClose').addEventListener('click',close);
+  modal.addEventListener('click',e=>{ if(e.target===modal) close(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&modal.classList.contains('open')) close(); });
+  input.addEventListener('input',renderResults);
+  list.addEventListener('click',e=>{
     const el=e.target.closest('[data-itempick]'); if(!el) return;
     const it=ITEM_DB[el.dataset.itempick.toLowerCase()]; if(!it) return;
     S.equipment.push({qty:String(it.q),name:it.n,type:it.t,desc:it.d,combat:it.cb,att:false});
-    if(S.eqTab!=='ALL'&&S.eqTab!==it.t) S.eqTab=it.t; // jump to where it landed
-    input.value=''; close();
-    eqToast(`Added ${it.n}`);
-    renderEquipment(); renderCombatFeatures(); save();
-  });
-  document.addEventListener('click',e=>{
-    if(!e.target.closest('#itemSearch')&&!e.target.closest('#itemResults')) close();
+    const kit=KITS[it.n];
+    if(kit){
+      kit.forEach(([name,qty])=>addPackItem(name,qty));
+      S.eqTab='ALL';
+      eqToast(`Added ${it.n} + ${kit.length} craftable items`);
+      renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
+    } else {
+      if(S.eqTab!=='ALL'&&S.eqTab!==it.t) S.eqTab=it.t; // jump to where it landed
+      eqToast(`Added ${it.n}`);
+      renderEquipment(); renderCombatFeatures(); save();
+    }
+    el.classList.add('added'); // brief feedback without closing — you can keep tapping more items
+    setTimeout(()=>el.classList.remove('added'),400);
   });
   // Equipped & Defense folds too — on a tablet you set it once and want it out of the way
   const eqPanel=$('#invEqPanel'), eqHead=$('#invEqHead');
@@ -1350,6 +1384,56 @@ function wireItemLibrary(){
       save();
     });
   }
+}
+// Separate from the gear-index search above: this one only ever filters the cards already
+// in the pack, with no dropdown and nothing to add — the two were merged into one input
+// before and it made "search index" results look like they were fighting the live pack filter.
+function wirePackSearch(){
+  const input=$('#packSearch'); if(!input) return;
+  input.addEventListener('input',()=>{ EQ_SEARCH_Q=input.value; renderEquipment(); });
+}
+// Starting-equipment packs (Explorer's Pack, Burglar's Pack, ...) — one tap drops every
+// item they contain into the pack at once, merging into a matching stack if you already have some.
+function addPackItem(name,qty){
+  const src=ITEM_DB[name.toLowerCase()]; if(!src) return;
+  const existing=S.equipment.find(e=>(e.name||'').toLowerCase()===name.toLowerCase()&&e.type===src.t);
+  if(existing && String(existing.qty||'').trim()!=='') existing.qty=String(num(existing.qty)+qty);
+  else S.equipment.push({qty:String(qty),name:src.n,type:src.t,desc:src.d,combat:!!src.cb,att:false});
+}
+function addPack(pack){
+  pack.items.forEach(([name,qty])=>addPackItem(name,qty));
+  S.eqTab='ALL';
+  eqToast(`Added ${pack.n} — ${pack.items.length} items`);
+  renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
+}
+// Same real-modal treatment as the Gear Index: opens reliably on one click, stays open so you
+// can drop in more than one pack (or a pack plus a couple of extra kits) before closing it.
+function wirePackModal(){
+  const btn=$('#eqPackBtn'), modal=$('#packModal'), input=$('#packModalSearch'), list=$('#packModalList');
+  if(!btn||!modal) return;
+  document.body.appendChild(modal); // survives the tab-fade transform, same reason as the eq drawer
+  function renderResults(){
+    const q=input.value.trim().toLowerCase();
+    const packs=PACKS.filter((p,i)=>!q||p.n.toLowerCase().includes(q)||p.items.some(x=>x[0].toLowerCase().includes(q)));
+    if(!packs.length){ list.innerHTML='<div class="empty">No matches</div>'; return; }
+    list.innerHTML=packs.map(p=>{
+      const i=PACKS.indexOf(p);
+      return `<div class="item" data-packpick="${i}">${esc(p.n)}<small>${esc(p.price)} — ${p.items.length} items: ${p.items.map(x=>esc(x[0])).join(', ')}</small></div>`;
+    }).join('');
+  }
+  const open=()=>{ input.value=''; renderResults(); modal.classList.add('open'); setTimeout(()=>input.focus(),50); };
+  const close=()=>modal.classList.remove('open');
+  btn.addEventListener('click',open);
+  $('#packModalClose').addEventListener('click',close);
+  modal.addEventListener('click',e=>{ if(e.target===modal) close(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&modal.classList.contains('open')) close(); });
+  input.addEventListener('input',renderResults);
+  list.addEventListener('click',e=>{
+    const el=e.target.closest('[data-packpick]'); if(!el) return;
+    addPack(PACKS[+el.dataset.packpick]);
+    el.classList.add('added');
+    setTimeout(()=>el.classList.remove('added'),400);
+  });
 }
 const FX_STATS={ac:'AC',speed:'Speed',init:'Initiative',passive:'Passive Perception',hpmax:'Max HP',vision:'Darkvision Range'};
 const SKILL_NAMES=Object.fromEntries(SKILLS.map(s=>[s[0],s[1]]));
@@ -4046,7 +4130,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemLibrary(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryDropcap(); wireNotes();
+wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryDropcap(); wireNotes();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

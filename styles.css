@@ -355,6 +355,8 @@ label.fld span{
   white-space:nowrap;
 }
 .eq-newbtn:hover{background:var(--gold-lt);border-color:var(--gold-lt)}
+.eq-packbtn{background:transparent;color:var(--gold-lt);border:1px solid var(--gold-dim)}
+.eq-packbtn:hover{background:var(--gold-dim)}
 
 /* Item list — scannable cards, tap to open the edit drawer */
 .eq-list{display:flex;flex-direction:column;gap:7px}
@@ -896,6 +898,29 @@ label.fld span{
 .lib-results .item:hover,.lib-results .item.hi{background:var(--panel3)}
 .lib-results .item small{display:block;color:var(--muted);font-size:.73rem;margin-top:1px;font-style:italic}
 .lib-results .empty{padding:12px;color:var(--faint);font-style:italic;font-size:.85rem}
+
+/* Gear Index modal — a real modal instead of a focus/blur dropdown, so opening it is a single
+   deterministic click and it stays open while you tap in several items. */
+.eq-index-modal{max-width:600px;max-height:82vh;display:flex;flex-direction:column}
+.eq-index-modal #itemIndexSearch{width:100%;margin-bottom:10px;flex-shrink:0}
+.eq-index-list{
+  flex:1 1 auto;overflow-y:auto;background:var(--panel2);border:1px solid var(--border);
+  border-radius:10px;margin:0 -4px;
+}
+.eq-index-list .grp,.eq-index-list .item{padding-left:14px;padding-right:14px}
+.eq-index-list .grp{
+  color:var(--gold);font-size:.68rem;letter-spacing:1.6px;text-transform:uppercase;
+  font-family:'Cinzel',serif;padding-top:9px;padding-bottom:4px;
+}
+.eq-index-list .item{
+  padding-top:8px;padding-bottom:8px;cursor:pointer;font-size:.9rem;color:var(--text);
+  border-top:1px solid #2a2318;-webkit-tap-highlight-color:transparent;
+}
+.eq-index-list .grp:first-child{padding-top:8px}
+.eq-index-list .grp + .item{border-top:none}
+.eq-index-list .item:hover,.eq-index-list .item.added{background:var(--panel3)}
+.eq-index-list .item small{display:block;color:var(--muted);font-size:.73rem;margin-top:1px;font-style:italic}
+.eq-index-list .empty{padding:12px;color:var(--faint);font-style:italic;font-size:.85rem}
 /* Subclass/feat suggestion fields (former <datalist> fields). The dropdown itself is a
    position:fixed popover appended straight to <body> (see renderSuggest in app.js) so it can
    never get clipped by an ancestor's overflow:hidden — the Subclass field lives inside

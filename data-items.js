@@ -18,6 +18,9 @@ const ITEM_RAW=[
 ['Ball Bearings (bag of 1,000)','C','Spread over 10-ft square: DC 10 Dex or fall prone.',1,1],
 ['Rations (1 day)','C','Dry food for one day of travel.',5,0],
 ['Waterskin','C','Holds 4 pints of liquid.',1,0],
+['Potion of Climbing','C','Drink (action): climbing speed = walking speed, advantage on Athletics to climb, for 1 hour.',1,1],
+['Potion of Fire Breath','C','Drink then exhale (action): 4d6 fire in a 30-ft line, DC 13 Dex for half. 2 doses per vial.',1,1],
+['Potion of Water Breathing','C','Drink (action): breathe underwater for 1 hour.',1,1],
 // Ammunition
 ['Arrows (20)','A','Standard ammunition for bows. Recover half after battle.',1,1],
 ['Crossbow Bolts (20)','A','Standard ammunition for crossbows. Recover half after battle.',1,1],
@@ -26,6 +29,16 @@ const ITEM_RAW=[
 // Magic-ish
 ['Bag of Holding','M','Holds 500 lb / 64 cu ft; weighs 15 lb. Retrieval is an action.',1,0],
 ['Scroll Case','M','Protects up to ten rolled sheets of paper.',1,0],
+['Cloak of Elvenkind','M','Advantage on Stealth; others have disadvantage to spot you while the hood is up (attune).',1,0],
+["Boots of Elvenkind",'M','Advantage on Stealth checks that rely on moving silently.',1,0],
+['Cloak of Protection','M','+1 AC and +1 to all saving throws (attune).',1,0],
+['Ring of Protection','M','+1 AC and +1 to all saving throws (attune).',1,0],
+['Rope of Climbing','M','60 ft, animates on command (action) to knot, tie itself, or climb for you.',1,0],
+['Immovable Rod','M','Press the button (action) to fix it in place, immovable until pressed again.',1,0],
+['Bag of Tricks','M','Reach in (action) and pull out a random friendly animal.',1,1],
+['Driftglobe','M','Floats and sheds light 15/30 ft on command; can be sent 30 ft away.',1,0],
+['Wand of Magic Missiles','M','7 charges. Expend 1+ (action): cast Magic Missile, +1 missile per extra charge.',1,1],
+['Gauntlets of Ogre Power','M','Strength score becomes 19 while worn, if lower (attune).',1,0],
 // Scrolls & paper
 ['Spell Scroll','S','Cast the written spell (action, or its cast time). If it\'s above your level range, ability check to succeed. Crumbles after use.',1,1],
 ['Paper (sheet)','S','One sheet of fine paper.',5,0],
@@ -43,10 +56,54 @@ const ITEM_RAW=[
 ['Tinderbox','T','Light a torch (action) or other exposed fuel (1 minute).',1,0],
 ['Musical Instrument','T','Play it (proficiency applies). Bards: also a spell focus.',1,0],
 ['Gaming Set','T','Dice, cards, or board pieces (proficiency applies).',1,0],
+// Named gaming sets & instruments — same proficiency rules as the generic entries above,
+// for when you want the sheet to say exactly what's in your hands
+['Dice Set','T','A set of gaming dice (proficiency applies).',1,0],
+['Playing Card Set','T','A deck of playing cards (proficiency applies).',1,0],
+['Dragonchess Set','T','An elaborate three-tiered strategy game (proficiency applies).',1,0],
+['Three-Dragon Ante Set','T','A fast, cutthroat card game beloved by sailors and rogues (proficiency applies).',1,0],
+['Bagpipes','T','A musical instrument (proficiency applies).',1,0],
+['Drum','T','A musical instrument (proficiency applies).',1,0],
+['Dulcimer','T','A musical instrument (proficiency applies).',1,0],
+['Flute','T','A musical instrument (proficiency applies).',1,0],
+['Lute','T','A musical instrument (proficiency applies). Bards: also a spell focus.',1,0],
+['Lyre','T','A musical instrument (proficiency applies).',1,0],
+['Horn','T','A musical instrument (proficiency applies).',1,0],
+['Pan Flute','T','A musical instrument (proficiency applies).',1,0],
+['Shawm','T','A musical instrument (proficiency applies).',1,0],
+['Viol','T','A musical instrument (proficiency applies).',1,0],
+['Navigator\'s Tools','T','Chart a course and avoid hazards at sea (proficiency applies).',1,0],
+["Poisoner's Kit",'T','Handle, apply, and identify poisons safely (proficiency applies).',1,0],
+// Artisan's tools — each is its own trade proficiency (PHB)
+["Alchemist's Supplies",'T','Identify substances and brew acids and alchemical mixtures (proficiency applies).',1,0],
+["Brewer's Supplies",'T','Brew ale, wine, and spirits, and judge a drink\'s quality (proficiency applies).',1,0],
+["Calligrapher's Supplies",'T','Fine lettering, illuminated manuscripts, forged flourishes (proficiency applies).',1,0],
+["Carpenter's Tools",'T','Build and repair wooden structures and furniture; craft a barrel, chest, ladder, pole, portable ram, or wooden weapon (proficiency applies). Adding this drops those craftable items into your pack too.',1,0],
+["Cartographer's Tools",'T','Draft and read maps and charts (proficiency applies).',1,0],
+["Cobbler's Tools",'T','Make and repair footwear (proficiency applies).',1,0],
+["Cook's Utensils",'T','Prepare and season food (proficiency applies).',1,0],
+["Glassblower's Tools",'T','Shape molten glass into vessels and ornaments (proficiency applies).',1,0],
+["Jeweler's Tools",'T','Cut, set, and appraise gems (proficiency applies).',1,0],
+["Leatherworker's Tools",'T','Cure hides and craft leather goods (proficiency applies).',1,0],
+["Mason's Tools",'T','Shape and fit stone (proficiency applies).',1,0],
+["Painter's Supplies",'T','Paint portraits, murals, and convincing forgeries of style (proficiency applies).',1,0],
+["Potter's Tools",'T','Throw and fire clay vessels (proficiency applies).',1,0],
+["Smith's Tools",'T','Forge and repair metal weapons, armor, and tools (proficiency applies).',1,0],
+["Tinker's Tools",'T','Build and repair small mechanisms; assemble a tiny clockwork device in 1 hour (proficiency applies).',1,0],
+["Weaver's Tools",'T','Spin thread and weave cloth (proficiency applies).',1,0],
+["Woodcarver's Tools",'T','Whittle and carve fine woodwork (proficiency applies).',1,0],
 // Gear
 ['Backpack','G','Holds 30 lb / 1 cu ft of gear.',1,0],
 ['Bedroll','G','Sleeping roll for camp.',1,0],
 ['Blanket','G','A warm blanket.',1,0],
+// Spellcasting foci — a spellbook or holy symbol goes missing constantly, worth tracking
+['Component Pouch','G','A small watertight pouch holding material components for spells.',1,0],
+['Spellbook','G','128 pages for recording spells you know. A wizard\'s prepared-spell source.',1,0],
+['Holy Symbol','G','An amulet, emblem, or reliquary — a divine spellcasting focus.',1,0],
+['Druidic Focus','G','Sprig of mistletoe, totem, wand, or staff — a druid or ranger spellcasting focus.',1,0],
+['Arcane Focus','G','Crystal, orb, rod, staff, or wand — a wizard, sorcerer, or warlock spellcasting focus.',1,0],
+['Fishing Tackle','G','Rod, line, hooks, bait, and a net for a day\'s catch.',1,0],
+['Net','G','Throw (action), 5-ft square, DC 10 Str or restrained; 5 HP to cut free.',1,0],
 ['Rope, Hempen (50 ft)','G','2 HP, burst DC 17 Strength.',1,0],
 ['Rope, Silk (50 ft)','G','2 HP, burst DC 17 Strength. Lighter than hemp.',1,0],
 ['Grappling Hook','G','Throw with rope to anchor a climb.',1,0],
@@ -74,7 +131,115 @@ const ITEM_RAW=[
 ['Signal Whistle','G','Shrill blast heard far away.',1,0],
 ['Hourglass','G','Track time precisely.',1,0],
 ['Magnifying Glass','G','Advantage on appraisal/detail checks; start fires in sunlight.',1,0],
-['Hunting Trap','G','Set (action): DC 13 Dex or 1d4 piercing and stuck; DC 13 Str (action) to free.',1,1]
+['Hunting Trap','G','Set (action): DC 13 Dex or 1d4 piercing and stuck; DC 13 Str (action) to free.',1,1],
+// Extra gear that only shows up bundled in the starting packs below
+['String (10 ft)','G','Simple cordage — snares, tripwires, tying things down.',1,0],
+['Sealing Wax','G','Seal letters and documents; press a signet while soft.',1,0],
+['Soap','G','Get the dungeon off you.',1,0],
+['Fine Clothes','G','Impress nobles and merchants.',1,0],
+['Costume','G','A change of dress and props for playing a part.',2,0],
+['Chest','G','Holds 12 cu ft / 300 lb of gear.',1,0],
+['Lamp','G','Bright light 15 ft, 6 hours per oil flask.',1,0],
+['Alms Box','G','A collection box for offerings.',1,0],
+['Incense (block)','G','Burn in a censer for ritual scent and smoke.',2,0],
+['Censer','G','Burns incense for rites and blessings.',1,0],
+['Vestments','G','Ceremonial robes for religious rites.',1,0],
+['Bag of Sand (little)','G','A small bag of fine sand.',1,0],
+['Small Knife','G','A simple utility blade.',1,0],
+['Book of Lore','S','A tome of collected lore and notes.',1,0],
+// Things assorted artisan's tools can craft — see KITS below
+['Club','G','A simple wooden cudgel. See Combat for its attack stats.',1,0],
+['Greatclub','G','A heavy two-handed cudgel. See Combat for its attack stats.',1,0],
+['Quarterstaff','G','A balanced wooden staff. See Combat for its attack stats.',1,0],
+['Barrel','G','Holds 40 gallons of liquid or 4 cu ft of dry goods.',1,0],
+['Ladder','G','10 feet long — lean it or lash it in place to climb.',1,0],
+['Portable Ram','G','+4 to Strength checks made to break down doors.',1,0],
+['Dagger','G','A simple bladed weapon. See Combat for its attack stats.',1,0],
+['Handaxe','G','A light throwable axe. See Combat for its attack stats.',1,0],
+['Warhammer','G','A martial bludgeon. See Combat for its attack stats.',1,0],
+['Quiver','G','Holds 20 arrows.',1,0],
+['Saddlebags','G','Holds 30 lb of gear, split across a mount\'s haunches.',1,0],
+['Sling','G','A simple ranged weapon. See Combat for its attack stats.',1,0],
+['Glass Bottle','G','Holds 1.5 pints of liquid.',2,0],
+['Empty Flask','G','A small glass or tin flask, ready to fill.',2,0],
+['Jug','G','Holds a gallon of liquid.',1,0],
+['Empty Vial','G','A stoppered glass vial, ready to fill.',2,0],
+['Clockwork Toy','G','A wind-up animal or soldier that walks a short distance.',1,0],
+['Music Box','G','Wind it to play a short tune.',1,0],
+['Wooden Shield','G','A simple wooden shield. See Combat for its AC bonus.',1,0],
+['Walking Stick','G','A sturdy cane for rough terrain — or a light bludgeon in a pinch.',1,0],
+['Crutches','G','A pair of wooden crutches for a lamed leg.',1,0],
+["Poison, Basic (vial)",'C','Coat a weapon or piece of ammunition (action, 1 use): a hit deals an extra 1d4 poison damage. DC 10 Con save if ingested.',1,1],
+['Chisel','G','A mason\'s or carver\'s edge for shaping stone.',2,0],
+["Jeweler's Loupe",'G','A folding lens for appraising and setting fine gems.',1,0],
+['Canvas (small)','G','A primed canvas ready for paint.',2,0],
+['Clay Pot','G','A fired clay vessel — waterproof and easily replaced.',2,0],
+['Sturdy Boots','G','Well-fitted footwear built to last.',1,0]
 ];
 const ITEM_DB={};
 ITEM_RAW.forEach(([n,t,d,q,cb])=>{ ITEM_DB[n.toLowerCase()]={n,t,d,q:q||1,cb:!!cb}; });
+
+// ---------- Starting equipment packs (PHB) — one tap adds every item at once ----------
+const PACKS=[
+ {n:"Burglar's Pack",price:'16 gp',items:[
+   ['Backpack',1],['Ball Bearings (bag of 1,000)',1],['String (10 ft)',1],['Bell',1],
+   ['Candle',5],['Crowbar',1],['Hammer',1],['Pitons (10)',1],['Lantern, Hooded',1],
+   ['Oil (flask)',2],['Rations (1 day)',5],['Tinderbox',1],['Waterskin',1],['Rope, Hempen (50 ft)',1]
+ ]},
+ {n:"Diplomat's Pack",price:'39 gp',items:[
+   ['Chest',1],['Scroll Case',2],['Fine Clothes',1],['Ink & Pen',1],['Lamp',1],
+   ['Oil (flask)',2],['Paper (sheet)',5],['Perfume (vial)',1],['Sealing Wax',1],['Soap',1]
+ ]},
+ {n:"Dungeoneer's Pack",price:'12 gp',items:[
+   ['Backpack',1],['Crowbar',1],['Hammer',1],['Pitons (10)',1],['Torch',10],
+   ['Tinderbox',1],['Rations (1 day)',10],['Waterskin',1],['Rope, Hempen (50 ft)',1]
+ ]},
+ {n:"Entertainer's Pack",price:'40 gp',items:[
+   ['Backpack',1],['Bedroll',1],['Costume',2],['Candle',5],['Rations (1 day)',5],
+   ['Waterskin',1],['Disguise Kit',1]
+ ]},
+ {n:"Explorer's Pack",price:'10 gp',items:[
+   ['Backpack',1],['Bedroll',1],['Mess Kit',1],['Tinderbox',1],['Torch',10],
+   ['Rations (1 day)',10],['Waterskin',1],['Rope, Hempen (50 ft)',1]
+ ]},
+ {n:"Priest's Pack",price:'19 gp',items:[
+   ['Backpack',1],['Blanket',1],['Candle',10],['Tinderbox',1],['Alms Box',1],
+   ['Incense (block)',2],['Censer',1],['Vestments',1],['Rations (1 day)',2],['Waterskin',1]
+ ]},
+ {n:"Scholar's Pack",price:'40 gp',items:[
+   ['Backpack',1],['Book of Lore',1],['Ink & Pen',1],['Parchment (sheet)',10],
+   ['Bag of Sand (little)',1],['Small Knife',1]
+ ]}
+];
+
+// ---------- Tool kits that also bundle their craftable items ----------
+// Adding one of these from the gear index drops the tool AND a starter set of what it can make
+// into the pack at once, same one-tap idea as PACKS above. These lists are flavor-driven — a
+// trade's typical output, not a verbatim rulebook quote — so treat them as a starting point and
+// edit freely.
+const KITS={
+ "Carpenter's Tools":[['Barrel',1],['Chest',1],['Ladder',1],['Pole (10 ft)',1],['Portable Ram',1],
+   ['Club',1],['Greatclub',1],['Quarterstaff',1],['Torch',1]],
+ "Smith's Tools":[['Chain (10 ft)',1],['Manacles',1],['Crowbar',1],['Hammer',1],
+   ['Dagger',1],['Handaxe',1],['Warhammer',1]],
+ "Leatherworker's Tools":[['Backpack',1],['Quiver',1],['Saddlebags',1],['Sling',1]],
+ "Alchemist's Supplies":[['Acid (vial)',1],["Alchemist's Fire",1],['Antitoxin',1],
+   ['Oil (flask)',1],['Perfume (vial)',1],['Soap',1]],
+ "Tinker's Tools":[['Tinderbox',1],['Magnifying Glass',1],['Clockwork Toy',1],['Music Box',1]],
+ "Woodcarver's Tools":[['Club',1],['Quarterstaff',1],['Wooden Shield',1],['Walking Stick',1],['Crutches',1]],
+ "Glassblower's Tools":[['Glass Bottle',2],['Empty Flask',2],['Jug',1],['Empty Vial',2],['Spyglass',1]],
+ "Cartographer's Tools":[['Map or Chart',1],['Ink & Pen',1],['Parchment (sheet)',5]],
+ "Calligrapher's Supplies":[['Ink & Pen',1],['Paper (sheet)',5],['Parchment (sheet)',5],['Sealing Wax',1]],
+ "Weaver's Tools":[['Costume',1],['Fine Clothes',1],['Blanket',1]],
+ "Brewer's Supplies":[['Flask of Common Wine',3]],
+ "Navigator's Tools":[['Map or Chart',1],['Spyglass',1]],
+ "Poisoner's Kit":[['Poison, Basic (vial)',1]],
+ "Cook's Utensils":[['Iron Pot',1],['Mess Kit',1],['Rations (1 day)',5]],
+ "Potter's Tools":[['Clay Pot',2],['Jug',1]],
+ "Mason's Tools":[['Chisel',1]],
+ "Jeweler's Tools":[["Jeweler's Loupe",1]],
+ "Painter's Supplies":[['Canvas (small)',2]],
+ "Cobbler's Tools":[['Sturdy Boots',1]],
+ "Disguise Kit":[['Costume',1]],
+ "Forgery Kit":[['Ink & Pen',1],['Paper (sheet)',3],['Sealing Wax',1]]
+};
