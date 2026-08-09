@@ -145,6 +145,11 @@ input[type=text],input[type=number],textarea,select{
   padding:7px 10px;outline:none;width:100%;
 }
 input:focus,textarea:focus,select:focus{border-color:var(--gold-dim)}
+/* Campaign notes get typed in Hebrew as often as English — unicode-bidi:plaintext reads each
+   field's own text and lays it out right-to-left or left-to-right per its actual first strong
+   character (the CSS equivalent of the HTML dir="auto" a few search boxes already used), instead
+   of forcing every field to the page's base left-to-right direction regardless of what's typed. */
+input[type=text],textarea{unicode-bidi:plaintext}
 /* Every textarea in the app is now auto-grown by JS to fit what's typed (see autoGrow in
    app.js), so a manual resize handle is redundant at best and at worst lets you drag it smaller
    than its own content, hiding text behind a scrollbar again. overflow:hidden guards the same
@@ -1714,6 +1719,102 @@ input.ov-id-field:focus{border-bottom-color:var(--gold)}
 }
 .ov-whisper-line:hover{color:var(--text)}
 .ov-whisper-line b{color:var(--gold);font-style:normal;font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:1px;text-transform:uppercase;margin-right:6px}
+
+/* ---------- Character tab: "The Dossier" ---------- */
+/* A paper-form read instead of a stack of app cards: a mounted photo up top, vitals as
+   dotted-underline form fields, then every narrative field as a labeled ledger row sharing one
+   sheet of paper, and Backstory set apart as its own torn-edge parchment panel. */
+.cp-dossier{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.cp-photo-col{flex:0 0 168px;display:flex;flex-direction:column;gap:8px}
+.cp-photo-mount{
+  position:relative;transform:rotate(-1.4deg);width:100%;aspect-ratio:3/4;
+  border:6px solid var(--panel2);outline:1px solid var(--border-lt);background:var(--ink);
+  box-shadow:0 10px 22px -10px rgba(0,0,0,.7);
+}
+.cp-photo-tape{
+  position:absolute;top:-9px;left:50%;transform:translateX(-50%) rotate(-2deg);
+  width:60px;height:20px;background:rgba(227,193,92,.22);border:1px solid rgba(227,193,92,.3);z-index:2;
+}
+.cp-photo-inner{width:100%;height:100%;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:2.4rem;color:var(--gold-dim)}
+.cp-portrait-btn,.cp-portrait-remove{
+  font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:1px;text-transform:uppercase;
+  background:var(--panel2);border:1px solid var(--border-lt);color:var(--muted);
+  border-radius:6px;padding:6px 8px;cursor:pointer;
+}
+.cp-portrait-btn:hover{border-color:var(--gold);color:var(--gold-lt)}
+.cp-portrait-remove{background:none;border-color:transparent;color:var(--faint);padding:0}
+.cp-portrait-remove:hover{color:var(--red);text-decoration:underline}
+.cp-id-fields{flex:1 1 340px;min-width:0}
+@media(max-width:640px){
+  .cp-dossier{flex-direction:column;align-items:center;text-align:center}
+  .cp-photo-col{width:168px}
+}
+/* Higher specificity than the shared input[type=text] rule on purpose — vitals read as filled-in
+   form fields (dotted rule, no box) instead of the app's usual input chrome. */
+label.fld-paper{display:block;margin-bottom:10px}
+label.fld-paper span{display:block;color:var(--muted);font-size:.7rem;letter-spacing:1.1px;text-transform:uppercase;font-family:'Cinzel',serif;margin-bottom:3px}
+label.fld-paper input{background:none;border:none;border-radius:0;border-bottom:1px dotted var(--border-lt);padding:3px 2px;color:var(--text)}
+label.fld-paper input:focus{border-bottom-style:solid;border-bottom-color:var(--gold)}
+
+.cp-ledger .ledger-row{display:grid;grid-template-columns:150px 1fr;gap:16px;padding:14px 0;border-bottom:1px solid var(--border)}
+.cp-ledger .ledger-row:last-child{border-bottom:none}
+.cp-ledger .ledger-row>label{font-family:'Cinzel',serif;color:var(--gold-dim);font-size:.72rem;letter-spacing:1.4px;text-transform:uppercase;padding-top:6px}
+.cp-ledger .ledger-row textarea{background:none;border:none;padding:2px 0;min-height:2.6em}
+.cp-ledger .ledger-row textarea:focus{background:var(--panel2);border-radius:6px;padding:6px 8px}
+@media(max-width:600px){.cp-ledger .ledger-row{grid-template-columns:1fr;gap:4px}}
+
+.cp-scroll{background:linear-gradient(180deg,var(--panel3),var(--panel));position:relative;padding-top:26px;padding-bottom:26px;overflow:hidden}
+.cp-scroll::before,.cp-scroll::after{content:'';position:absolute;left:14px;right:14px;height:8px;background:repeating-linear-gradient(90deg,var(--bg) 0 7px,transparent 7px 14px)}
+.cp-scroll::before{top:0}
+.cp-scroll::after{bottom:0}
+.cp-scroll textarea{background:none;border:none;min-height:200px;font-size:1rem;line-height:1.75;padding:0;text-indent:2.3em;unicode-bidi:normal}
+.cp-scroll textarea:focus{background:rgba(0,0,0,.15);border-radius:6px;padding:8px}
+/* Illuminated-manuscript opening letter — see updateBackstoryDropcap() in app.js. text-indent
+   only ever affects a block's first line, which is exactly the space the big letter needs; the
+   textarea reverts to unicode-bidi:normal here because the drop cap's side has to track the
+   *direction* the JS already resolved, not re-detect it independently via plaintext. */
+.cp-scroll-body{position:relative}
+.cp-dropcap{
+  position:absolute;top:2px;left:6px;pointer-events:none;-webkit-user-select:none;user-select:none;
+  font-family:'Cinzel',serif;font-weight:700;color:var(--gold);
+  font-size:3rem;line-height:.72;text-shadow:0 0 14px rgba(201,162,39,.3);
+}
+.cp-scroll-body.rtl textarea{direction:rtl;text-align:right}
+.cp-scroll-body.rtl .cp-dropcap{left:auto;right:6px}
+
+/* ---------- Notes tab: "Session Timeline" ---------- */
+.tl-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.tl-search{flex:1 1 220px}
+.tl-filters{display:flex;gap:6px;flex-wrap:wrap}
+.tl-filter{
+  --accent:var(--gold);background:var(--panel2);border:1px solid var(--border-lt);border-radius:20px;
+  padding:4px 12px;font-size:.75rem;color:var(--muted);letter-spacing:.4px;
+}
+.tl-filter.on{border-color:var(--accent);color:var(--accent);background:var(--panel3)}
+.timeline{position:relative;padding-left:26px}
+.timeline::before{content:'';position:absolute;left:6px;top:4px;bottom:4px;width:2px;background:linear-gradient(var(--border-lt),var(--border))}
+.tl-entry{position:relative;margin-bottom:20px}
+.tl-dot{position:absolute;left:-26px;top:8px;width:12px;height:12px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px var(--bg),0 0 0 5px var(--border-lt)}
+.tl-session{
+  display:block;background:none;border:none;border-bottom:1px dashed var(--border-lt);
+  color:var(--faint);font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:1.3px;text-transform:uppercase;
+  padding:2px 2px;width:auto;max-width:260px;margin-bottom:7px;
+}
+.tl-session:focus{border-bottom-color:var(--gold)}
+.tl-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 15px 14px}
+.tl-card-head{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.tl-note-title{flex:1;background:none;border:none;border-bottom:1px solid transparent;padding:2px 0;color:var(--text);font-size:1.05rem;font-weight:600}
+.tl-note-title:focus{border-bottom-color:var(--gold-dim)}
+.tl-tag-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:9px}
+.tl-tag{
+  --accent:var(--gold-dim);display:inline-flex;align-items:center;gap:4px;
+  font-size:.68rem;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);
+  border:1px solid var(--accent);border-radius:20px;padding:2px 6px 2px 10px;
+}
+.tl-tag button{background:none;border:none;color:inherit;opacity:.6;font-size:.85em;padding:0;line-height:1}
+.tl-tag button:hover{opacity:1}
+.tl-tag-add{background:none;border:none;border-bottom:1px dashed var(--border-lt);color:var(--muted);font-size:.72rem;padding:2px 2px;width:64px;transition:width .15s ease}
+.tl-tag-add:focus{border-bottom-color:var(--gold-dim);width:130px}
 
 /* ---------- Modal ---------- */
 .modal-bg{

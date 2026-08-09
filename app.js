@@ -32,10 +32,12 @@ function defaultState(){
     turnPlans:[{name:'Default',steps:[]}], turnPlanIdx:0,
     cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false},
     // Page 2
+    portrait:'',
     age:'',height:'',weight:'',eyes:'',skin:'',hair:'',
     personality:'', ideals:'', bonds:'', flaws:'',
+    goals:'', secrets:'',
     allies:'', factionName:'', backstory:'',
-    notes:[{title:'Session notes',body:''}]
+    notes:[{title:'Session notes',body:'',tags:[],session:''}]
   };
 }
 let S = defaultState();
@@ -589,29 +591,52 @@ features:`
   </div>`,
 
 character:`
-  <div class="panel"><h2>Identity</h2>
-    <div class="grid g3">
-      <label class="fld"><span>Player Name</span><input type="text" data-bind="playerName"></label>
-      <label class="fld"><span>Faction / Organization</span><input type="text" data-bind="factionName"></label>
-      <label class="fld"><span>Age</span><input type="text" data-bind="age"></label>
-      <label class="fld"><span>Height</span><input type="text" data-bind="height"></label>
-      <label class="fld"><span>Weight</span><input type="text" data-bind="weight"></label>
-      <label class="fld"><span>Eyes</span><input type="text" data-bind="eyes"></label>
-      <label class="fld"><span>Skin</span><input type="text" data-bind="skin"></label>
-      <label class="fld"><span>Hair</span><input type="text" data-bind="hair"></label>
+  <div class="panel cp-dossier">
+    <div class="cp-photo-col">
+      <div class="cp-photo-mount">
+        <div class="cp-photo-tape"></div>
+        <div class="cp-photo-inner" id="cpPortraitImg">🎭</div>
+      </div>
+      <input type="file" id="cpPortraitFile" accept="image/*" style="display:none">
+      <button type="button" class="cp-portrait-btn" id="cpPortraitBtn">Upload Portrait</button>
+      <button type="button" class="cp-portrait-remove" id="cpPortraitRemove" style="display:none">Remove photo</button>
+    </div>
+    <div class="cp-id-fields">
+      <h2>Identity</h2>
+      <div class="grid g3">
+        <label class="fld-paper"><span>Player Name</span><input type="text" data-bind="playerName"></label>
+        <label class="fld-paper"><span>Faction / Organization</span><input type="text" data-bind="factionName"></label>
+        <label class="fld-paper"><span>Age</span><input type="text" data-bind="age"></label>
+        <label class="fld-paper"><span>Height</span><input type="text" data-bind="height"></label>
+        <label class="fld-paper"><span>Weight</span><input type="text" data-bind="weight"></label>
+        <label class="fld-paper"><span>Eyes</span><input type="text" data-bind="eyes"></label>
+        <label class="fld-paper"><span>Skin</span><input type="text" data-bind="skin"></label>
+        <label class="fld-paper"><span>Hair</span><input type="text" data-bind="hair"></label>
+      </div>
     </div>
   </div>
-  <div class="grid g2">
-    <div class="panel"><h2>Personality Traits</h2><textarea data-bind="personality"></textarea></div>
-    <div class="panel"><h2>Ideals</h2><textarea data-bind="ideals"></textarea></div>
-    <div class="panel"><h2>Bonds</h2><textarea data-bind="bonds"></textarea></div>
-    <div class="panel"><h2>Flaws</h2><textarea data-bind="flaws"></textarea></div>
+  <div class="panel cp-ledger">
+    <div class="ledger-row"><label>Personality Traits</label><textarea data-bind="personality" placeholder="How they walk into a room, speak, react under pressure…"></textarea></div>
+    <div class="ledger-row"><label>Ideals</label><textarea data-bind="ideals" placeholder="What they believe in, live by, would die for…"></textarea></div>
+    <div class="ledger-row"><label>Bonds</label><textarea data-bind="bonds" placeholder="People, places, or things they're tied to…"></textarea></div>
+    <div class="ledger-row"><label>Flaws</label><textarea data-bind="flaws" placeholder="Vices, blind spots, the thing that keeps tripping them up…"></textarea></div>
+    <div class="ledger-row"><label>Goals &amp; Motivations</label><textarea data-bind="goals" placeholder="What are they chasing? What would make all this worth it?"></textarea></div>
+    <div class="ledger-row"><label>Fears &amp; Secrets</label><textarea data-bind="secrets" placeholder="What do they hide — from the party, or from themselves?"></textarea></div>
+    <div class="ledger-row"><label>Allies &amp; Organizations</label><textarea data-bind="allies" placeholder="Contacts, patrons, rivals, debts owed either way…"></textarea></div>
   </div>
-  <div class="panel"><h2>Allies &amp; Organizations</h2><textarea data-bind="allies"></textarea></div>
-  <div class="panel"><h2>Backstory</h2><textarea data-bind="backstory" style="min-height:160px"></textarea></div>`,
+  <div class="panel cp-scroll"><h2>Backstory</h2>
+    <div class="cp-scroll-body" id="cpScrollBody">
+      <span class="cp-dropcap" id="cpDropcap"></span>
+      <textarea data-bind="backstory" id="cpBackstoryTa" placeholder="Where they came from, what shaped them, how they ended up here…"></textarea>
+    </div>
+  </div>`,
 
 notes:`
-  <div id="noteList"></div>
+  <div class="tl-toolbar">
+    <input type="text" id="noteSearch" class="tl-search" placeholder="Search notes… (title, body, tags, session)" autocomplete="off">
+    <div id="noteTagFilters" class="tl-filters"></div>
+  </div>
+  <div id="noteList" class="timeline"></div>
   <button class="add-btn" data-add="notes">+ New note</button>`
 };
 
@@ -642,6 +667,10 @@ function initRoster(){
   saveRoster();
 }
 let saveTimer=null;
+// Notes tab UI state (which tag filters are toggled on, current search text) — deliberately not
+// part of S: it's a view over the notes, not data worth persisting per character.
+let activeNoteFilters=new Set();
+let noteSearchQuery='';
 function saveNow(){
   try{
     localStorage.setItem(charKey(ROSTER.active),JSON.stringify(S));
@@ -665,6 +694,12 @@ function load(){
     else S=defaultState();
   }catch(e){ /* corrupt data -> start fresh */ }
   migrateAttacks();
+  migrateNotes();
+}
+// Notes predate tags/session (the Session Timeline layout) — backfill both on any older save
+// so every note has a shape renderNotes() can rely on instead of scattering `||[]` everywhere.
+function migrateNotes(){
+  S.notes = (S.notes||[]).map(n=>({title:n.title||'',body:n.body||'',tags:n.tags||[],session:n.session||''}));
 }
 // Attacks have gone through a few shapes across rebuilds of this panel. Fold every earlier shape
 // into today's unified one (weapon:'longsword'|'custom', die, dmgStat, buffs[]) on load, so
@@ -2395,16 +2430,89 @@ function wireFx(){
     fxRefresh();
   }));
 }
+// A handful of common tags get a fixed elemental color (same palette as the ability cards) so
+// they read consistently across a whole campaign's worth of notes; anything else falls back to
+// a neutral gold-dim so custom tags still look intentional, not broken.
+const NOTE_TAG_COLORS={combat:'var(--rust)',lore:'var(--blue)',npc:'var(--amber)',loot:'var(--verdant)',personal:'var(--rose)',quest:'var(--gold)'};
+function noteTagColor(tag){ return NOTE_TAG_COLORS[tag.toLowerCase()] || 'var(--gold-dim)'; }
+// A new note's session marker fills itself in: "Session N" where N is one past the highest
+// session number already used (so it climbs on its own instead of the player tracking it by
+// hand), plus today's date so the timeline entry is dated the moment it's created.
+function nextSessionLabel(){
+  let max=0;
+  S.notes.forEach(n=>{ const m=/session\s*(\d+)/i.exec(n.session||''); if(m) max=Math.max(max,+m[1]); });
+  const date=new Date().toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+  return `Session ${max+1} · ${date}`;
+}
+function escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+// "Smart" here means: every typed word has to appear SOMEWHERE across title/body/session/tags,
+// in any order, in any field — not one exact substring match against the whole note. That's what
+// lets "bridge combat" find a note titled "Ambush at Miller's Bridge" tagged Combat.
+function noteMatches(n,terms){
+  if(!terms.length) return true;
+  const hay=[n.title,n.body,n.session,...(n.tags||[])].join('\n').toLowerCase();
+  return terms.every(t=>hay.includes(t));
+}
+function renderNoteFilters(){
+  const box=$('#noteTagFilters'); if(!box) return;
+  const tags=[...new Set(S.notes.flatMap(n=>n.tags||[]))];
+  box.innerHTML=tags.map(t=>
+    `<button type="button" class="tl-filter${activeNoteFilters.has(t)?' on':''}" data-tag="${esc(t)}" style="--accent:${noteTagColor(t)}">${esc(t)}</button>`
+  ).join('');
+  $$('#noteTagFilters .tl-filter').forEach(b=>b.addEventListener('click',()=>{
+    activeNoteFilters.has(b.dataset.tag) ? activeNoteFilters.delete(b.dataset.tag) : activeNoteFilters.add(b.dataset.tag);
+    renderNotes();
+  }));
+}
 function renderNotes(){
-  $('#noteList').innerHTML = S.notes.map((n,i)=>`
-    <div class="panel">
-      <div class="list-row">
-        <input type="text" value="${esc(n.title)}" data-li="notes.${i}.title" placeholder="Note title" style="font-size:1.1rem">
-        <button class="del-btn" data-del="notes.${i}">✕</button>
+  renderNoteFilters();
+  const terms=noteSearchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  // Keep each row's real index (for data-li/data-del paths) while showing most-recently-added
+  // notes first — a session log reads top-down as "what just happened", not "what happened first".
+  const rows=S.notes.map((n,i)=>({n,i})).filter(({n})=>
+    noteMatches(n,terms) && (!activeNoteFilters.size || (n.tags||[]).some(t=>activeNoteFilters.has(t)))
+  ).reverse();
+  $('#noteList').innerHTML = rows.length ? rows.map(({n,i})=>`
+    <div class="tl-entry">
+      <div class="tl-dot"></div>
+      <input type="text" class="tl-session" value="${esc(n.session)}" data-li="notes.${i}.session" placeholder="Session / date…">
+      <div class="tl-card">
+        <div class="tl-card-head">
+          <input type="text" class="tl-note-title" value="${esc(n.title)}" data-li="notes.${i}.title" placeholder="Note title">
+          <button class="del-btn" data-del="notes.${i}">✕</button>
+        </div>
+        <textarea data-li="notes.${i}.body" placeholder="Write anything...">${esc(n.body)}</textarea>
+        <div class="tl-tag-row">
+          ${(n.tags||[]).map((t,ti)=>`<span class="tl-tag" style="--accent:${noteTagColor(t)}">${esc(t)}<button type="button" data-deltag="${i}.${ti}">✕</button></span>`).join('')}
+          <input type="text" class="tl-tag-add" data-tagadd="${i}" placeholder="+ tag" autocomplete="off">
+        </div>
       </div>
-      <textarea data-li="notes.${i}.body" style="min-height:120px" placeholder="Write anything...">${esc(n.body)}</textarea>
-    </div>`).join('');
+    </div>`).join('')
+    : `<p class="prep-note" style="margin:0">${S.notes.length?'No notes match your search.':'No notes yet — jot down anything with the +New note button below.'}</p>`;
   wireList('#noteList');
+  wireNoteExtras();
+}
+function wireNoteExtras(){
+  $$('#noteList [data-tagadd]').forEach(inp=>inp.addEventListener('keydown',e=>{
+    if(e.key!=='Enter') return;
+    e.preventDefault();
+    const i=+inp.dataset.tagadd, val=inp.value.trim();
+    if(val){
+      const tags=S.notes[i].tags=(S.notes[i].tags||[]);
+      if(!tags.some(t=>t.toLowerCase()===val.toLowerCase())) tags.push(val);
+      save();
+    }
+    renderNotes();
+  }));
+  $$('#noteList [data-deltag]').forEach(b=>b.addEventListener('click',()=>{
+    const [i,ti]=b.dataset.deltag.split('.').map(Number);
+    S.notes[i].tags.splice(ti,1);
+    renderNotes(); save();
+  }));
+}
+function wireNotes(){
+  const search=$('#noteSearch'); if(!search) return;
+  search.addEventListener('input',()=>{ noteSearchQuery=search.value; renderNotes(); });
 }
 // Power-tier accent (mirrors the elemental accents on Ability Scores/Skills): cantrips read as
 // cool silver sparks, low-level spells arcane blue, mid-level mystic violet, and 7th-9th the
@@ -2865,7 +2973,10 @@ function renderOverviewWealth(){
 // ---------- Overview character whisper: one line per non-empty personality field ----------
 function renderOverviewWhisper(){
   const box=$('#ovWhisper'); if(!box) return;
-  const fields=[['personality','Traits'],['ideals','Ideals'],['bonds','Bonds'],['flaws','Flaws']]
+  // Secrets stay off this at-a-glance strip on purpose — everything else here is a quick
+  // reminder of how to play the character, but a secret is something they're keeping quiet.
+  const fields=[['personality','Traits'],['ideals','Ideals'],['bonds','Bonds'],['flaws','Flaws'],
+    ['goals','Goals']]
     .filter(([k])=>(S[k]||'').trim());
   box.style.display = fields.length ? '' : 'none';
   box.innerHTML = fields.map(([k,label])=>{
@@ -2878,18 +2989,87 @@ function renderOverview(){
   renderOverviewIdentity(); renderOverviewSkillChips(); renderOverviewWealth(); renderOverviewWhisper();
 }
 
+// ---------- Character tab: portrait upload ----------
+// Stored as a data URL right on S.portrait (so it rides along with export/import and the
+// roster's per-character localStorage slot like any other field), but downscaled through a
+// canvas first — an unscaled phone photo would blow past localStorage's ~5MB quota fast.
+function renderCharacterPortrait(){
+  const box=$('#cpPortraitImg'), rm=$('#cpPortraitRemove'); if(!box) return;
+  if(S.portrait){
+    box.style.backgroundImage=`url("${S.portrait}")`;
+    box.textContent='';
+    if(rm) rm.style.display='';
+  }else{
+    box.style.backgroundImage='none';
+    box.textContent='🎭';
+    if(rm) rm.style.display='none';
+  }
+}
+function wireCharacterPortrait(){
+  const btn=$('#cpPortraitBtn'), file=$('#cpPortraitFile'), rm=$('#cpPortraitRemove');
+  if(!btn || btn._bound) return; btn._bound=true;
+  btn.addEventListener('click',()=>file.click());
+  file.addEventListener('change',()=>{
+    const f=file.files[0]; file.value=''; if(!f) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const max=360, scale=Math.min(1,max/Math.max(img.width,img.height));
+        const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        S.portrait=cv.toDataURL('image/jpeg',.85);
+        renderCharacterPortrait(); save();
+      };
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(f);
+  });
+  rm.addEventListener('click',()=>{ S.portrait=''; renderCharacterPortrait(); save(); });
+}
+
+// ---------- Character tab: Backstory drop cap ----------
+// ::first-letter can't reach into a <textarea>'s value, so the big opening letter is a separate
+// decorative span kept in sync with the real (editable) first character on every keystroke.
+// Hebrew/Arabic openings flip the cap — and the textarea's own text-indent — to the right, since
+// a drop cap glued to the left edge of a right-to-left paragraph would sit on the wrong side.
+// Codepoint ranges (not a regex literal, to keep the Hebrew/Arabic bounds unambiguous in source):
+// Hebrew U+0591-U+07FF, Arabic Presentation Forms-A U+FB1D-U+FDFD, Forms-B U+FE70-U+FEFC.
+function isRtlChar(ch){
+  if(!ch) return false;
+  const c=ch.codePointAt(0);
+  return (c>=0x0591&&c<=0x07FF)||(c>=0xFB1D&&c<=0xFDFD)||(c>=0xFE70&&c<=0xFEFC);
+}
+function updateBackstoryDropcap(){
+  const ta=$('#cpBackstoryTa'), cap=$('#cpDropcap'), wrap=$('#cpScrollBody');
+  if(!ta || !cap || !wrap) return;
+  const ch=ta.value.trimStart().slice(0,1);
+  cap.textContent=ch;
+  cap.style.display=ch?'':'none';
+  wrap.classList.toggle('rtl',isRtlChar(ch));
+}
+function wireBackstoryDropcap(){
+  const ta=$('#cpBackstoryTa'); if(!ta || ta._dcBound) return; ta._dcBound=true;
+  ta.addEventListener('input',updateBackstoryDropcap);
+}
+
 // ---------- Add buttons (attacks / equipment / features / notes) ----------
 const ADD_TEMPLATES = {
   attacks:()=>({name:'',weapon:'custom',die:'',dmgStat:'auto',magic:0,miscAtk:0,miscDmg:0,rolled:'',buffs:[]}),
   features:()=>({title:'',desc:'',fx:[],combat:false,usesMax:0,usesPer:'short',usesUsed:0,usesScale:'',source:{kind:'custom'}}),
-  notes:()=>({title:'',body:''})
+  notes:()=>({title:'',body:'',tags:[],session:nextSessionLabel()})
 };
 function wireAddButtons(){
   $$('[data-add]').forEach(b=>b.addEventListener('click',()=>{
     const key=b.dataset.add;
     S[key].push(ADD_TEMPLATES[key]());
     RERENDER[key](); save();
-    focusLast('#'+({attacks:'attackList',features:'featureList',notes:'noteList'})[key]);
+    // Notes render newest-first (the Session Timeline reads top-down as most-recent-first), so
+    // the just-added note is the FIRST title field in the list, not the last — everywhere else
+    // a fresh row lands at the bottom, so focusLast's "grab the last input" still applies there.
+    if(key==='notes') $('#noteList .tl-note-title')?.focus();
+    else focusLast('#'+({attacks:'attackList',features:'featureList'})[key]);
   }));
 }
 
@@ -3850,7 +4030,7 @@ function renderAll(){
   renderAbilityCards(); renderSaves(); renderSkills(); renderDeathSaves();
   renderAttacks(); renderEquipment(); renderFeatures(); renderNotes();
   renderSpellLevels(); renderOverview(); renderCombatFeatures(); renderLanguages();
-  renderBuildSelectors(); renderAsi(); renderHudControls();
+  renderBuildSelectors(); renderAsi(); renderHudControls(); renderCharacterPortrait(); updateBackstoryDropcap();
   bindAll(); syncBound(); recalc();
 }
 // Tablet-first: skill-badge "when" tooltips open on TAP, not hover. One delegated listener on
@@ -3866,7 +4046,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemLibrary(); wireEquipmentDrawer();
+wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemLibrary(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryDropcap(); wireNotes();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
