@@ -1,0 +1,307 @@
+{
+  "name": "Cassian Starfall2",
+  "classLevel": "Fighter 1",
+  "background": "",
+  "playerName": "",
+  "race": "",
+  "alignment": "",
+  "xp": "",
+  "inspiration": false,
+  "profBonus": 2,
+  "classId": "fighter",
+  "level": 1,
+  "subclass": "",
+  "raceId": "aasimar",
+  "subraceId": "",
+  "flexBonus": [
+    "wis",
+    "str"
+  ],
+  "asi": {},
+  "abilities": {
+    "str": 17,
+    "dex": 11,
+    "con": 16,
+    "int": 11,
+    "wis": 16,
+    "cha": 13
+  },
+  "saveProf": {
+    "str": true,
+    "dex": false,
+    "con": true,
+    "int": false,
+    "wis": false,
+    "cha": false
+  },
+  "skills": {
+    "acrobatics": 0,
+    "animal": 1,
+    "arcana": 0,
+    "athletics": 1,
+    "deception": 0,
+    "history": 0,
+    "insight": 0,
+    "intimidation": 0,
+    "investigation": 0,
+    "medicine": 0,
+    "nature": 0,
+    "perception": 1,
+    "performance": 0,
+    "persuasion": 0,
+    "religion": 0,
+    "sleight": 0,
+    "stealth": 0,
+    "survival": 1
+  },
+  "favSkills": [],
+  "ac": 18,
+  "initiativeMisc": 0,
+  "speed": "30 ft.",
+  "vision": "60 ft.",
+  "hpMax": 15,
+  "hpCurrent": 15,
+  "hpTemp": 0,
+  "hdTotal": "1d10",
+  "hd": "",
+  "hdUsed": 0,
+  "deathS": [
+    false,
+    false,
+    false
+  ],
+  "deathF": [
+    false,
+    false,
+    false
+  ],
+  "attacks": [
+    {
+      "name": "Longsword",
+      "weapon": "longsword",
+      "die": "1d8",
+      "dmgStat": "auto",
+      "magic": 0,
+      "miscAtk": 0,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": []
+    }
+  ],
+  "atkNotes": "",
+  "equip": {
+    "armor": "chainmail",
+    "armorMagic": 0,
+    "shield": true,
+    "shieldMagic": 0,
+    "acAuto": true,
+    "head": "",
+    "neck": "",
+    "cloak": "",
+    "hands": "",
+    "ring1": "",
+    "ring2": "",
+    "boots": "",
+    "mainhand": "",
+    "offhand": ""
+  },
+  "money": {
+    "cp": 0,
+    "sp": 0,
+    "ep": 0,
+    "gp": 10,
+    "pp": 0
+  },
+  "equipment": [
+    {
+      "qty": "",
+      "name": "",
+      "type": "G",
+      "desc": "",
+      "combat": false,
+      "att": false
+    }
+  ],
+  "treasure": "",
+  "features": [
+    {
+      "title": "Healing Hands",
+      "desc": " As an action, you can touch a creature and roll a number of d4s equal to your proficiency bonus. The creature regains a number of hit points equal to the total rolled. Once you use this trait, you can’t use it again until you finish a long rest.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "race",
+        "raceName": "Aasimar"
+      },
+      "actionTypes": [
+        "action"
+      ]
+    },
+    {
+      "title": "Celestial Resistance",
+      "desc": "Resistance to necrotic and radiant damage.",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "race",
+        "raceName": "Aasimar"
+      }
+    },
+    {
+      "title": "Fighting Style Interception ",
+      "desc": "Interception: When an enemy hits an ally within 5 feet of you, you can use your Reaction to reduce the damage by:\n1d10 + your Proficiency Bonus",
+      "fx": [],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "class",
+        "classId": "fighter",
+        "className": "Fighter"
+      },
+      "actionTypes": [
+        "other",
+        "reaction"
+      ]
+    },
+    {
+      "title": "Second Wind",
+      "desc": "Bonus action: regain 1d10 + fighter level HP, once per short/long rest.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 1,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "class",
+        "classId": "fighter",
+        "className": "Fighter"
+      }
+    }
+  ],
+  "profLang": "",
+  "languages": [
+    "Common"
+  ],
+  "featuresLocked": true,
+  "spellClass": "",
+  "spellAbility": "",
+  "spellLevels": [
+    {
+      "total": 0,
+      "used": 0,
+      "spells": [
+        {
+          "name": "Light",
+          "prep": false,
+          "meta": "1 Action · Touch · 1 hour",
+          "desc": "You touch one object that is no larger than 10 feet in any dimension. Until the spell ends, the object sheds bright light in a 20-foot radius and dim light for an additional 20 feet. The light can be colored as you like. Completely covering the object with something opaque blocks the light. The spell ends if you cast it again or dismiss it as an action.\n\nIf you target an object held or worn by a hostile creature, that creature must succeed on a Dexterity saving throw to avoid the spell."
+        }
+      ]
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    }
+  ],
+  "eqTab": "ALL",
+  "invEqOpen": true,
+  "customCards": [],
+  "states": [],
+  "concentration": null,
+  "turnPlans": [
+    {
+      "name": "Default",
+      "steps": []
+    }
+  ],
+  "turnPlanIdx": 0,
+  "cockpit": {
+    "hidden": [],
+    "pins": [],
+    "showAllSpells": false,
+    "showDeath": false,
+    "atkOpen": false
+  },
+  "portrait": "",
+  "age": "",
+  "height": "",
+  "weight": "",
+  "eyes": "",
+  "skin": "",
+  "hair": "",
+  "personality": "I prefer listening to talking. People reveal a lot when you give them enough silence.",
+  "ideals": "If I have the strength to protect someone, I should use it.",
+  "bonds": "Garran gave me a life when I had none. I try to live in a way that would make him proud.",
+  "flaws": "I find it much easier to protect others than to let them protect me.",
+  "goals": "",
+  "secrets": "",
+  "allies": "",
+  "factionName": "",
+  "backstory": "The Child From the Ashes\nI don't remember where I was born. Most people have stories about their first home.\nI have Garran's.\nHe told me he found me as an infant in the ruins of a settlement destroyed by fire. Everyone there was dead.\nSomehow, I wasn't.\nGarran was a blacksmith from a nearby village. He took me home and raised me as his son. I grew up around the sound of hammer against steel, learning patience, discipline, and eventually how to fight.\nI suppose that's where I learned to be quiet, too. Garran never wasted words, and neither do I. I've found people usually tell you more when you give them enough silence.\nThere was only one thing from my life before him: a small piece of strange, pale metal that had been sewn into the blanket I was found in. I kept it, mostly because Garran did.\nNeither of us knew what it was.\nAt least, that's what I thought.\nYears later, a strange sword found its way into Garran's forge. I never paid much attention to it, but he did. After that, he became different. Distracted. He started asking questions about places I'd never heard of and people I'd never met.\nThen, one evening, he finally sat down beside me.\n“There is something I should have told you years ago.”\nI remember waiting for him to continue.\nHe didn't.\n\nThe village bells started ringing.\nWe were under attack.\nGarran took up his weapon, then pointed me toward our neighbors' house. Their children were still inside.\n“Cassian. They need you.”\nI didn’t hesitate.\nI went.\nI got them out.\nWhen I looked back, I could see Garran fighting near the forge. I saw him take a blow and fall to one knee.\nThen he looked toward me and shouted something.\nI couldn't hear him.\nThose were the last words my father ever said to me.\nWhen I returned, Garran was gone. No body was ever found, and though I told myself that meant nothing, I never fully convinced myself he didn’t survive.\nThe strange sword had disappeared with him.\nI still don't know what Garran wanted to tell me that night, or why that sword mattered to him. Sometimes I think he was interrupted before he could finish—other times I think he chose not to.\nMaybe one day I will find him and finally hear it.\nUntil then, I have the only answer he ever really gave me:\nIf you have the strength to protect someone, use it.",
+  "notes": [
+    {
+      "title": "זריקת קוביות",
+      "body": "17\n11\n16\n13\n11\n16",
+      "tags": [],
+      "session": ""
+    }
+  ],
+  "eqCollapse": {}
+}

@@ -641,10 +641,14 @@ character:`
     <div class="ledger-row"><label>Fears &amp; Secrets</label><textarea data-bind="secrets" placeholder="What do they hide — from the party, or from themselves?"></textarea></div>
     <div class="ledger-row"><label>Allies &amp; Organizations</label><textarea data-bind="allies" placeholder="Contacts, patrons, rivals, debts owed either way…"></textarea></div>
   </div>
-  <div class="panel cp-scroll"><h2>Backstory</h2>
+  <div class="panel cp-scroll" id="cpScroll"><h2>Backstory</h2>
     <div class="cp-scroll-body" id="cpScrollBody">
-      <span class="cp-dropcap" id="cpDropcap"></span>
-      <textarea data-bind="backstory" id="cpBackstoryTa" placeholder="Where they came from, what shaped them, how they ended up here…"></textarea>
+      <div class="cp-backstory-edit" id="cpBackstoryEdit" contenteditable="true" data-placeholder="Where they came from, what shaped them, how they ended up here…"></div>
+      <div class="cp-scroll-fade"></div>
+    </div>
+    <div class="cp-scroll-foot">
+      <span class="cp-scroll-count" id="cpWordCount"></span>
+      <button type="button" class="cp-expand-btn" id="cpExpandBtn">⤢ Expand</button>
     </div>
   </div>`,
 
@@ -763,6 +767,10 @@ function showTab(id){
   // Textareas rendered while their tab was hidden measured scrollHeight 0, so auto-grow
   // clipped them to the minimum — remeasure everything the moment the tab is actually visible.
   $$('#page-'+id+' textarea').forEach(autoGrow);
+  // Same "measured while hidden" trap as the autoGrow line above: the Backstory box's own
+  // scrollHeight/clientHeight both read 0 while its tab was display:none, so the long-text fade
+  // and Expand button never turned on for an already-long backstory until this re-check runs.
+  if(id==='character') updateBackstoryMeta();
   if(id==='overview') renderOverview();
   // Title/description edits on the Features tab don't live-refresh this panel (typing shouldn't
   // yank focus mid-keystroke), so re-render it fresh whenever the Combat tab is opened — otherwise
@@ -3113,11 +3121,12 @@ function wireCharacterPortrait(){
   rm.addEventListener('click',()=>{ S.portrait=''; renderCharacterPortrait(); save(); });
 }
 
-// ---------- Character tab: Backstory drop cap ----------
-// ::first-letter can't reach into a <textarea>'s value, so the big opening letter is a separate
-// decorative span kept in sync with the real (editable) first character on every keystroke.
-// Hebrew/Arabic openings flip the cap — and the textarea's own text-indent — to the right, since
-// a drop cap glued to the left edge of a right-to-left paragraph would sit on the wrong side.
+// ---------- Character tab: Backstory editor (drop cap, word count, expand) ----------
+// A plain <textarea> can't host a real drop cap — ::first-letter plus float, which is what
+// actually lets a book's opening letter sit tall while the next few LINES wrap around it, only
+// applies to real rendered text, and a textarea's value isn't that; it's opaque to CSS. Backstory
+// is a contenteditable div instead so ::first-letter can do the genuine multi-line wrap, with
+// data-bind's job (state -> DOM -> state) done by hand in render/syncBackstoryFromEditor below.
 // Codepoint ranges (not a regex literal, to keep the Hebrew/Arabic bounds unambiguous in source):
 // Hebrew U+0591-U+07FF, Arabic Presentation Forms-A U+FB1D-U+FDFD, Forms-B U+FE70-U+FEFC.
 function isRtlChar(ch){
@@ -3125,17 +3134,59 @@ function isRtlChar(ch){
   const c=ch.codePointAt(0);
   return (c>=0x0591&&c<=0x07FF)||(c>=0xFB1D&&c<=0xFDFD)||(c>=0xFE70&&c<=0xFEFC);
 }
-function updateBackstoryDropcap(){
-  const ta=$('#cpBackstoryTa'), cap=$('#cpDropcap'), wrap=$('#cpScrollBody');
-  if(!ta || !cap || !wrap) return;
-  const ch=ta.value.trimStart().slice(0,1);
-  cap.textContent=ch;
-  cap.style.display=ch?'':'none';
-  wrap.classList.toggle('rtl',isRtlChar(ch));
+// State -> DOM. Skipped while the box is focused so a character-switch mid-edit (or any other
+// renderAll()) can't clobber the cursor position of an edit already in progress.
+function renderBackstoryEditor(){
+  const el=$('#cpBackstoryEdit'); if(!el || document.activeElement===el) return;
+  el.innerHTML = esc(S.backstory||'').replace(/\n/g,'<br>');
+  updateBackstoryMeta();
 }
-function wireBackstoryDropcap(){
-  const ta=$('#cpBackstoryTa'); if(!ta || ta._dcBound) return; ta._dcBound=true;
-  ta.addEventListener('input',updateBackstoryDropcap);
+// DOM -> state, on every keystroke. innerText (not textContent) is what turns each <br> or block
+// boundary the browser inserted for Enter back into a '\n' — textContent would silently drop them
+// and glue every line into one run-on paragraph.
+function syncBackstoryFromEditor(){
+  const el=$('#cpBackstoryEdit'); if(!el) return;
+  const text=el.innerText.replace(/\n+$/,'');
+  S.backstory=text;
+  // A browser can leave a stray empty line (a bare <br>) behind after deleting everything back to
+  // nothing, which defeats the :empty CSS selector the placeholder depends on — force it clean.
+  if(!text) el.innerHTML='';
+  save();
+  updateBackstoryMeta();
+}
+// Word count, the RTL flip (cap + whole block, since a float's side is a real layout commitment,
+// not something plaintext auto-detection can make per line), and whether there's enough text for
+// the "more below" fade + Expand button to earn their keep.
+function updateBackstoryMeta(){
+  const el=$('#cpBackstoryEdit'), wrap=$('#cpScrollBody'), count=$('#cpWordCount'), scroll=$('#cpScroll');
+  if(!el) return;
+  const text=S.backstory||'';
+  if(wrap) wrap.classList.toggle('rtl',isRtlChar(text.trimStart().slice(0,1)));
+  if(count){
+    const words=text.trim()?text.trim().split(/\s+/).length:0;
+    count.textContent = words ? `${words.toLocaleString()} word${words===1?'':'s'}` : '';
+  }
+  if(scroll) scroll.classList.toggle('cp-scroll-long', el.scrollHeight>el.clientHeight+4);
+}
+function wireBackstoryEditor(){
+  const el=$('#cpBackstoryEdit'); if(!el || el._bound) return; el._bound=true;
+  el.addEventListener('input',syncBackstoryFromEditor);
+  // Force plain-text paste — otherwise pasting from Word/a web page drags in its own fonts,
+  // colors and stray markup that would fight (and outlive, on every future render) the app's own.
+  el.addEventListener('paste',e=>{
+    e.preventDefault();
+    document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text/plain'));
+  });
+}
+// Long backstories default to a capped, scrollable box (so one sprawling character doesn't push
+// every panel below it halfway down the page) with an Expand button to read/write it in full.
+function wireBackstoryExpand(){
+  const btn=$('#cpExpandBtn'), scroll=$('#cpScroll'); if(!btn || btn._bound) return; btn._bound=true;
+  btn.addEventListener('click',()=>{
+    const open=scroll.classList.toggle('expanded');
+    btn.textContent = open ? '⤡ Collapse' : '⤢ Expand';
+    updateBackstoryMeta(); // recheck cp-scroll-long now that the height cap just changed
+  });
 }
 
 // ---------- Add buttons (attacks / equipment / features / notes) ----------
@@ -4114,7 +4165,7 @@ function renderAll(){
   renderAbilityCards(); renderSaves(); renderSkills(); renderDeathSaves();
   renderAttacks(); renderEquipment(); renderFeatures(); renderNotes();
   renderSpellLevels(); renderOverview(); renderCombatFeatures(); renderLanguages();
-  renderBuildSelectors(); renderAsi(); renderHudControls(); renderCharacterPortrait(); updateBackstoryDropcap();
+  renderBuildSelectors(); renderAsi(); renderHudControls(); renderCharacterPortrait(); renderBackstoryEditor();
   bindAll(); syncBound(); recalc();
 }
 // Tablet-first: skill-badge "when" tooltips open on TAP, not hover. One delegated listener on
@@ -4130,7 +4181,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryDropcap(); wireNotes();
+wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

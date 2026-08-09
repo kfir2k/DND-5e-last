@@ -38,6 +38,10 @@ h1,h2,h3,.tab-btn,.stat-label,.ability-name,button{font-family:'Cinzel',Georgia,
 *::-webkit-scrollbar-track{background:var(--panel2)}
 *::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:6px;border:2px solid var(--panel2)}
 *::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+/* Chromium draws its own light-gray up/down arrow buttons at each end of a scrollbar by default,
+   even with the thumb/track above recolored — the Backstory box is tall enough to actually show
+   a scrollbar now, and those default arrows would clash against everything above. */
+*::-webkit-scrollbar-button{display:none}
 
 /* ---------- Header ---------- */
 header{
@@ -1792,20 +1796,42 @@ label.fld-paper input:focus{border-bottom-style:solid;border-bottom-color:var(--
 .cp-scroll::before,.cp-scroll::after{content:'';position:absolute;left:14px;right:14px;height:8px;background:repeating-linear-gradient(90deg,var(--bg) 0 7px,transparent 7px 14px)}
 .cp-scroll::before{top:0}
 .cp-scroll::after{bottom:0}
-.cp-scroll textarea{background:none;border:none;min-height:200px;font-size:1rem;line-height:1.75;padding:0;text-indent:2.3em;unicode-bidi:normal}
-.cp-scroll textarea:focus{background:rgba(0,0,0,.15);border-radius:6px;padding:8px}
-/* Illuminated-manuscript opening letter — see updateBackstoryDropcap() in app.js. text-indent
-   only ever affects a block's first line, which is exactly the space the big letter needs; the
-   textarea reverts to unicode-bidi:normal here because the drop cap's side has to track the
-   *direction* the JS already resolved, not re-detect it independently via plaintext. */
+/* Illuminated-manuscript opening letter, done for real this time: ::first-letter + float is what
+   lets a book's opening letter sit tall while the next few LINES wrap around it (not just the
+   first one) — but that pseudo-element only ever fires on genuine rendered text, which a
+   textarea's value isn't. Backstory is a contenteditable div instead (see renderBackstoryEditor /
+   syncBackstoryFromEditor in app.js) purely so this selector has real text to grab. */
 .cp-scroll-body{position:relative}
-.cp-dropcap{
-  position:absolute;top:2px;left:6px;pointer-events:none;-webkit-user-select:none;user-select:none;
-  font-family:'Cinzel',serif;font-weight:700;color:var(--gold);
-  font-size:3rem;line-height:.72;text-shadow:0 0 14px rgba(201,162,39,.3);
+.cp-backstory-edit{min-height:200px;font-size:1rem;line-height:1.75;outline:none;max-height:420px;overflow-y:auto}
+.cp-scroll.expanded .cp-backstory-edit{max-height:none;overflow-y:hidden}
+.cp-backstory-edit:focus{background:rgba(0,0,0,.15);border-radius:6px;padding:8px;margin:-8px}
+.cp-backstory-edit:empty::before{content:attr(data-placeholder);color:var(--faint);font-style:italic}
+.cp-backstory-edit::first-letter{
+  float:left;font-family:'Cinzel',serif;font-weight:700;color:var(--gold);
+  font-size:2.8em;line-height:.82;padding:2px 8px 0 0;text-shadow:0 0 14px rgba(201,162,39,.3);
 }
-.cp-scroll-body.rtl textarea{direction:rtl;text-align:right}
-.cp-scroll-body.rtl .cp-dropcap{left:auto;right:6px}
+/* RTL flips both the block's own flow and which side the cap floats to — a float's side is a
+   real layout commitment for the whole paragraph, not something per-character auto-detection
+   (unicode-bidi:plaintext, used everywhere else in the app) could resolve on its own. */
+.cp-scroll-body.rtl .cp-backstory-edit{direction:rtl;text-align:right}
+.cp-scroll-body.rtl .cp-backstory-edit::first-letter{float:right;padding:2px 0 0 8px}
+/* A short backstory just sits in an open box; only once it's long enough to hit the cap does the
+   bottom fade + Expand control appear — nothing to look at (or click) until there's a reason to. */
+.cp-scroll-fade{
+  position:absolute;left:0;right:0;bottom:0;height:46px;pointer-events:none;
+  background:linear-gradient(rgba(31,25,19,0),var(--panel));opacity:0;transition:opacity .2s ease;
+}
+.cp-scroll-long .cp-scroll-fade{opacity:1}
+.cp-scroll.expanded .cp-scroll-fade{opacity:0}
+.cp-scroll-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;position:relative;z-index:1}
+.cp-scroll-count{color:var(--faint);font-size:.74rem;font-style:italic}
+.cp-expand-btn{
+  display:none;background:none;border:1px solid var(--border-lt);color:var(--muted);
+  font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:1px;text-transform:uppercase;
+  padding:5px 11px;border-radius:6px;cursor:pointer;
+}
+.cp-scroll-long .cp-expand-btn,.cp-scroll.expanded .cp-expand-btn{display:inline-block}
+.cp-expand-btn:hover{border-color:var(--gold);color:var(--gold-lt)}
 
 /* ---------- Notes tab: "Session Timeline" ---------- */
 .tl-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
