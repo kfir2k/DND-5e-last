@@ -233,6 +233,7 @@ label.fld span{
   -webkit-tap-highlight-color:transparent;
 }
 .sk-fx:hover,.sk-fx.open{background:var(--panel2);border-color:var(--gold)}
+.sk-fx.open{width:100%}
 .sk-fx b{
   background:var(--gold);color:var(--ink);border-radius:5px;
   padding:1px 6px;font-weight:800;font-size:.85rem;white-space:nowrap;
@@ -241,6 +242,8 @@ label.fld span{
 .sk-fx.open b{transform:scale(1.12)}
 .sk-fx.perm{border-color:var(--green);color:var(--green)}
 .sk-fx.perm:hover,.sk-fx.perm.open{border-color:var(--green)}
+.sk-fx.warn{border-color:var(--red);color:#e08a80}
+.sk-fx.warn:hover,.sk-fx.warn.open{border-color:var(--red)}
 /* The "when" condition — tapping the badge unfolds it on its own line, fully wrapped (never
    clipped, however long the text is), instead of stretching sideways past the card's edge. */
 .sk-tip{

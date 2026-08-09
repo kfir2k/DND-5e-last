@@ -791,6 +791,10 @@ function skillBadgesHTML(k,ab){
     const srcs=allFx().filter(x=>x.t==='skill'&&xSkills(x).includes(k)).map(x=>x.src).join(', ');
     badges.push(`<span class="sk-fx perm">✦ ${esc(srcs)}<span class="sk-tip">Always active — already counted in the bonus</span></span>`);
   }
+  if(k==='stealth'){
+    const a=ARMORS[(S.equip||{}).armor]||ARMORS.none;
+    if(a.sd) badges.push(`<span class="sk-fx warn">⚠ Disadvantage<span class="sk-tip">${esc(a.n.split(' (')[0])} imposes disadvantage on Stealth</span></span>`);
+  }
   fxNotes(k).forEach(n=>{
     const b=noteBadge(k,ab,n);
     if(b==null) return; // effect makes no difference here (e.g. already at expertise) — nothing to show
