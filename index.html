@@ -27,20 +27,18 @@
       <input data-bind="background" placeholder="Background" size="10">
     </div>
   </div>
+  <div class="rest-inline">
+    <button class="icon-btn sm" id="shortRestBtn" title="Spend hit dice to heal; Warlock pact slots return.">🌙 Short Rest</button>
+    <button class="icon-btn sm" id="longRestBtn" title="Full HP, all slots, half your hit dice back.">☀ Long Rest</button>
+    <span class="prep-note" id="restNote"></span>
+  </div>
   <div class="header-right">
     <span id="saveStatus">saved</span>
     <button class="icon-btn" id="charsBtn" title="Choose or manage characters">🎭 Characters</button>
-    <button class="icon-btn" id="mapBtn" title="Open the battle map">🗺 Map</button>
+    <button class="icon-btn" id="mapBtn" title="Open the map">🗺 Map</button>
     <button class="icon-btn" id="settingsBtn">⚙ Settings</button>
   </div>
 </header>
-
-<div class="rest-bar">
-  <span class="stat-label" style="margin:0">Rest</span>
-  <button class="icon-btn sm" id="shortRestBtn">🌙 Short</button>
-  <button class="icon-btn sm" id="longRestBtn">☀ Long</button>
-  <span class="prep-note" id="restNote" style="margin:0;flex:1 1 220px">Short rest: spend hit dice to heal; Warlock pact slots return. Long rest: full HP, all slots, half your hit dice back.</span>
-</div>
 
 <nav id="tabs"></nav>
 
@@ -56,44 +54,42 @@
   </div>
 </div>
 
-<div class="modal-bg map-modal-bg" id="battleMap">
+<div class="modal-bg map-modal-bg" id="mapModal">
   <div class="map-shell">
     <div class="map-toolbar">
       <div class="map-toolbar-group">
-        <div class="map-add-ally">
-          <button class="icon-btn sm" id="mapAddAllyBtn">+ Ally ▾</button>
-          <div class="map-dropdown" id="mapAllyDropdown"></div>
-        </div>
-        <button class="icon-btn sm" id="mapAddEnemyBtn">+ Enemy</button>
-        <div class="map-enemy-form" id="mapEnemyForm">
-          <input type="text" id="mapEnemyName" placeholder="Enemy name" maxlength="30">
-          <input type="color" id="mapEnemyColor" value="#b0392f" title="Token color">
-          <select id="mapEnemySize" title="Size"></select>
-          <input type="number" id="mapEnemyCount" value="1" min="1" max="20" title="How many">
-          <button class="icon-btn sm" id="mapEnemyAdd">Add</button>
-          <button class="icon-btn sm" id="mapEnemyCancel">Cancel</button>
-        </div>
+        <button class="icon-btn sm" id="mapUploadBtn">🖼 Upload Map</button>
+        <input type="file" id="mapImageFile" accept="image/*" style="display:none">
+        <button class="icon-btn sm danger" id="mapRemoveImageBtn" style="display:none">Remove Map</button>
       </div>
-      <div class="map-toolbar-group">
-        <button class="icon-btn sm" id="mapMeasureBtn" title="Measure distance without moving a token">📏 Measure</button>
+      <div class="map-toolbar-group" id="mapPinTools" style="display:none">
+        <button class="icon-btn sm map-pintool" id="mapAddPartyBtn" data-pintype="party" title="Click, then tap the map to mark where your party is">📍 Party</button>
+        <button class="icon-btn sm map-pintool" id="mapAddWaypointBtn" data-pintype="waypoint" title="Click, then tap the map to mark a waypoint">🚩 Waypoint</button>
+        <button class="icon-btn sm map-pintool" id="mapAddQuestBtn" data-pintype="quest" title="Click, then tap the map to mark a quest">⭐ Quest</button>
+      </div>
+      <div class="map-toolbar-group" id="mapViewTools" style="display:none">
         <button class="icon-btn sm" id="mapZoomOut" title="Zoom out">−</button>
         <button class="icon-btn sm" id="mapZoomReset" title="Fit to screen">Reset view</button>
         <button class="icon-btn sm" id="mapZoomIn" title="Zoom in">+</button>
-        <button class="icon-btn sm danger" id="mapClearBtn">Clear map</button>
       </div>
       <button class="close-x" id="mapClose">✕</button>
     </div>
     <div class="map-stage" id="mapStage">
-      <div class="map-viewport" id="mapViewport">
-        <svg id="mapSvg" class="map-svg"></svg>
-        <div id="mapTokenLayer" class="map-token-layer"></div>
+      <div class="map-empty" id="mapEmpty">
+        <p>Upload a picture of your game's map to pin your party's position, waypoints and quests on it.</p>
+        <button class="icon-btn" id="mapUploadBtnBig">🖼 Upload a Map Image</button>
       </div>
-      <div class="map-move-badge" id="mapMoveBadge"></div>
+      <div class="map-viewport" id="mapViewport">
+        <img id="mapImg" class="map-img" alt="Campaign map">
+        <div id="mapPinLayer" class="map-pin-layer"></div>
+      </div>
     </div>
     <div class="map-selected-bar" id="mapSelectedBar">
-      <span id="mapSelectedName"></span>
-      <span class="map-hint">Tap a hex to move here</span>
-      <button class="icon-btn sm danger" id="mapRemoveBtn">Remove</button>
+      <span class="map-pin-ico" id="mapSelIcon"></span>
+      <input type="text" id="mapSelLabel" placeholder="Label" maxlength="40">
+      <input type="text" id="mapSelNote" placeholder="Note (optional)" maxlength="120">
+      <button class="icon-btn sm danger" id="mapPinRemoveBtn">Remove</button>
+      <button class="icon-btn sm" id="mapPinDoneBtn">Done</button>
     </div>
   </div>
 </div>
