@@ -125,13 +125,39 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
 }
 .build-panel .grid.g3,.build-panel .prep-note{position:relative;z-index:1}
 
-.bHero{
-  position:relative;height:min(64vh,560px);border-radius:18px;overflow:hidden;
+/* Class and Heritage now live in one continuous frame — a single rounded card holding both
+   stages, joined by an ornamental seam, rather than two separate boxes with a gap between them. */
+.bHeroGroup{
+  --bHeroH:min(58vh,480px);
+  position:relative;border-radius:18px;overflow:hidden;
   background:var(--ink);border:1px solid var(--border-lt);margin-bottom:14px;
-  display:flex;flex-direction:row;align-items:stretch;
   box-shadow:0 14px 32px rgba(0,0,0,.45);
 }
-.bHeroMini{height:340px}
+.bHero{
+  position:relative;height:var(--bHeroH);overflow:hidden;
+  background:var(--ink);
+  display:flex;flex-direction:row;align-items:stretch;
+}
+.bHeroMini{height:var(--bHeroH)}
+
+/* A thin gold seam with a centered gem stitches the two stages into one fluid whole. */
+.bHeroSeam{
+  position:relative;z-index:5;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent);
+}
+.bHeroSeamGem{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;background:var(--ink);border:1px solid var(--gold-dim);
+  color:var(--gold);font-size:.85rem;
+  box-shadow:0 0 0 5px var(--ink),0 0 16px rgba(201,162,39,.45);
+}
+/* Soft dark bleed at the top/bottom of each stage so the seam reads as a blend, not a hard cut. */
+.bHero::after,.bHeroMini::before{
+  content:'';position:absolute;left:0;right:0;height:56px;z-index:1;pointer-events:none;
+}
+.bHero::after{bottom:0;background:linear-gradient(to bottom,transparent,rgba(8,6,4,.85))}
+.bHeroMini::before{top:0;background:linear-gradient(to top,transparent,rgba(8,6,4,.85))}
 
 .bcsCorner{position:absolute;z-index:6;width:20px;height:20px;pointer-events:none;opacity:.8}
 .bcsCorner::before,.bcsCorner::after{content:'';position:absolute;background:var(--gold-dim)}
@@ -149,9 +175,9 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
   background:linear-gradient(180deg,rgba(0,0,0,.3),rgba(0,0,0,.14));
   border-right:1px solid rgba(255,255,255,.07);
 }
-.bRailColMini{width:230px}
+.bRailColMini{width:250px}
 .bRailColLbl{
-  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.22em;font-size:.66rem;
+  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.22em;font-size:.74rem;
   color:var(--gold-dim);padding:0 2px 8px;flex:0 0 auto;
 }
 .bRail{
@@ -182,13 +208,13 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
   border-radius:8px;border:2px solid rgba(255,255,255,.14);filter:saturate(.7) brightness(.7);
   transition:border-color .2s ease,filter .2s ease,box-shadow .2s ease;
 }
-.bThumbSm{width:34px;height:34px;border-radius:6px}
+.bThumbSm{width:40px;height:40px;border-radius:7px}
 .bLabel{
-  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.03em;font-size:.74rem;
+  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.03em;font-size:.82rem;
   color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   transition:color .2s ease;
 }
-.bLabelSm{font-size:.66rem}
+.bLabelSm{font-size:.76rem}
 .bRailItem.active .bThumb{
   border-color:var(--c);filter:none;
   box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 55%,transparent),0 6px 14px rgba(0,0,0,.5);
@@ -202,7 +228,7 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
 .bBgA,.bBgB,.bMbgA,.bMbgB{filter:blur(26px) brightness(.4) saturate(1.2)}
 
 .bPortraitWrap{position:absolute;left:50%;top:2%;transform:translateX(-50%);width:min(44%,420px);height:82%;pointer-events:none}
-.bMiniPortraitWrap{position:absolute;left:50%;top:4%;transform:translateX(-50%);width:min(30%,260px);height:76%;pointer-events:none}
+.bMiniPortraitWrap{position:absolute;left:50%;top:3%;transform:translateX(-50%);width:min(38%,340px);height:80%;pointer-events:none}
 .bPortA,.bPortB,.bMportA,.bMportB{
   -webkit-mask-image:radial-gradient(ellipse 60% 64% at 50% 36%,#000 52%,transparent 94%);
   mask-image:radial-gradient(ellipse 60% 64% at 50% 36%,#000 52%,transparent 94%);
@@ -227,35 +253,35 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
   cursor:pointer;transition:background .15s,border-color .15s,transform .15s;
 }
 .bArrow:hover{background:rgba(20,16,10,.8);border-color:var(--gold-dim);transform:translateY(-50%) scale(1.06)}
-.bArrowSm{width:30px;height:30px;font-size:.95rem}
+.bArrowSm{width:34px;height:34px;font-size:1rem}
 .bArrowL{left:14px}
 .bArrowR{right:14px}
 
 .bContent{position:relative;z-index:2;flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-end;text-align:left;padding:0 7% 22px 6%}
 .bContentMini{padding-bottom:22px}
-.bEyebrow{font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.24em;font-size:.72rem;color:var(--gold)}
+.bEyebrow{font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.24em;font-size:.8rem;color:var(--gold)}
 .bName{
   font-family:'Cinzel',serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em;
-  font-size:clamp(1.5rem,3.6vw,2.3rem);color:var(--gold-lt);margin:4px 0 4px;line-height:1.05;
+  font-size:clamp(1.7rem,3.9vw,2.5rem);color:var(--gold-lt);margin:4px 0 4px;line-height:1.05;
   text-shadow:0 8px 30px rgba(0,0,0,.85);
 }
-.bNameMini{font-size:clamp(1.05rem,2.1vw,1.4rem);margin:3px 0 0}
-.bLevelStars{color:var(--gold-dim);font-size:.85rem;letter-spacing:1px;margin-bottom:8px;min-height:1.1em}
+.bNameMini{font-size:clamp(1.5rem,3.3vw,2.15rem);margin:3px 0 0}
+.bLevelStars{color:var(--gold-dim);font-size:.95rem;letter-spacing:1px;margin-bottom:8px;min-height:1.1em}
 
 .bStatBars{display:flex;flex-direction:column;gap:5px;max-width:340px;margin:2px 0 10px}
 .bStatBar{display:grid;grid-template-columns:78px 1fr;align-items:center;gap:8px}
-.bStatBarLbl{font-family:'Cinzel',serif;text-transform:uppercase;font-size:.6rem;letter-spacing:.08em;color:var(--muted)}
+.bStatBarLbl{font-family:'Cinzel',serif;text-transform:uppercase;font-size:.68rem;letter-spacing:.08em;color:var(--muted)}
 .bStatBarTrack{height:6px;background:rgba(255,255,255,.09);border-radius:4px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.3)}
 .bStatBarFill{display:block;height:100%;background:linear-gradient(90deg,var(--accent-dim),var(--accent));border-radius:4px;transition:width .4s ease}
 
-.bFlavor{color:var(--muted);font-style:italic;font-size:.9rem;line-height:1.5;max-width:520px;margin:0 0 12px}
+.bFlavor{color:var(--muted);font-style:italic;font-size:1rem;line-height:1.5;max-width:520px;margin:0 0 12px}
 
 /* Heritage trait chips read as the mini stage's main payoff — sized up and anchored to the
    bottom edge (via .bContent's justify-content:flex-end) rather than floating mid-portrait. */
 .bChipRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .bChip{
   background:rgba(0,0,0,.4);border:1px solid var(--border-lt);border-radius:999px;
-  padding:5px 14px;font-size:.85rem;color:var(--text);white-space:nowrap;
+  padding:6px 16px;font-size:.95rem;color:var(--text);white-space:nowrap;
 }
 
 .bFields{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
@@ -272,10 +298,10 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
 
 .bPillRow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .bFlexGroup{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0}
-.bFlexGroupLbl{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.bFlexGroupLbl{font-size:.76rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
 .bPill{
   background:var(--panel2);border:1px solid var(--border);border-radius:999px;color:var(--muted);
-  padding:6px 13px;font-size:.8rem;cursor:pointer;transition:background .15s,color .15s,border-color .15s;
+  padding:6px 14px;font-size:.86rem;cursor:pointer;transition:background .15s,color .15s,border-color .15s;
 }
 .bPill:hover{border-color:var(--gold-dim);color:var(--text)}
 .bPill.active{background:var(--gold-dim);border-color:var(--gold);color:var(--ink);font-weight:700}
@@ -283,8 +309,8 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
 @media (max-width:900px){
   .bHero{flex-direction:column;height:auto}
   .bRailCol{width:auto;max-height:220px;border-right:none;border-bottom:1px solid rgba(255,255,255,.07)}
-  .bStage{height:460px;overflow:hidden}
-  .bHeroMini .bStage{height:300px}
+  .bStage{height:400px;overflow:hidden}
+  .bHeroMini .bStage{height:400px}
   .bContent{text-align:center;align-items:center;padding:0 6% 18px}
   .bStatBars{margin-left:auto;margin-right:auto}
   .bFlavor{margin-left:auto;margin-right:auto}
@@ -292,10 +318,11 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
   .bSelectedPill{align-self:center}
 }
 @media (max-width:640px){
-  .bStage{height:420px}
-  .bHeroMini .bStage{height:260px}
+  .bStage{height:360px}
+  .bHeroMini .bStage{height:360px}
   .bPortraitWrap{width:min(66%,260px)}
-  .bName{font-size:1.3rem}
+  .bName{font-size:1.5rem}
+  .bNameMini{font-size:1.35rem}
   .bArrow{width:32px;height:32px;font-size:1rem}
 }
 
@@ -747,6 +774,10 @@ label.fld span{
    a violet border marks that split even before it's tapped active. */
 .ck-filter-spell{border-color:rgba(165,140,224,.5)}
 .ck-filter-spell.on{background:rgba(165,140,224,.28);border-color:#a58ce0;color:#cdbdf0}
+/* Feats get the same treatment as Spells above — a source facet, not a timing one — in a rose
+   accent so the two source facets never read as the same thing at a glance. */
+.ck-filter-feat{border-color:rgba(224,107,176,.5)}
+.ck-filter-feat.on{background:rgba(224,107,176,.28);border-color:#e06bb0;color:#f0bede}
 /* "All" (or any category with a lot of cards) used to push Turn Plan, and everything below it
    on the page, further down with every card added — capped height + its own scroll keeps the
    rest of the cockpit in place no matter how many cards are in the filtered view. */
@@ -771,9 +802,14 @@ label.fld span{
    action-type spine color they already have — so Fireball (green spine, it's an Action) still
    visibly reads as a spell at a glance instead of looking identical to a weapon attack. */
 .ck-card.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.16),var(--panel3) 75%)}
+/* Feats carry the same kind of second signal as spells above — a rose wash over whatever
+   action-type spine color they already have — so a feat with an Action tag (green spine) still
+   visibly reads as a feat, distinct from the violet spell wash. */
+.ck-card.ck-card-feat{background:linear-gradient(165deg,rgba(224,107,176,.16),var(--panel3) 75%)}
 .ck-card:hover{border-color:var(--border-strong,var(--muted));transform:translateY(-1px)}
 .ck-card.open{grid-column:1/-1;background:var(--panel2);border-color:var(--gold-dim);transform:none}
 .ck-card.open.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.12),var(--panel2) 75%)}
+.ck-card.open.ck-card-feat{background:linear-gradient(165deg,rgba(224,107,176,.12),var(--panel2) 75%)}
 .ck-card.open.ck-card-action{border-left-color:#7fd6a4}
 .ck-card.open.ck-card-bonus{border-left-color:#e8c25b}
 .ck-card.open.ck-card-reaction{border-left-color:#e0876f}
@@ -781,6 +817,7 @@ label.fld span{
 .ck-card.open.ck-card-other{border-left-color:#7db8e8}
 .ck-card.ck-cond{background:rgba(232,194,91,.05)}
 .ck-card.ck-cond.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.16),rgba(232,194,91,.05) 75%)}
+.ck-card.ck-cond.ck-card-feat{background:linear-gradient(165deg,rgba(224,107,176,.16),rgba(232,194,91,.05) 75%)}
 /* Wrap the whole head onto a second line rather than crushing the name flat: a long pill
    ("BONUS ACTION") next to a two-word name used to leave the name almost no room, which then
    broke mid-word ("Shortswor" / "d left"). Now the name keeps a real floor and the pill/⤵
@@ -1082,14 +1119,11 @@ label.fld span{
 .eq-index-list .item:hover,.eq-index-list .item.added{background:var(--panel3)}
 .eq-index-list .item small{display:block;color:var(--muted);font-size:.73rem;margin-top:1px;font-style:italic}
 .eq-index-list .empty{padding:12px;color:var(--faint);font-style:italic;font-size:.85rem}
-/* Subclass/feat suggestion fields (former <datalist> fields). The dropdown itself is a
-   position:fixed popover appended straight to <body> (see renderSuggest in app.js) so it can
-   never get clipped by an ancestor's overflow:hidden — the Subclass field lives inside
-   .build-panel, which needs overflow:hidden for its class-color glow. No positioning context
-   is required here; .sug-wrap just exists as a layout hook if these fields need one later. */
+/* Subclass/feat suggestion fields (former <datalist> fields, then a position:fixed popover —
+   now a centered modal, see openSuggestModal in app.js). .sug-wrap just exists as a layout hook
+   if these fields need one later; nothing about the modal depends on it. */
 .sug-wrap{display:inline-block}
 label.fld.sug-wrap{display:block}
-.sug-results{position:fixed}
 /* Spell search gets its own grimoire index instead of the plain generic dropdown every other
    search box uses — each result carries a left rune-tab colored by its power tier (same silver/
    arcane-blue/mystic-violet/legendary-gold language as the level cards), so browsing results
@@ -1158,6 +1192,34 @@ label.fld.sug-wrap{display:block}
 /* Locked view: every feature becomes one plain, compact block — no inputs, no buttons, just
    title (+ a combat tag), description and effects sitting there in full. Nothing to expand —
    there are only ever a handful of features, so a collapse/expand step just adds a tap. */
+/* Level-Up ASI/Feat rows: each row is its own responsive flex line, sized so the ability-score
+   pair and the feat search each get real room instead of being crushed to unreadable widths
+   fighting the fixed-width choice select for space — every field here wraps onto its own line
+   before it gets small enough to be unusable. */
+.asi-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}
+.asi-lv{flex:0 0 56px;color:var(--gold);font-family:'Cinzel',serif;font-weight:700;font-size:.85rem}
+.asi-choice-sel{flex:1 1 190px;min-width:170px;max-width:230px}
+.asi-ab-pair{display:flex;gap:8px;flex:2 1 280px;min-width:220px}
+.asi-ab-sel{flex:1 1 130px;min-width:110px}
+.asi-feat-wrap{flex:3 1 260px;min-width:220px}
+.asi-feat-wrap input{width:100%}
+.asi-bonus-label{flex:0 0 170px;min-width:140px}
+.asi-bonus-hdr{
+  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.1em;font-size:.72rem;
+  color:var(--gold-dim);margin:14px 0 8px;padding-top:10px;border-top:1px dashed var(--border);
+}
+/* Level-Up "Feat" row: confirms the pick was actually mirrored into a real Features entry
+   (not just left as a label in this table) and jumps there to flesh it out or add effects. */
+.asi-feat-link-row{margin:-4px 0 10px 2px}
+.asi-feat-link{
+  background:none;border:none;padding:0;color:var(--green);font-size:.78rem;cursor:pointer;
+  text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;
+}
+.asi-feat-link:hover{color:var(--gold-lt)}
+/* Briefly glows the feature card jumped to from the Level-Up link above, so it's obvious which
+   of possibly several cards is the one you just came here to edit. */
+.feature-card.flash{animation:featureFlash .9s ease}
+@keyframes featureFlash{0%{box-shadow:0 0 0 2px var(--gold),0 0 24px rgba(201,162,39,.5)}100%{box-shadow:0 0 0 0 transparent}}
 .feature-card.locked{padding:10px 14px}
 .feature-card.locked .cf-row{padding:0 2px 6px;border-bottom:none}
 .feature-card.locked .feature-cap{font-size:1.9rem}
@@ -2381,6 +2443,18 @@ input.tw-die-wide{width:70px}
 .sel-opt.on i{font-style:normal;color:var(--gold-lt);flex-shrink:0}
 .sel-opt:disabled{opacity:.4;cursor:default}
 .sel-opt:disabled:hover{background:transparent}
+/* Search-and-pick variant (Subclass & Feat-name fields): same sheet, plus a live search box —
+   these two take free text as well as a pick from the list, unlike a plain <select>. */
+.sug-sheet{max-width:460px}
+/* input.sug-sheet-search, not just .sug-sheet-search: the global input[type=text]{width:100%}
+   rule is an element+attribute selector, which outweighs a bare class (see .tw-die-in above for
+   the same fix) — without it this ignored the width below and bled past the modal's edges. */
+input.sug-sheet-search{display:block;width:calc(100% - 36px);margin:0 18px 10px}
+.sug-sheet-opts .sel-opt{flex-direction:column;align-items:flex-start;gap:2px}
+.sug-sheet-opts .sel-opt small{color:var(--muted);font-size:.76rem;font-style:italic;font-family:'Crimson Pro',serif}
+.sug-sheet-opts .sel-opt-custom{border-top:1px dashed var(--border);margin-top:4px;padding-top:12px}
+.sug-sheet-opts .sel-opt-custom span{color:var(--gold-lt)}
+.sug-sheet-opts .empty{padding:14px 12px;color:var(--faint);font-style:italic;font-size:.85rem}
 
 @media (max-width:640px){
   main{padding:14px 10px 70px}

@@ -5,7 +5,7 @@ function defaultState(){
     name:'', classLevel:'', background:'', playerName:'', race:'', alignment:'', xp:'',
     inspiration:false, profBonus:2,
     // Smart build (class/race presets)
-    classId:'', level:1, subclass:'', raceId:'', subraceId:'', flexBonus:['',''], asi:{},
+    classId:'', level:1, subclass:'', raceId:'', subraceId:'', flexBonus:['',''], asi:{}, asiExtra:[],
     abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},
     saveProf:{str:false,dex:false,con:false,int:false,wis:false,cha:false},
     skills:Object.fromEntries(SKILLS.map(s=>[s[0],0])), // 0 none, 1 proficient, 2 expertise
@@ -75,7 +75,8 @@ function racialBonus(k){
   if(flexCount()>0 && S.flexBonus.includes(k)) b+=1;
   return b;
 }
-// Bonuses from Ability Score Improvements chosen at ASI levels
+// Bonuses from Ability Score Improvements chosen at ASI levels, plus any DM-granted bonus picks
+// (S.asiExtra — outside the normal level progression, so they always count regardless of level).
 function asiBonus(k){
   let b=0;
   const lvls=asiLevels(S.classId);
@@ -84,6 +85,9 @@ function asiBonus(k){
     const e=S.asi[L];
     if(e&&e.choice==='asi'){ if(e.a===k)b+=1; if(e.b===k)b+=1; }
   }
+  (S.asiExtra||[]).forEach(e=>{
+    if(e.choice==='asi'){ if(e.a===k)b+=1; if(e.b===k)b+=1; }
+  });
   return b;
 }
 function score(k){ return (Number(S.abilities[k])||0)+racialBonus(k)+asiBonus(k); }
@@ -292,6 +296,7 @@ overview:`
 
 build:`
   <div class="panel build-panel" id="buildPanel">
+    <div class="bHeroGroup">
     <section class="bHero bcsHero" id="bHero">
       <div class="bcsCorner bcsCornerTl"></div><div class="bcsCorner bcsCornerTr"></div>
       <div class="bcsCorner bcsCornerBl"></div><div class="bcsCorner bcsCornerBr"></div>
@@ -318,12 +323,14 @@ build:`
           <p class="bFlavor" id="bFlavor">Pick a class from the roster to see how they fight.</p>
           <div class="bFields">
             <label class="fld bFld"><span>Level</span><input type="number" id="levelIn" min="1" max="20" value="1"></label>
-            <label class="fld bFld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="e.g. Gloom Stalker"></label>
+            <label class="fld bFld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="Tap to choose — e.g. Gloom Stalker" readonly></label>
           </div>
           <div class="bSelectedPill" id="bSelectedPill">Selected</div>
         </div>
       </div>
     </section>
+
+    <div class="bHeroSeam"><span class="bHeroSeamGem">✦</span></div>
 
     <section class="bHero bcsHero bHeroMini" id="bHeroMini">
       <div class="bcsCorner bcsCornerTl"></div><div class="bcsCorner bcsCornerTr"></div>
@@ -349,6 +356,7 @@ build:`
         </div>
       </div>
     </section>
+    </div>
 
     <div class="grid g3" id="subDetails">
       <label class="fld" id="subraceFld" style="display:none"><span>Subrace</span><div class="bPillRow" id="subracePills"></div></label>
@@ -357,7 +365,7 @@ build:`
     <p class="prep-note" id="buildNote">Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses. Subclass features are searchable in the Features tab once picked here.</p>
   </div>
   <div class="panel" id="asiPanel" style="display:none"><h2>Level-Up Choices — ASI &amp; Feats</h2>
-    <p class="prep-note" style="margin:0 0 10px">At each of these levels you chose either an Ability Score Improvement (two +1s — pick the same ability twice for +2) or a feat. Ability picks are added to your scores automatically.</p>
+    <p class="prep-note" style="margin:0 0 10px">ASI = two +1s (same ability twice for +2), added automatically. Or pick a Feat.</p>
     <div id="asiList"></div>
   </div>`,
 
@@ -642,7 +650,10 @@ features:`
       <span class="prep-note" style="margin:0">effects come pre-attached</span>
     </div>
     <div id="featureList"></div>
-    <button class="add-btn" data-add="features" id="addFeatureBtn">+ Add feature</button>
+    <div class="fx-addrow" style="margin-top:0">
+      <button class="add-btn" data-add="features" id="addFeatureBtn">+ Add feature</button>
+      <button class="add-btn" id="addFeatBtn" title="For a DM-granted feat, or any feat not in the search above">+ Add custom feat</button>
+    </div>
   </div>
   <div class="grid g2">
     <div class="panel"><h2>Other Proficiencies</h2>
@@ -1752,9 +1763,13 @@ function cockpitCards(){
     cards.push({key:`sp:${L}.${i}`,kind:'sp',L,i,name:sp.name,types,type:types[0],cond:sp.cond||'',conc:spellIsConc(sp)});
   }));
   S.features.forEach((f,gi)=>{
-    if(!f.combat) return;
+    const isFeat=!!(f.source&&f.source.kind==='feat');
+    // Class/race features stay opt-in (⚔ "Show in Combat"), but a feat — chosen at level-up or
+    // added by hand for something the DM granted — always earns a spot here under its own Feats
+    // filter, action-usable or not: "what feats do I have" is exactly what you want mid-fight.
+    if(!f.combat && !isFeat) return;
     const types=ckTypesOf(f,f.actionType,num(f.usesMax)>0?'action':'other');
-    cards.push({key:'ft:'+gi,kind:'ft',gi,name:f.title||'Feature',types,type:types[0],cond:f.cond||''});
+    cards.push({key:'ft:'+gi,kind:'ft',gi,name:f.title||'Feature',types,type:types[0],cond:f.cond||'',isFeat});
   });
   S.customCards.forEach((cc,i)=>{
     const types=ckTypesOf(cc,cc.type,'action');
@@ -1893,7 +1908,7 @@ function ckCardHTML(card){
   // One pill per tag — usually just one, but a card tagged for more than one economy slot
   // (Action + Bonus Action) shows both right here, no need to open it to see where it lives.
   const pills=card.types.map(v=>`<span class="sp-pill ${CK_PILL[v]||'pill-cast'}">${tl[v]||'Other'}</span>`).join('');
-  return `<div class="ck-card ck-card-${card.type||'other'} ${card.kind==='sp'?'ck-card-spell':''} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${open?'open':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
+  return `<div class="ck-card ck-card-${card.type||'other'} ${card.kind==='sp'?'ck-card-spell':''} ${card.isFeat?'ck-card-feat':''} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${open?'open':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
     <div class="ck-card-head">
       <span class="ck-drag-handle" data-ckdraghandle title="Drag to place in your turn plan">⠿</span>
       <span class="ck-card-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</span>
@@ -1910,21 +1925,22 @@ function renderCockpitCards(){
   const box=$('#ckCards'); if(!box) return;
   const c=ck();
   let cards=cockpitCards();
-  const counts={all:cards.length,spell:cards.filter(x=>x.kind==='sp').length};
+  const counts={all:cards.length,spell:cards.filter(x=>x.kind==='sp').length,feat:cards.filter(x=>x.isFeat).length};
   // A card tagged with more than one economy slot counts (and shows up) under every tab it's
   // tagged for, same idea as the spell facet below — nothing is forced into one exclusive bucket.
   CK_TYPES.forEach(([v])=>counts[v]=cards.filter(x=>x.types.includes(v)).length);
-  // "Spells" is a source facet (kind), not an action-type facet — it sits alongside Action/Bonus/
-  // etc. rather than replacing them, so a spell that's also an Action (e.g. Fireball) shows up
-  // under either filter instead of being forced into one exclusive bucket.
+  // "Spells" and "Feats" are source facets (kind), not action-type facets — they sit alongside
+  // Action/Bonus/etc. rather than replacing them, so a spell or feat that's also an Action shows
+  // up under either filter instead of being forced into one exclusive bucket.
   if(CK_FILTER==='spell') cards=cards.filter(x=>x.kind==='sp');
+  else if(CK_FILTER==='feat') cards=cards.filter(x=>x.isFeat);
   else if(CK_FILTER!=='all') cards=cards.filter(x=>x.types.includes(CK_FILTER));
   cards.sort((a,b)=>(b.pin-a.pin)||(CK_TYPE_ORDER[a.type]-CK_TYPE_ORDER[b.type])||((a.cond?1:0)-(b.cond?1:0))||a.name.localeCompare(b.name));
-  $('#ckFilters').innerHTML=[['all','All'],...CK_TYPES,['spell','🔮 Spells']].map(([v,l])=>
-    `<button class="ck-filter ${v==='spell'?'ck-filter-spell':''} ${CK_FILTER===v?'on':''}" data-ckfilter="${v}">${l}${counts[v]?` <i>${counts[v]}</i>`:''}</button>`).join('');
+  $('#ckFilters').innerHTML=[['all','All'],...CK_TYPES,['spell','🔮 Spells'],['feat','🎖 Feats']].map(([v,l])=>
+    `<button class="ck-filter ${v==='spell'?'ck-filter-spell':v==='feat'?'ck-filter-feat':''} ${CK_FILTER===v?'on':''}" data-ckfilter="${v}">${l}${counts[v]?` <i>${counts[v]}</i>`:''}</button>`).join('');
   box.innerHTML = cards.length
     ? cards.map(ckCardHTML).join('')
-    : '<p class="prep-note" style="margin:0">Nothing here yet — add attacks below, pick spells on the Spells tab, flag features with ⚔ on the Features tab, or add a custom card.</p>';
+    : '<p class="prep-note" style="margin:0">Nothing here yet — add attacks below, pick spells on the Spells tab, add a feat on the Build tab, or add a custom card.</p>';
   $('#ckUndo').innerHTML = CK_UNDO
     ? `<div class="ck-undo">${esc(CK_UNDO.msg)} <button data-ckundo>Undo</button><button data-ckundox>✕</button></div>` : '';
   const anyPrep=S.spellLevels.some((lv,L)=>L>0&&lv.spells.some(s=>s.prep));
@@ -2317,6 +2333,16 @@ function initCkDrag(){
   });
 }
 
+// Build a S.features entry from a FEATURE_LIB entry — shared by the class-feature/feat search
+// below and the Level-Up "Feat" picker further down, so both produce identically-wired entries
+// (uses, usesScale, the Tough-scales-with-level special case) instead of the two drifting apart.
+function libEntryToFeature(ent,source){
+  let fx=(ent.fx||[]).map(x=>({...x}));
+  if(ent.n==='Tough') fx=[{t:'stat',stat:'hpmax',n:2*Math.max(1,num(S.level))}];
+  const usesScale=ent.usesScale||'';
+  const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
+  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source};
+}
 // ----- Feature library: searchable instead of one giant native <select> (a lot of options) -----
 function wireLibrary(){
   const input=$('#libSearch'), panel=$('#libResults');
@@ -2340,19 +2366,14 @@ function wireLibrary(){
   panel.addEventListener('click',e=>{
     const item=e.target.closest('[data-libidx]'); if(!item) return;
     const ent=FEATURE_LIB[+item.dataset.libidx];
-    // deep-copy effects; Tough scales with current level
-    let fx=(ent.fx||[]).map(x=>({...x}));
-    if(ent.n==='Tough') fx=[{t:'stat',stat:'hpmax',n:2*Math.max(1,num(S.level))}];
     // "smart" add: library entries already know if they're combat-relevant and how many uses per rest,
     // so a feature like Action Surge shows up on the Combat tab immediately, no manual setup needed.
     // A few carry usesScale (proficiency bonus or an ability mod, e.g. Bardic Inspiration = CHA)
     // so their max stays synced automatically as you level up or raise that ability.
-    const usesScale=ent.usesScale||'';
-    const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
     // Tag where this came from — class feature vs. feat — so the card can wear its source
     // as a colored wax seal instead of every feature looking identical.
     const source = ent.g==='Feats' ? {kind:'feat'} : {kind:'class',classId:classIdFromGroupName(ent.g),className:ent.g};
-    S.features.push({title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source});
+    S.features.push(libEntryToFeature(ent,source));
     input.value=''; close();
     fxRefresh();
   });
@@ -3256,6 +3277,15 @@ function wireAddButtons(){
     if(key==='notes') $('#noteList .tl-note-title')?.focus();
     else focusLast('#'+({attacks:'attackList',features:'featureList'})[key]);
   }));
+  // Its own button rather than the generic data-add path above: a custom feat needs
+  // source:{kind:'feat'} (not the generic 'custom') so it gets the "Feat" byline on this tab and
+  // shows up under the Combat cockpit's Feats filter — everything else about it (title, description,
+  // effects, combat tracking) is the same free-form editor as any other hand-written feature.
+  $('#addFeatBtn')?.addEventListener('click',()=>{
+    S.features.push({title:'',desc:'',fx:[],combat:false,usesMax:0,usesPer:'short',usesUsed:0,usesScale:'',source:{kind:'feat',custom:true}});
+    renderFeatures(); renderCombatFeatures(); save();
+    focusLast('#featureList');
+  });
 }
 
 // ---------- HP quick buttons ----------
@@ -3457,49 +3487,156 @@ function renderSubraceAndFlex(){
 }
 
 // ---------- ASI / Feat rows ----------
+// A "Feat" pick here used to be a bare label — typing a name into this table did nothing but
+// sit there; the actual feat (description, effects, combat tracking) had to be added separately
+// via the Features tab search, by hand, and the two could drift out of sync. Now each row's feat
+// is mirrored 1:1 into a real S.features entry the moment a name is entered — pulling full data
+// from FEATURE_LIB when the name matches an official feat, or starting a blank editable entry
+// when it doesn't (a DM-granted feat, house rule, etc.). That entry is the single source of
+// truth from then on: this field just displays/renames it.
+//
+// Two kinds of row share one template (renderAsiRow) and one linking scheme:
+//  - the fixed per-level rows the class rules grant (4/8/12/16/19, extras for Fighter/Rogue) —
+//    identified by ref {L: level number}, always present, can't be removed.
+//  - "bonus" rows in S.asiExtra — a DM handing out "take a feat" or "+2 to an ability" outside
+//    the normal progression doesn't fit a level slot, so these are freely added/removed, each
+//    identified by ref {id: a stable id on the entry} so a link survives other bonus rows being
+//    added or removed around it (an array index would not).
+function asiRefKey(ref){ return ref.L!=null ? 'L:'+ref.L : 'X:'+ref.id; }
+function parseAsiRef(key){ return key[0]==='L' ? {L:+key.slice(2)} : {id:key.slice(2)}; }
+function asiEntry(ref){
+  if(ref.L!=null) return S.asi[ref.L]||(S.asi[ref.L]={choice:'',a:'',b:'',feat:''});
+  return (S.asiExtra||[]).find(x=>x.id===ref.id);
+}
+function asiLinkedFeat(ref){
+  return S.features.find(f=>f.source&&f.source.kind==='feat'&&
+    (ref.L!=null ? f.source.asiLevel===ref.L : f.source.asiExtraId===ref.id));
+}
+function featLibEntry(name){
+  const q=name.trim().toLowerCase();
+  return FEATURE_LIB.find(e=>e.g==='Feats'&&e.n.toLowerCase()===q);
+}
+function buildFeatFeature(name,ref){
+  const ent=featLibEntry(name);
+  const source = ref.L!=null ? {kind:'feat',asiLevel:ref.L} : {kind:'feat',asiExtraId:ref.id};
+  if(ent) return libEntryToFeature(ent,source);
+  return {title:name.trim(),desc:'',fx:[],combat:false,usesMax:0,usesPer:'short',usesUsed:0,usesScale:'',source:{...source,custom:true}};
+}
+function syncAsiFeat(ref){
+  if(asiLinkedFeat(ref)) return; // already linked — further edits just rename it in place (below)
+  const name=((asiEntry(ref)||{}).feat||'').trim();
+  if(!name) return;
+  S.features.push(buildFeatFeature(name,ref));
+  fxRefresh();
+}
+function asiFeatLinkHTML(ref){
+  if(!asiLinkedFeat(ref)) return '';
+  return `<div class="asi-feat-link-row"><button type="button" class="asi-feat-link" data-asifeatjump="${asiRefKey(ref)}" title="Edit this feat's description, effects, or combat tracking on the Features tab">✓ Added — tap to edit</button></div>`;
+}
+function abOpts(sel){
+  return '<option value="">— pick —</option>'+ABILITIES
+    .map(([k,l])=>`<option value="${k}" ${sel===k?'selected':''}>${l}</option>`).join('');
+}
+// leadHTML fills the row's left-most slot (a fixed "LV 4" label, or a bonus row's editable
+// name field); trailHTML adds anything after the choice fields (a bonus row's ✕ remove button).
+function renderAsiRow(ref,leadHTML,trailHTML){
+  const e=asiEntry(ref); if(!e) return '';
+  const key=asiRefKey(ref);
+  const linked=asiLinkedFeat(ref);
+  const featName=linked?(linked.title||''):(e.feat||'');
+  return `
+    <div class="list-row asi-row">
+      ${leadHTML}
+      <select class="narrow asi-choice-sel" data-asichoice="${key}">
+        <option value="" ${!e.choice?'selected':''}>— choose —</option>
+        <option value="asi" ${e.choice==='asi'?'selected':''}>Ability Score Improvement</option>
+        <option value="feat" ${e.choice==='feat'?'selected':''}>Feat</option>
+      </select>
+      ${e.choice==='asi'?`
+        <span class="asi-ab-pair">
+          <select class="asi-ab-sel" data-asia="${key}">${abOpts(e.a)}</select>
+          <select class="asi-ab-sel" data-asib="${key}">${abOpts(e.b)}</select>
+        </span>`:''}
+      ${e.choice==='feat'?`
+        <span class="sug-wrap asi-feat-wrap"><input type="text" value="${esc(featName)}" data-asifeat="${key}" autocomplete="off" placeholder="Tap to choose a feat…" readonly></span>`:''}
+      ${trailHTML||''}
+    </div>
+    ${e.choice==='feat'?asiFeatLinkHTML(ref):''}`;
+}
 function renderAsi(){
   const panel=$('#asiPanel');
   const lvls=asiLevels(S.classId).filter(L=>L<=num(S.level));
-  if(!S.classId||!lvls.length){ panel.style.display='none'; return; }
+  S.asiExtra=S.asiExtra||[];
+  if(!S.classId && !S.asiExtra.length){ panel.style.display='none'; return; }
   panel.style.display='';
   // The feat inputs below get fully rebuilt — an open suggestion popover would be left
   // pointing at a detached node, so close it first rather than track it through the rebuild.
   closeSuggest();
   // drop stale entries from levels no longer earned (e.g. level lowered)
   Object.keys(S.asi).forEach(L=>{ if(!lvls.includes(+L)) delete S.asi[L]; });
-  const abOpts=sel=>'<option value="">— pick —</option>'+ABILITIES
-    .map(([k,l])=>`<option value="${k}" ${sel===k?'selected':''}>${l}</option>`).join('');
-  $('#asiList').innerHTML=lvls.map(L=>{
-    const e=S.asi[L]||{choice:'',a:'',b:'',feat:''};
-    return `
-    <div class="list-row" style="align-items:center">
-      <span style="flex:0 0 70px;color:var(--gold);font-family:'Cinzel',serif;font-size:.85rem">LV ${L}</span>
-      <select class="narrow" style="flex:0 0 200px" data-asichoice="${L}">
-        <option value="" ${!e.choice?'selected':''}>— choose —</option>
-        <option value="asi" ${e.choice==='asi'?'selected':''}>Ability Score Improvement</option>
-        <option value="feat" ${e.choice==='feat'?'selected':''}>Feat</option>
-      </select>
-      ${e.choice==='asi'?`
-        <select data-asia="${L}">${abOpts(e.a)}</select>
-        <select data-asib="${L}">${abOpts(e.b)}</select>`:''}
-      ${e.choice==='feat'?`
-        <span class="sug-wrap" style="flex:1 1 220px;min-width:180px"><input type="text" value="${esc(e.feat)}" data-asifeat="${L}" autocomplete="off" placeholder="Feat name (start typing…)" style="width:100%"></span>`:''}
-    </div>`;
-  }).join('');
-  const entry=L=>S.asi[L]||(S.asi[L]={choice:'',a:'',b:'',feat:''});
+  const lvlRows=lvls.map(L=>renderAsiRow({L},
+    `<span class="asi-lv">LV ${L}</span>`
+  )).join('');
+  const bonusRows=S.asiExtra.map(e=>renderAsiRow({id:e.id},
+    `<input type="text" class="asi-bonus-label" value="${esc(e.label||'')}" data-asibonuslabel="${e.id}" placeholder="e.g. DM boon">`,
+    `<button type="button" class="del-btn" data-asibonusdel="${e.id}" title="Remove this bonus pick">✕</button>`
+  )).join('');
+  $('#asiList').innerHTML =
+    (lvls.length?lvlRows:'<p class="prep-note" style="margin:0 0 10px">Bonus picks below still work.</p>')
+    + (S.asiExtra.length?`<div class="asi-bonus-hdr">Bonus picks</div>${bonusRows}`:'')
+    + `<button type="button" class="add-btn" id="asiBonusAdd" style="margin-top:4px">+ Add bonus ASI/Feat</button>`;
   $$('[data-asichoice]').forEach(s=>s.addEventListener('change',()=>{
-    entry(+s.dataset.asichoice).choice=s.value;
+    asiEntry(parseAsiRef(s.dataset.asichoice)).choice=s.value;
     renderAsi(); recalc(); save();
   }));
   $$('[data-asia]').forEach(s=>s.addEventListener('change',()=>{
-    entry(+s.dataset.asia).a=s.value; recalc(); save();
+    asiEntry(parseAsiRef(s.dataset.asia)).a=s.value; recalc(); save();
   }));
   $$('[data-asib]').forEach(s=>s.addEventListener('change',()=>{
-    entry(+s.dataset.asib).b=s.value; recalc(); save();
+    asiEntry(parseAsiRef(s.dataset.asib)).b=s.value; recalc(); save();
   }));
-  $$('[data-asifeat]').forEach(inp=>inp.addEventListener('input',()=>{
-    entry(+inp.dataset.asifeat).feat=inp.value; save();
+  $$('[data-asifeat]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const ref=parseAsiRef(inp.dataset.asifeat), linked=asiLinkedFeat(ref);
+      // Once linked, this field just renames the real entry in place; until then it's caching
+      // the in-progress name for syncAsiFeat to pick up on blur (see the 'change' listener below).
+      if(linked) linked.title=inp.value; else asiEntry(ref).feat=inp.value;
+      save();
+    });
+    inp.addEventListener('change',()=>{
+      const ref=parseAsiRef(inp.dataset.asifeat), linked=asiLinkedFeat(ref);
+      if(linked && !inp.value.trim()){ delete linked.source.asiLevel; delete linked.source.asiExtraId; save(); } // cleared — unlink, keep the entry itself
+      else syncAsiFeat(ref);
+      renderAsi();
+    });
+  });
+  $$('[data-asifeatjump]').forEach(b=>b.addEventListener('click',()=>{
+    const idx=S.features.findIndex(f=>f===asiLinkedFeat(parseAsiRef(b.dataset.asifeatjump)));
+    showTab('features');
+    if(idx<0) return;
+    const card=$$('#featureList .feature-card')[idx];
+    if(card){ card.scrollIntoView({behavior:'smooth',block:'center'}); card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),900); }
   }));
+  $$('[data-asibonuslabel]').forEach(inp=>inp.addEventListener('input',()=>{
+    const e=(S.asiExtra||[]).find(x=>x.id===inp.dataset.asibonuslabel);
+    if(e){ e.label=inp.value; save(); }
+  }));
+  $$('[data-asibonusdel]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.asibonusdel;
+    // The feat this bonus row created stays on the Features tab (same paper-trail philosophy as
+    // deleting an attack/spell doesn't retroactively erase a turn-plan step referencing it) —
+    // just unlinked, so removing a bonus pick can't silently delete a feat you've since edited.
+    const linked=S.features.find(f=>f.source&&f.source.kind==='feat'&&f.source.asiExtraId===id);
+    if(linked) delete linked.source.asiExtraId;
+    S.asiExtra=(S.asiExtra||[]).filter(x=>x.id!==id);
+    renderAsi(); recalc(); save();
+  }));
+  $('#asiBonusAdd')?.addEventListener('click',()=>{
+    S.asiExtra=S.asiExtra||[];
+    S.asiExtra.push({id:'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),choice:'',a:'',b:'',feat:'',label:''});
+    renderAsi(); save();
+    $('#asiList .asi-bonus-label:last-of-type')?.focus();
+  });
 }
 
 // Apply class/level/race choices to the sheet.
@@ -4054,72 +4191,100 @@ function wireSelectSheets(){
 // dropdown anchored inside that panel gets clipped against its edge, which is what looked like
 // the dropdown "overlapping" the field. Escaping to <body> sidesteps any clipped ancestor,
 // current or future, instead of special-casing this one panel.
+// Feat suggestions merge FEATURE_LIB's detailed "Feats" group (name + mechanical blurb, so you
+// can tell Alert from Mobile without alt-tabbing to look it up) with the fuller plain-name feat
+// list, so every official feat is offered even though only some have a description pre-attached.
+const FEAT_SUGGESTIONS=(()=>{
+  const detailed=FEATURE_LIB.filter(e=>e.g==='Feats').map(e=>({n:e.n,d:e.d||''}));
+  const known=new Set(detailed.map(e=>e.n.toLowerCase()));
+  const extra=FEATS.filter(n=>!known.has(n.toLowerCase())).map(n=>({n,d:''}));
+  return [...detailed,...extra].sort((a,b)=>a.n.localeCompare(b.n));
+})();
 function suggestSourceFor(el){
   if(!el||el.tagName!=='INPUT') return null;
   if(el.id==='subclassIn') return subclassNamesForClass(S.classId);
-  if(el.dataset&&el.dataset.asifeat!=null) return FEATS;
+  if(el.dataset&&el.dataset.asifeat!=null) return FEAT_SUGGESTIONS;
   return null;
 }
-let SUG_SILENT=false, SUG_POP=null; // SUG_POP: the one open popover, tagged with ._inputEl
-function positionSuggest(inp,p){
-  const r=inp.getBoundingClientRect();
-  const width=Math.max(r.width,240);
-  const left=Math.max(8,Math.min(r.left,window.innerWidth-8-width));
-  p.style.left=left+'px';
-  p.style.top=(r.bottom+4)+'px';
-  p.style.width=width+'px';
-}
+// A themed, always-centered modal — the same .sel-sheet shell the "— choose —" selects above
+// use, plus its own live search box since these two fields (Subclass, Feat name) take free text
+// too, not just a pick from the list. Replaces an earlier version that anchored a small popover
+// right below the field: fine when the field is near the top of the screen, but the ASI/Feat
+// table sits well down a tall page, so that popover routinely had nowhere to open into and ran
+// off the bottom of the screen — a modal is centered and fully visible no matter where the field
+// that opened it happens to be scrolled to.
+let SUG_MODAL=null;
 function closeSuggest(){
-  if(!SUG_POP) return;
-  SUG_POP.remove(); SUG_POP=null;
-  window.removeEventListener('scroll',repositionSuggest,true);
-  window.removeEventListener('resize',repositionSuggest);
+  if(!SUG_MODAL) return;
+  SUG_MODAL.remove(); SUG_MODAL=null;
+  document.removeEventListener('keydown',suggestKeydown);
 }
-function repositionSuggest(){
-  if(!SUG_POP) return;
-  // The field this popover belongs to may have scrolled away or been re-rendered out from
-  // under it (e.g. choosing a different ASI option rebuilds the panel) — bail cleanly rather
-  // than position a dropdown that no longer has anything to anchor to.
-  if(!SUG_POP._inputEl.isConnected) return closeSuggest();
-  positionSuggest(SUG_POP._inputEl,SUG_POP);
-}
-function renderSuggest(inp){
+function suggestKeydown(e){ if(e.key==='Escape') closeSuggest(); }
+function openSuggestModal(inp){
   const src=suggestSourceFor(inp); if(!src) return;
-  if(!SUG_POP||SUG_POP._inputEl!==inp){
+  const all=src.map(x=>typeof x==='string'?{n:x,d:''}:x);
+  const label=inp.id==='subclassIn'?'Choose a Subclass':'Choose a Feat';
+  const wrap=document.createElement('div');
+  wrap.className='ui-dlg-bg sel-sheet-bg open';
+  wrap.innerHTML=`<div class="sel-sheet sug-sheet" role="dialog" aria-label="${esc(label)}">
+    <h3>${esc(label)}</h3>
+    <input type="text" class="sug-sheet-search" placeholder="Search — or type your own" autocomplete="off">
+    <div class="sel-opts sug-sheet-opts"></div>
+  </div>`;
+  document.body.appendChild(wrap);
+  SUG_MODAL=wrap;
+  const search=wrap.querySelector('.sug-sheet-search'), list=wrap.querySelector('.sug-sheet-opts');
+  search.value=inp.value;
+  const paint=()=>{
+    const q=search.value.trim(), ql=q.toLowerCase();
+    const items=all.filter(x=>!ql||x.n.toLowerCase().includes(ql));
+    const exact=all.some(x=>x.n.toLowerCase()===ql);
+    const customRow=q&&!exact
+      ?`<button type="button" class="sel-opt sel-opt-custom" data-sugpick="${esc(q)}"><span>Use "${esc(q)}"</span><small>Not in the list — free text works too</small></button>`:'';
+    list.innerHTML=customRow+(items.length
+      ?items.slice(0,80).map(x=>`<button type="button" class="sel-opt" data-sugpick="${esc(x.n)}"><span>${esc(x.n)}</span>${x.d?`<small>${esc(x.d)}</small>`:''}</button>`).join('')
+      :(q?'':'<div class="empty">Start typing to search…</div>'));
+  };
+  const commit=val=>{
+    inp.value=val;
+    // Both events, bubbling — data-bind fields listen to 'input', the ASI feat field's own sync
+    // listens to 'change' (see renderAsi) to link/create the Features entry right away.
+    inp.dispatchEvent(new Event('input',{bubbles:true}));
+    inp.dispatchEvent(new Event('change',{bubbles:true}));
     closeSuggest();
-    SUG_POP=document.createElement('div');
-    SUG_POP.className='lib-results sug-results open';
-    SUG_POP._inputEl=inp;
-    document.body.appendChild(SUG_POP);
-    window.addEventListener('scroll',repositionSuggest,true);
-    window.addEventListener('resize',repositionSuggest);
-  }
-  const q=inp.value.trim().toLowerCase();
-  const items=src.filter(n=>!q||n.toLowerCase().includes(q));
-  SUG_POP.innerHTML=(items.length?items.slice(0,50).map(n=>`<div class="item" data-sugpick="${esc(n)}">${esc(n)}</div>`).join(''):'')
-    +((!items.length||(q&&!src.some(n=>n.toLowerCase()===q)))
-      ?`<div class="empty">${items.length?'':'No matches — '}free text works too</div>`:'');
-  positionSuggest(inp,SUG_POP);
+  };
+  search.addEventListener('input',paint);
+  search.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(search.value); } });
+  wrap.addEventListener('click',e=>{
+    if(e.target===wrap) return closeSuggest(); // backdrop tap cancels, leaves the field as it was
+    const b=e.target.closest('[data-sugpick]');
+    if(b) commit(b.dataset.sugpick);
+  });
+  document.addEventListener('keydown',suggestKeydown);
+  paint();
+  search.focus();
 }
 function wireSuggest(){
-  document.addEventListener('focusin',e=>{ if(suggestSourceFor(e.target)) renderSuggest(e.target); });
-  document.addEventListener('input',e=>{ if(!SUG_SILENT&&suggestSourceFor(e.target)) renderSuggest(e.target); });
-  document.addEventListener('click',e=>{
-    const pick=e.target.closest('[data-sugpick]');
-    if(pick&&SUG_POP){
-      const inp=SUG_POP._inputEl;
-      inp.value=pick.dataset.sugpick;
-      // Fire the input event so data-bind / renderAsi listeners update state, but flag it so
-      // our own delegated handler doesn't immediately reopen the list we're closing.
-      SUG_SILENT=true;
-      inp.dispatchEvent(new Event('input',{bubbles:true}));
-      SUG_SILENT=false;
-      closeSuggest();
-      return;
+  // Same interception pattern as wireSelectSheets: stop the field from taking focus/typing
+  // directly (which would just be typing into thin air on mobile — no popover chasing the
+  // caret) and open the modal instead. Both fields are marked readonly in the HTML so a
+  // keyboard Tab still lands on them without letting a stray keystroke type straight into a
+  // field that isn't showing any suggestions — Enter/Space below opens the modal instead.
+  const handler=e=>{
+    const inp=e.target.closest&&e.target.closest('input');
+    if(!inp||!suggestSourceFor(inp)) return;
+    e.preventDefault();
+    if(!SUG_MODAL) openSuggestModal(inp);
+  };
+  document.addEventListener('mousedown',handler);
+  document.addEventListener('touchend',handler,{passive:false});
+  document.addEventListener('keydown',e=>{
+    if(SUG_MODAL) return; // the open modal's own keydown handler owns Enter/Escape while it's up
+    const inp=e.target;
+    if((e.key==='Enter'||e.key===' ')&&inp&&inp.tagName==='INPUT'&&suggestSourceFor(inp)){
+      e.preventDefault(); openSuggestModal(inp);
     }
-    if(SUG_POP && !e.target.closest('.sug-results') && e.target!==SUG_POP._inputEl) closeSuggest();
   });
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&SUG_POP) closeSuggest(); });
 }
 
 // ---------- Character select screen ----------
