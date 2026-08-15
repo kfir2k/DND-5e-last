@@ -292,43 +292,62 @@ overview:`
 
 build:`
   <div class="panel build-panel" id="buildPanel">
-    <section class="bHero" id="bHero">
-      <img class="bLayer bBgA visible" id="bBgA" alt="">
-      <img class="bLayer bBgB" id="bBgB" alt="">
-      <div class="bPortraitWrap" id="bPortraitWrap">
-        <img class="bLayer bPortA visible" id="bPortA" alt="">
-        <img class="bLayer bPortB" id="bPortB" alt="">
+    <section class="bHero bcsHero" id="bHero">
+      <div class="bcsCorner bcsCornerTl"></div><div class="bcsCorner bcsCornerTr"></div>
+      <div class="bcsCorner bcsCornerBl"></div><div class="bcsCorner bcsCornerBr"></div>
+      <div class="bRailCol">
+        <div class="bRailColLbl">Class</div>
+        <div class="bRail" id="classRail"></div>
       </div>
-      <div class="bScrim"></div>
-      <div class="bFlash" id="bFlash"></div>
-      <button class="bArrow bArrowL" id="classPrevBtn" type="button" aria-label="Previous class">‹</button>
-      <button class="bArrow bArrowR" id="classNextBtn" type="button" aria-label="Next class">›</button>
-      <div class="bContent">
-        <div class="bEyebrow" id="bEyebrow">Choose your class</div>
-        <h2 class="bName" id="bName">—</h2>
-        <div class="bFields">
-          <label class="fld bFld"><span>Level</span><input type="number" id="levelIn" min="1" max="20" value="1"></label>
-          <label class="fld bFld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="e.g. Gloom Stalker"></label>
+      <div class="bStage">
+        <img class="bLayer bBgA visible" id="bBgA" alt="">
+        <img class="bLayer bBgB" id="bBgB" alt="">
+        <div class="bPortraitWrap" id="bPortraitWrap">
+          <img class="bLayer bPortA visible" id="bPortA" alt="">
+          <img class="bLayer bPortB" id="bPortB" alt="">
+        </div>
+        <div class="bScrim"></div>
+        <div class="bFlash" id="bFlash"></div>
+        <button class="bArrow bArrowL" id="classPrevBtn" type="button" aria-label="Previous class">‹</button>
+        <button class="bArrow bArrowR" id="classNextBtn" type="button" aria-label="Next class">›</button>
+        <div class="bContent">
+          <div class="bEyebrow" id="bEyebrow">Choose your class</div>
+          <h2 class="bName" id="bName">—</h2>
+          <div class="bLevelStars" id="bLevelStars"></div>
+          <div class="bStatBars" id="bStatBars"></div>
+          <p class="bFlavor" id="bFlavor">Pick a class from the roster to see how they fight.</p>
+          <div class="bFields">
+            <label class="fld bFld"><span>Level</span><input type="number" id="levelIn" min="1" max="20" value="1"></label>
+            <label class="fld bFld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="e.g. Gloom Stalker"></label>
+          </div>
+          <div class="bSelectedPill" id="bSelectedPill">Selected</div>
         </div>
       </div>
-      <div class="bRail" id="classRail"></div>
     </section>
 
-    <section class="bHero bHeroMini" id="bHeroMini">
-      <img class="bLayer bMbgA visible" id="bMbgA" alt="">
-      <img class="bLayer bMbgB" id="bMbgB" alt="">
-      <div class="bMiniPortraitWrap">
-        <img class="bLayer bMportA visible" id="bMportA" alt="">
-        <img class="bLayer bMportB" id="bMportB" alt="">
+    <section class="bHero bcsHero bHeroMini" id="bHeroMini">
+      <div class="bcsCorner bcsCornerTl"></div><div class="bcsCorner bcsCornerTr"></div>
+      <div class="bcsCorner bcsCornerBl"></div><div class="bcsCorner bcsCornerBr"></div>
+      <div class="bRailCol bRailColMini">
+        <div class="bRailColLbl">Heritage</div>
+        <div class="bRail bRailMini" id="raceRail"></div>
       </div>
-      <div class="bScrim"></div>
-      <button class="bArrow bArrowL bArrowSm" id="racePrevBtn" type="button" aria-label="Previous heritage">‹</button>
-      <button class="bArrow bArrowR bArrowSm" id="raceNextBtn" type="button" aria-label="Next heritage">›</button>
-      <div class="bContent bContentMini">
-        <div class="bEyebrow">Heritage</div>
-        <h3 class="bName bNameMini" id="bRaceName">—</h3>
+      <div class="bStage">
+        <img class="bLayer bMbgA visible" id="bMbgA" alt="">
+        <img class="bLayer bMbgB" id="bMbgB" alt="">
+        <div class="bMiniPortraitWrap">
+          <img class="bLayer bMportA visible" id="bMportA" alt="">
+          <img class="bLayer bMportB" id="bMportB" alt="">
+        </div>
+        <div class="bScrim"></div>
+        <button class="bArrow bArrowL bArrowSm" id="racePrevBtn" type="button" aria-label="Previous heritage">‹</button>
+        <button class="bArrow bArrowR bArrowSm" id="raceNextBtn" type="button" aria-label="Next heritage">›</button>
+        <div class="bContent bContentMini">
+          <div class="bEyebrow">Heritage</div>
+          <h3 class="bName bNameMini" id="bRaceName">—</h3>
+          <div class="bChipRow" id="bRaceChips"></div>
+        </div>
       </div>
-      <div class="bRail bRailMini" id="raceRail"></div>
     </section>
 
     <div class="grid g3" id="subDetails">
@@ -3371,6 +3390,17 @@ function renderBuildTheme(){
   $('#bEyebrow').textContent=c?`Level ${num(S.level)||1}`:'Choose your class';
   $('#bName').textContent=c?(c.name+(S.subclass?' — '+S.subclass:'')):'—';
 
+  const lvl=Math.max(1,Math.min(20,num(S.level)||1)), tier=Math.min(5,Math.ceil(lvl/4));
+  $('#bLevelStars').innerHTML=c?('Lv '+lvl+' '+'★'.repeat(tier)+'☆'.repeat(5-tier)):'';
+
+  const bars=c?classPowerBars(S.classId):null;
+  $('#bStatBars').innerHTML=bars?bars.map(b=>
+    `<div class="bStatBar"><span class="bStatBarLbl">${b.label}</span>
+      <span class="bStatBarTrack"><span class="bStatBarFill" style="width:${b.pct}%"></span></span></div>`).join(''):'';
+
+  $('#bFlavor').textContent=c?(CLASS_FLAVOR[S.classId]||''):'Pick a class from the roster to see how they fight.';
+  $('#bSelectedPill').classList.toggle('show',!!c);
+
   const ri=raceInfo();
   if(ri&&S.raceId!==bLastRaceId){
     const img=RACE_IMG[S.raceId];
@@ -3386,6 +3416,7 @@ function renderBuildTheme(){
     bLastRaceId=S.raceId;
   }
   $('#bRaceName').textContent=ri?((ri.sub&&ri.sub.name)||ri.r.name):'—';
+  $('#bRaceChips').innerHTML=ri?raceFlavorChips(S.raceId,S.subraceId).map(t=>`<span class="bChip">${t}</span>`).join(''):'';
 
   renderClassRail();
   renderRaceRail();

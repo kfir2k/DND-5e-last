@@ -45,6 +45,37 @@ const CLASS_ICON={barbarian:'🪓',bard:'🎵',cleric:'✨',druid:'🍃',fighter
 const CLASS_COLOR={barbarian:'#c0524a',bard:'#d9599b',cleric:'#e3c15c',druid:'#7dc26a',
   fighter:'#8b98ab',monk:'#5fbfa0',paladin:'#c9a227',ranger:'#4f9e5c',rogue:'#6b6f8a',
   sorcerer:'#e0705a',warlock:'#8b5cc9',wizard:'#5aa9e0'};
+// One-line character-select flavor text per class, shown beside the big portrait on the Build screen.
+const CLASS_FLAVOR={
+  barbarian:'Fury given form — she abandons defense for raw, unstoppable rage, striking hardest the closer death creeps.',
+  bard:'A storyteller and spellsinger who turns wit, music and charm into magic that lifts allies and unravels foes.',
+  cleric:'A conduit for divine power, channeling their god’s will into healing light or righteous judgment.',
+  druid:'Keeper of the wild, shifting shape and bending nature itself to protect the balance of the world.',
+  fighter:'A master of arms and tactics, trained to outlast and outfight anything the battlefield throws at them.',
+  monk:'A disciplined martial artist who channels inner energy into strikes faster than the eye can follow.',
+  paladin:'A sworn champion bound by sacred oath, wielding martial might and divine magic in equal measure.',
+  ranger:'A hunter of the frontier, as deadly with a blade as with a bow, and never lost in hostile terrain.',
+  rogue:'A shadow between heartbeats — precise, cunning, and lethal the moment an opening appears.',
+  sorcerer:'Magic runs in their blood, wild and instinctive, reshaped on the fly to suit the moment’s need.',
+  warlock:'Bound by pact to a power beyond mortal ken, trading service for magic that bends reality’s rules.',
+  wizard:'A scholar of the arcane, wielding spells drawn from years of study and a mind as sharp as any blade.',
+};
+// Flavor-only power bars for the Build screen's stat readout (NOT mechanical stats) — derived from
+// hit die size and casting progression so every class gets a value without hand-tuning 12 sets of
+// numbers. Martial scales with hit die; Arcane scales with casting progression; Resilience blends
+// hit die with a CON save (a real toughness signal 5e already encodes).
+const CAST_POWER={undefined:8,full:100,half:70,pact:55};
+function classPowerBars(classId){
+  const c=CLASSES[classId]; if(!c) return null;
+  const hdScale={6:35,8:55,10:75,12:100}[c.hd]||55;
+  const arcane=CAST_POWER[c.cast]||CAST_POWER[undefined];
+  const resilience=Math.round(hdScale*0.5+(c.saves.includes('con')?50:20));
+  return [
+    {label:'Martial',pct:hdScale},
+    {label:'Arcane',pct:arcane},
+    {label:'Resilience',pct:Math.min(100,resilience)},
+  ];
+}
 // Subclass features live in the same FEATURE_LIB, grouped as "Class — Subclass". Pulling the
 // suggestion list for the Build tab's datalist straight from those group names keeps everything
 // in one place — add a new subclass group up there and it shows up here automatically.
@@ -133,6 +164,24 @@ const RACES = {
   shifter:{name:'Shifter',group:'Monstrous',speed:30,motm:true,dark:60},
   yuanti:{name:'Yuan-Ti',group:'Monstrous',speed:30,motm:true,dark:60}
 };
+
+// Short data-driven trait chips for the Build screen's heritage picker — built straight from
+// RACES so all 46 lineages get an accurate line without hand-writing 46 blurbs.
+function raceFlavorChips(raceId,subraceId){
+  const r=RACES[raceId]; if(!r) return [];
+  const sub=r.subs?r.subs[subraceId]:null;
+  const chips=[r.group+' lineage','Speed '+((sub&&sub.speed)||r.speed)+' ft.'];
+  const bonus={};
+  Object.entries(r.bonus||{}).forEach(([k,v])=>bonus[k]=(bonus[k]||0)+v);
+  Object.entries((sub&&sub.bonus)||{}).forEach(([k,v])=>bonus[k]=(bonus[k]||0)+v);
+  Object.entries(bonus).forEach(([k,v])=>chips.push('+'+v+' '+k.toUpperCase()));
+  if(r.motm) chips.push('+2/+1 (your choice)');
+  else if((sub&&sub.flex)||r.flex) chips.push('+'+((sub&&sub.flex)||r.flex)+' (your choice)');
+  const dark=(sub&&sub.dark!=null)?sub.dark:(r.dark||0);
+  if(dark>0) chips.push('Darkvision '+dark+' ft.');
+  if(r.move) chips.push(r.move[0].toUpperCase()+r.move.slice(1));
+  return chips;
+}
 
 // Race portrait art (class-art/, race-art/ — see Build tab). Most exotic/monstrous lineages
 // don't have dedicated art, so they borrow the closest available family/vibe match rather than

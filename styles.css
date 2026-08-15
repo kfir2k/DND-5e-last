@@ -114,10 +114,11 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
 .g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
 .g3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 
-/* ---------- Build screen: cinematic class/heritage hero picker ---------- */
-/* Two crossfading portrait banners (class = big/primary, heritage = smaller echo of the same
-   language) replace the old plain <select> dropdowns — same S.classId/S.raceId state and
-   applyBuild() pipeline underneath, just a "forging a character" picker instead of a form. */
+/* ---------- Build screen: character-select style class/heritage picker ---------- */
+/* A slim class/heritage menu (left) + a big cinematic hero stage (right), styled after a game's
+   character-select screen — same S.classId/S.raceId state and applyBuild() pipeline underneath,
+   just picking a class now feels like choosing a hero from a roster instead of filling a form.
+   Same width as every other panel (main's 1180px column, same as #asiPanel below it). */
 .build-panel{
   --accent:var(--gold); --accent-dim:rgba(201,162,39,.18);
   transition:border-color .25s ease;
@@ -125,18 +126,83 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
 .build-panel .grid.g3,.build-panel .prep-note{position:relative;z-index:1}
 
 .bHero{
-  position:relative;min-height:min(58vh,520px);border-radius:18px;overflow:hidden;
-  background:var(--ink);border:1px solid var(--border);margin-bottom:12px;
-  display:flex;flex-direction:column;box-shadow:0 14px 32px rgba(0,0,0,.4);
+  position:relative;height:min(64vh,560px);border-radius:18px;overflow:hidden;
+  background:var(--ink);border:1px solid var(--border-lt);margin-bottom:14px;
+  display:flex;flex-direction:row;align-items:stretch;
+  box-shadow:0 14px 32px rgba(0,0,0,.45);
 }
-.bHeroMini{min-height:390px}
+.bHeroMini{height:340px}
 
+.bcsCorner{position:absolute;z-index:6;width:20px;height:20px;pointer-events:none;opacity:.8}
+.bcsCorner::before,.bcsCorner::after{content:'';position:absolute;background:var(--gold-dim)}
+.bcsCorner::before{width:100%;height:2px;top:0;left:0}
+.bcsCorner::after{width:2px;height:100%;top:0;left:0}
+.bcsCornerTl{top:9px;left:9px}
+.bcsCornerTr{top:9px;right:9px;transform:scaleX(-1)}
+.bcsCornerBl{bottom:9px;left:9px;transform:scaleY(-1)}
+.bcsCornerBr{bottom:9px;right:9px;transform:scale(-1,-1)}
+
+/* ---- left column: class/heritage menu ---- */
+.bRailCol{
+  position:relative;z-index:2;flex:0 0 auto;width:250px;min-height:0;
+  display:flex;flex-direction:column;gap:2px;padding:16px 10px 16px 16px;
+  background:linear-gradient(180deg,rgba(0,0,0,.3),rgba(0,0,0,.14));
+  border-right:1px solid rgba(255,255,255,.07);
+}
+.bRailColMini{width:230px}
+.bRailColLbl{
+  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.22em;font-size:.66rem;
+  color:var(--gold-dim);padding:0 2px 8px;flex:0 0 auto;
+}
+.bRail{
+  position:relative;flex:1 1 auto;min-height:0;
+  display:flex;flex-direction:column;gap:2px;
+  overflow-y:auto;overflow-x:hidden;padding-right:4px;
+}
+.bRailGroupLabel{
+  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.14em;
+  font-size:.6rem;color:var(--faint);padding:10px 6px 3px;
+}
+.bRailGroupLabel:first-child{padding-top:0}
+
+/* Each entry is a menu row — small portrait + name — rather than a big grid tile, so the
+   roster stays compact and the stage on the right gets the lion's share of the width. */
+.bRailItem{
+  --c:#c9a227;position:relative;cursor:pointer;display:flex;align-items:center;gap:10px;
+  padding:5px 8px 5px 9px;border-radius:8px;border-left:3px solid transparent;
+  transition:background .15s ease,border-color .15s ease;
+}
+.bRailItem:hover{background:rgba(255,255,255,.05)}
+.bRailItem.active{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--c) 20%,transparent),transparent 85%);
+  border-left-color:var(--c);
+}
+.bThumb{
+  flex:0 0 auto;width:44px;height:44px;background-size:cover;background-position:center top;
+  border-radius:8px;border:2px solid rgba(255,255,255,.14);filter:saturate(.7) brightness(.7);
+  transition:border-color .2s ease,filter .2s ease,box-shadow .2s ease;
+}
+.bThumbSm{width:34px;height:34px;border-radius:6px}
+.bLabel{
+  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.03em;font-size:.74rem;
+  color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:color .2s ease;
+}
+.bLabelSm{font-size:.66rem}
+.bRailItem.active .bThumb{
+  border-color:var(--c);filter:none;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 55%,transparent),0 6px 14px rgba(0,0,0,.5);
+}
+.bRailItem.active .bLabel{color:var(--gold-lt);font-weight:700}
+
+/* ---- right column: the cinematic hero stage ---- */
+.bStage{position:relative;flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
 .bLayer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;transition:opacity 1s ease}
 .bLayer.visible{opacity:1}
 .bBgA,.bBgB,.bMbgA,.bMbgB{filter:blur(26px) brightness(.4) saturate(1.2)}
 
-.bPortraitWrap{position:absolute;left:50%;top:2%;transform:translateX(-50%);width:min(46%,360px);height:80%;pointer-events:none}
-.bMiniPortraitWrap{position:absolute;left:50%;top:4%;transform:translateX(-50%);width:min(26%,180px);height:74%;pointer-events:none}
+.bPortraitWrap{position:absolute;left:50%;top:2%;transform:translateX(-50%);width:min(44%,420px);height:82%;pointer-events:none}
+.bMiniPortraitWrap{position:absolute;left:50%;top:4%;transform:translateX(-50%);width:min(30%,260px);height:76%;pointer-events:none}
 .bPortA,.bPortB,.bMportA,.bMportB{
   -webkit-mask-image:radial-gradient(ellipse 60% 64% at 50% 36%,#000 52%,transparent 94%);
   mask-image:radial-gradient(ellipse 60% 64% at 50% 36%,#000 52%,transparent 94%);
@@ -145,8 +211,9 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
 .bScrim{
   position:absolute;inset:0;pointer-events:none;
   background:
-    radial-gradient(ellipse 68% 55% at 50% 28%,transparent 40%,rgba(8,6,4,.5) 78%,rgba(8,6,4,.85) 100%),
-    linear-gradient(to top,rgba(8,6,4,.95) 0%,rgba(8,6,4,.35) 34%,transparent 58%);
+    linear-gradient(to right,rgba(8,6,4,.5) 0%,transparent 14%),
+    radial-gradient(ellipse 68% 55% at 50% 28%,transparent 38%,rgba(8,6,4,.5) 78%,rgba(8,6,4,.85) 100%),
+    linear-gradient(to top,rgba(8,6,4,.96) 0%,rgba(8,6,4,.34) 36%,transparent 60%);
 }
 .bFlash{position:absolute;inset:0;z-index:1;pointer-events:none;background:var(--c,var(--gold));opacity:0}
 .bFlash.pulse{animation:bFlashPulse .55s ease}
@@ -154,54 +221,54 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
 @media (prefers-reduced-motion:reduce){.bFlash.pulse{animation:none}}
 
 .bArrow{
-  position:absolute;top:34%;translate:0 -50%;z-index:3;width:40px;height:40px;border-radius:50%;
+  position:absolute;top:34%;translate:0 -50%;z-index:3;width:38px;height:38px;border-radius:50%;
   background:rgba(20,16,10,.55);border:1px solid rgba(255,255,255,.18);color:var(--gold-lt);
-  font-size:1.2rem;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+  font-size:1.1rem;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
   cursor:pointer;transition:background .15s,border-color .15s,transform .15s;
 }
 .bArrow:hover{background:rgba(20,16,10,.8);border-color:var(--gold-dim);transform:translateY(-50%) scale(1.06)}
-.bArrowSm{width:32px;height:32px;font-size:1rem}
+.bArrowSm{width:30px;height:30px;font-size:.95rem}
 .bArrowL{left:14px}
 .bArrowR{right:14px}
 
-.bContent{position:relative;z-index:2;flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding:0 6% 2px}
-.bContentMini{padding-bottom:12px}
+.bContent{position:relative;z-index:2;flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-end;text-align:left;padding:0 7% 22px 6%}
+.bContentMini{padding-bottom:22px}
 .bEyebrow{font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.24em;font-size:.72rem;color:var(--gold)}
 .bName{
   font-family:'Cinzel',serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em;
-  font-size:clamp(1.6rem,4.2vw,2.5rem);color:var(--gold-lt);margin:5px 0 10px;line-height:1.05;
+  font-size:clamp(1.5rem,3.6vw,2.3rem);color:var(--gold-lt);margin:4px 0 4px;line-height:1.05;
   text-shadow:0 8px 30px rgba(0,0,0,.85);
 }
-.bNameMini{font-size:clamp(1.15rem,2.4vw,1.5rem);margin:3px 0 0}
-.bFields{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:2px}
+.bNameMini{font-size:clamp(1.05rem,2.1vw,1.4rem);margin:3px 0 0}
+.bLevelStars{color:var(--gold-dim);font-size:.85rem;letter-spacing:1px;margin-bottom:8px;min-height:1.1em}
+
+.bStatBars{display:flex;flex-direction:column;gap:5px;max-width:340px;margin:2px 0 10px}
+.bStatBar{display:grid;grid-template-columns:78px 1fr;align-items:center;gap:8px}
+.bStatBarLbl{font-family:'Cinzel',serif;text-transform:uppercase;font-size:.6rem;letter-spacing:.08em;color:var(--muted)}
+.bStatBarTrack{height:6px;background:rgba(255,255,255,.09);border-radius:4px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.3)}
+.bStatBarFill{display:block;height:100%;background:linear-gradient(90deg,var(--accent-dim),var(--accent));border-radius:4px;transition:width .4s ease}
+
+.bFlavor{color:var(--muted);font-style:italic;font-size:.9rem;line-height:1.5;max-width:520px;margin:0 0 12px}
+
+/* Heritage trait chips read as the mini stage's main payoff — sized up and anchored to the
+   bottom edge (via .bContent's justify-content:flex-end) rather than floating mid-portrait. */
+.bChipRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.bChip{
+  background:rgba(0,0,0,.4);border:1px solid var(--border-lt);border-radius:999px;
+  padding:5px 14px;font-size:.85rem;color:var(--text);white-space:nowrap;
+}
+
+.bFields{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
 .bFld{min-width:140px;text-align:left}
 .bFld span{color:var(--muted)}
 
-.bRail{position:relative;z-index:2;display:flex;justify-content:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding:0 4% 14px}
-/* 46 races don't fit a single scrolling row well — wrap into a grid instead, grouped by
-   Common/Exotic/Monstrous, scrolling vertically (themed via the app's global thin-scrollbar
-   rule) rather than one long horizontal filmstrip. */
-.bRailMini{
-  flex-wrap:wrap;justify-content:flex-start;align-content:flex-start;
-  gap:10px 8px;overflow-x:hidden;overflow-y:auto;max-height:216px;padding:4px 5% 10px;
+.bSelectedPill{
+  display:none;align-self:flex-start;margin-top:12px;
+  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.2em;font-size:.7rem;
+  color:var(--ink);background:linear-gradient(180deg,var(--gold-lt),var(--gold));
+  border-radius:7px;padding:7px 22px;box-shadow:0 6px 14px rgba(0,0,0,.4);
 }
-.bRailGroupLabel{
-  flex-basis:100%;font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.16em;
-  font-size:.62rem;color:var(--faint);text-shadow:0 1px 3px rgba(0,0,0,.85);padding:8px 0 1px;
-}
-.bRailGroupLabel:first-child{padding-top:0}
-.bRailItem{--c:#c9a227;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
-.bThumb{
-  width:44px;height:44px;border-radius:50%;background-size:cover;background-position:center top;
-  border:2px solid rgba(255,255,255,.15);box-shadow:0 4px 10px rgba(0,0,0,.5);
-  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
-}
-.bThumbSm{width:32px;height:32px}
-.bLabel{font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.03em;font-size:.55rem;color:var(--muted);text-shadow:0 1px 3px rgba(0,0,0,.8);white-space:nowrap;transition:color .2s ease}
-.bLabelSm{font-size:.48rem}
-.bRailItem:hover .bThumb{transform:translateY(-3px)}
-.bRailItem.active .bThumb{border-color:var(--c);transform:translateY(-5px) scale(1.12);box-shadow:0 7px 16px rgba(0,0,0,.55),0 0 0 3px color-mix(in srgb,var(--c) 45%,transparent)}
-.bRailItem.active .bLabel{color:var(--gold-lt);font-weight:700}
+.bSelectedPill.show{display:inline-block}
 
 .bPillRow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .bFlexGroup{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0}
@@ -213,11 +280,23 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
 .bPill:hover{border-color:var(--gold-dim);color:var(--text)}
 .bPill.active{background:var(--gold-dim);border-color:var(--gold);color:var(--ink);font-weight:700}
 
+@media (max-width:900px){
+  .bHero{flex-direction:column;height:auto}
+  .bRailCol{width:auto;max-height:220px;border-right:none;border-bottom:1px solid rgba(255,255,255,.07)}
+  .bStage{height:460px;overflow:hidden}
+  .bHeroMini .bStage{height:300px}
+  .bContent{text-align:center;align-items:center;padding:0 6% 18px}
+  .bStatBars{margin-left:auto;margin-right:auto}
+  .bFlavor{margin-left:auto;margin-right:auto}
+  .bChipRow{justify-content:center}
+  .bSelectedPill{align-self:center}
+}
 @media (max-width:640px){
-  .bHero{min-height:52vh}
-  .bPortraitWrap{width:min(70%,280px)}
-  .bName{font-size:1.4rem}
-  .bArrow{width:34px;height:34px;font-size:1rem}
+  .bStage{height:420px}
+  .bHeroMini .bStage{height:260px}
+  .bPortraitWrap{width:min(66%,260px)}
+  .bName{font-size:1.3rem}
+  .bArrow{width:32px;height:32px;font-size:1rem}
 }
 
 /* ---------- Inputs ---------- */

@@ -1,0 +1,379 @@
+{
+  "name": "Cassian Starfall2",
+  "classLevel": "Fighter 1",
+  "background": "",
+  "playerName": "Kfir Kotler",
+  "race": "",
+  "alignment": "",
+  "xp": "",
+  "inspiration": false,
+  "profBonus": 2,
+  "classId": "fighter",
+  "level": 1,
+  "subclass": "",
+  "raceId": "aasimar",
+  "subraceId": "",
+  "flexBonus": [
+    "wis",
+    "str"
+  ],
+  "asi": {},
+  "abilities": {
+    "str": 17,
+    "dex": 11,
+    "con": 16,
+    "int": 11,
+    "wis": 16,
+    "cha": 13
+  },
+  "saveProf": {
+    "str": true,
+    "dex": false,
+    "con": true,
+    "int": false,
+    "wis": false,
+    "cha": false
+  },
+  "skills": {
+    "acrobatics": 0,
+    "animal": 1,
+    "arcana": 0,
+    "athletics": 1,
+    "deception": 0,
+    "history": 0,
+    "insight": 0,
+    "intimidation": 0,
+    "investigation": 0,
+    "medicine": 0,
+    "nature": 0,
+    "perception": 1,
+    "performance": 0,
+    "persuasion": 0,
+    "religion": 0,
+    "sleight": 0,
+    "stealth": 0,
+    "survival": 1
+  },
+  "favSkills": [],
+  "ac": 18,
+  "initiativeMisc": 0,
+  "speed": "30 ft.",
+  "vision": "60 ft.",
+  "hpMax": 15,
+  "hpCurrent": 15,
+  "hpTemp": 0,
+  "hdTotal": "1d10",
+  "hd": "",
+  "hdUsed": 0,
+  "deathS": [
+    false,
+    false,
+    false
+  ],
+  "deathF": [
+    false,
+    false,
+    false
+  ],
+  "attacks": [
+    {
+      "name": "Rapier",
+      "weapon": "rapier",
+      "die": "1d8",
+      "dmgStat": "auto",
+      "magic": 0,
+      "miscAtk": 0,
+      "miscDmg": 0,
+      "rolled": "",
+      "buffs": []
+    }
+  ],
+  "atkNotes": "",
+  "equip": {
+    "armor": "chainmail",
+    "armorMagic": 0,
+    "shield": true,
+    "shieldMagic": 0,
+    "acAuto": true,
+    "head": "",
+    "neck": "",
+    "cloak": "",
+    "hands": "",
+    "ring1": "",
+    "ring2": "",
+    "boots": "",
+    "mainhand": "Rapier",
+    "offhand": "Shield"
+  },
+  "money": {
+    "cp": 0,
+    "sp": 0,
+    "ep": 0,
+    "gp": 10,
+    "pp": 0
+  },
+  "equipment": [
+    {
+      "qty": "",
+      "name": "",
+      "type": "G",
+      "desc": "",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "Backpack",
+      "type": "G",
+      "desc": "Holds 30 lb / 1 cu ft of gear.",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "Crowbar",
+      "type": "G",
+      "desc": "Advantage on Strength checks where leverage applies.",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "Hammer",
+      "type": "G",
+      "desc": "Drive pitons, break things.",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "Pitons (10)",
+      "type": "G",
+      "desc": "Spikes for anchoring ropes.",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "10",
+      "name": "Torch",
+      "type": "C",
+      "desc": "1 hour of bright light 20 ft. As a weapon: 1 fire damage on hit.",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "Tinderbox",
+      "type": "T",
+      "desc": "Light a torch (action) or other exposed fuel (1 minute).",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "10",
+      "name": "Rations (1 day)",
+      "type": "C",
+      "desc": "Dry food for one day of travel.",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "Waterskin",
+      "type": "C",
+      "desc": "Holds 4 pints of liquid.",
+      "combat": false,
+      "att": false
+    },
+    {
+      "qty": "1",
+      "name": "Rope, Hempen (50 ft)",
+      "type": "G",
+      "desc": "2 HP, burst DC 17 Strength.",
+      "combat": false,
+      "att": false
+    }
+  ],
+  "treasure": "",
+  "features": [
+    {
+      "title": "Healing Hands",
+      "desc": " As an action, you can touch a creature and roll a number of d4s equal to your proficiency bonus. The creature regains a number of hit points equal to the total rolled. Once you use this trait, you can’t use it again until you finish a long rest.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "race",
+        "raceName": "Aasimar"
+      },
+      "actionTypes": [
+        "action"
+      ]
+    },
+    {
+      "title": "Celestial Resistance",
+      "desc": "Resistance to necrotic and radiant damage.",
+      "fx": [],
+      "combat": false,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "race",
+        "raceName": "Aasimar"
+      }
+    },
+    {
+      "title": "Fighting Style Interception ",
+      "desc": "Interception: When an enemy hits an ally within 5 feet of you, you can use your Reaction to reduce the damage by:\n1d10 + your Proficiency Bonus",
+      "fx": [],
+      "combat": true,
+      "usesMax": 0,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "class",
+        "classId": "fighter",
+        "className": "Fighter"
+      },
+      "actionTypes": [
+        "other",
+        "reaction"
+      ]
+    },
+    {
+      "title": "Second Wind",
+      "desc": "Bonus action: regain 1d10 + fighter level HP, once per short/long rest.",
+      "fx": [],
+      "combat": true,
+      "usesMax": 1,
+      "usesPer": "short",
+      "usesUsed": 0,
+      "usesScale": "",
+      "usesScaleBonus": 0,
+      "source": {
+        "kind": "class",
+        "classId": "fighter",
+        "className": "Fighter"
+      }
+    }
+  ],
+  "profLang": "",
+  "languages": [
+    "Common"
+  ],
+  "featuresLocked": true,
+  "spellClass": "",
+  "spellAbility": "",
+  "spellLevels": [
+    {
+      "total": 0,
+      "used": 0,
+      "spells": [
+        {
+          "name": "Light",
+          "prep": false,
+          "meta": "1 Action · Touch · 1 hour",
+          "desc": "You touch one object that is no larger than 10 feet in any dimension. Until the spell ends, the object sheds bright light in a 20-foot radius and dim light for an additional 20 feet. The light can be colored as you like. Completely covering the object with something opaque blocks the light. The spell ends if you cast it again or dismiss it as an action.\n\nIf you target an object held or worn by a hostile creature, that creature must succeed on a Dexterity saving throw to avoid the spell."
+        }
+      ]
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    },
+    {
+      "total": 0,
+      "used": 0,
+      "spells": []
+    }
+  ],
+  "eqTab": "ALL",
+  "invEqOpen": true,
+  "customCards": [],
+  "states": [],
+  "concentration": null,
+  "turnPlans": [
+    {
+      "name": "Default",
+      "steps": []
+    }
+  ],
+  "turnPlanIdx": 0,
+  "cockpit": {
+    "hidden": [],
+    "pins": [],
+    "showAllSpells": false,
+    "showDeath": false,
+    "atkOpen": true
+  },
+  "portrait": "data:image/jpeg;base64,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",
+  "age": "25",
+  "height": "1.90",
+  "weight": "85",
+  "eyes": "Gray",
+  "skin": "White",
+  "hair": "Blonde",
+  "personality": "I prefer listening to talking. People reveal a lot when you give them enough silence.",
+  "ideals": "If I have the strength to protect someone, I should use it.",
+  "bonds": "Garran gave me a life when I had none. I try to live in a way that would make him proud.",
+  "flaws": "I find it much easier to protect others than to let them protect me.",
+  "goals": "Protect those who cannot protect themselves. Garran taught me that strength means very little if it is only used for yourself.\nBecome stronger without becoming cruel. I want to be someone others can rely on, not someone they have to fear.\nFind out what happened to Garran. I have accepted that he may be dead, but as long as I don't know for certain, part of me will keep wondering.",
+  "secrets": "I am uncomfortable relying on others. It is easier for me to stand in front of someone than to trust them to stand in front of me.\nPart of me still believes Garran survived. I rarely admit it, because hope without evidence can be dangerous.",
+  "allies": "Local craftsmen and blacksmiths. Growing up in a forge means I am comfortable among working people and know how to earn their respect.",
+  "factionName": "",
+  "backstory": "The Child From the Ashes\nI don't remember where I was born. Most people have stories about their first home.\nI have Garran's.\nHe told me he found me as an infant in the ruins of a settlement destroyed by fire. Everyone there was dead.\nSomehow, I wasn't.\nGarran was a blacksmith from a nearby village. He took me home and raised me as his son. I grew up around the sound of hammer against steel, learning patience, discipline, and eventually how to fight.\nI suppose that's where I learned to be quiet, too. Garran never wasted words, and neither do I. I've found people usually tell you more when you give them enough silence.\nThere was only one thing from my life before him: a small piece of strange, pale metal that had been sewn into the blanket I was found in. I kept it, mostly because Garran did.\nNeither of us knew what it was.\nAt least, that's what I thought.\nYears later, a strange sword found its way into Garran's forge. I never paid much attention to it, but he did. After that, he became different. Distracted. He started asking questions about places I'd never heard of and people I'd never met.\nThen, one evening, he finally sat down beside me.\n“There is something I should have told you years ago.”\nI remember waiting for him to continue.\nHe didn't.\n\nThe village bells started ringing.\nWe were under attack.\nGarran took up his weapon, then pointed me toward our neighbors' house. Their children were still inside.\n“Cassian. They need you.”\nI didn’t hesitate.\nI went.\nI got them out.\nWhen I looked back, I could see Garran fighting near the forge. I saw him take a blow and fall to one knee.\nThen he looked toward me and shouted something.\nI couldn't hear him.\nThose were the last words my father ever said to me.\nWhen I returned, Garran was gone. No body was ever found, and though I told myself that meant nothing, I never fully convinced myself he didn’t survive.\nThe strange sword had disappeared with him.\nI still don't know what Garran wanted to tell me that night, or why that sword mattered to him. Sometimes I think he was interrupted before he could finish—other times I think he chose not to.\nMaybe one day I will find him and finally hear it.\nUntil then, I have the only answer he ever really gave me:\nIf you have the strength to protect someone, use it.",
+  "notes": [
+    {
+      "title": "זריקת קוביות",
+      "body": "17\n11\n16\n13\n11\n16",
+      "tags": [],
+      "session": ""
+    }
+  ],
+  "eqCollapse": {}
+}
