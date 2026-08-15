@@ -134,6 +134,38 @@ const RACES = {
   yuanti:{name:'Yuan-Ti',group:'Monstrous',speed:30,motm:true,dark:60}
 };
 
+// Race portrait art (class-art/, race-art/ — see Build tab). Most exotic/monstrous lineages
+// don't have dedicated art, so they borrow the closest available family/vibe match rather than
+// go without a portrait; the 20 with real dedicated photos map to themselves.
+const RACE_IMG={
+  dwarf:'dwarf',elf:'elf',halfling:'halfling',human:'human',dragonborn:'dragonborn',
+  gnome:'gnome',halfelf:'halfelf',halforc:'halforc',tiefling:'tiefling',
+  eladrin:'eladrin',shadarkai:'shadarkai',deepgnome:'gnome',orc:'orc',aasimar:'aasimar',
+  githyanki:'githyanki',githzerai:'githzerai',harengon:'harengon',lizardfolk:'lizardfolk',owlin:'owlin',
+  // borrowed — bird-folk
+  aarakocra:'owlin',kenku:'owlin',
+  // borrowed — small/mischievous
+  goblin:'gnome',kobold:'lizardfolk',verdan:'halfling',
+  // borrowed — fey
+  fairy:'eladrin',satyr:'eladrin',
+  // borrowed — elf-family
+  seaelf:'elf',
+  // borrowed — dwarf-family
+  duergar:'dwarf',tortle:'dwarf',
+  // borrowed — reptilian/aquatic
+  locathah:'lizardfolk',triton:'lizardfolk',grung:'lizardfolk',yuanti:'lizardfolk',
+  // borrowed — large & powerful
+  goliath:'halforc',centaur:'halforc',shifter:'halforc',
+  // borrowed — monstrous/militant
+  bugbear:'orc',hobgoblin:'orc',minotaur:'orc',
+  // borrowed — human-passing / no close match
+  changeling:'human',firbolg:'human',
+  // borrowed — elemental/otherworldly-touched
+  genasiair:'tiefling',genasiearth:'tiefling',genasifire:'tiefling',genasiwater:'tiefling',
+  // borrowed — anthro
+  tabaxi:'harengon',
+};
+
 // ---------- ASI / Feat levels & feat names ----------
 // Every class gets an Ability Score Improvement (or feat) at 4, 8, 12, 16, 19.
 // Fighters get extras at 6 & 14; Rogues at 10.

@@ -114,32 +114,111 @@ main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
 .g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
 .g3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 
-/* ---------- Build screen: class-flavored panel ---------- */
-/* Mirrors the ability-card elemental treatment (glow + lit top edge) but keyed off the chosen
-   class's flavor color (CLASS_COLOR) instead of ability score, plus a big watermark class icon
-   and a "Level X Class — Subclass" nameplate, so picking a class feels like forging a character
-   instead of filling out a form. */
+/* ---------- Build screen: cinematic class/heritage hero picker ---------- */
+/* Two crossfading portrait banners (class = big/primary, heritage = smaller echo of the same
+   language) replace the old plain <select> dropdowns — same S.classId/S.raceId state and
+   applyBuild() pipeline underneath, just a "forging a character" picker instead of a form. */
 .build-panel{
   --accent:var(--gold); --accent-dim:rgba(201,162,39,.18);
-  background:linear-gradient(165deg,var(--accent-dim),var(--panel) 75%);
-  border-top:2px solid var(--accent); position:relative; overflow:hidden;
-  transition:border-color .25s ease,background .25s ease;
+  transition:border-color .25s ease;
 }
-.build-panel::before{
-  content:'';position:absolute;top:-50%;right:-6%;width:70%;height:200%;
-  background:radial-gradient(circle,var(--accent-dim) 0%,transparent 65%);
-  pointer-events:none;
+.build-panel .grid.g3,.build-panel .prep-note{position:relative;z-index:1}
+
+.bHero{
+  position:relative;min-height:min(58vh,520px);border-radius:18px;overflow:hidden;
+  background:var(--ink);border:1px solid var(--border);margin-bottom:12px;
+  display:flex;flex-direction:column;box-shadow:0 14px 32px rgba(0,0,0,.4);
 }
-.build-icon{
-  position:absolute;top:10px;right:16px;font-size:3.4rem;opacity:.16;line-height:1;
-  pointer-events:none;filter:saturate(1.3);z-index:0;transition:opacity .2s ease;
+.bHeroMini{min-height:390px}
+
+.bLayer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;transition:opacity 1s ease}
+.bLayer.visible{opacity:1}
+.bBgA,.bBgB,.bMbgA,.bMbgB{filter:blur(26px) brightness(.4) saturate(1.2)}
+
+.bPortraitWrap{position:absolute;left:50%;top:2%;transform:translateX(-50%);width:min(46%,360px);height:80%;pointer-events:none}
+.bMiniPortraitWrap{position:absolute;left:50%;top:4%;transform:translateX(-50%);width:min(26%,180px);height:74%;pointer-events:none}
+.bPortA,.bPortB,.bMportA,.bMportB{
+  -webkit-mask-image:radial-gradient(ellipse 60% 64% at 50% 36%,#000 52%,transparent 94%);
+  mask-image:radial-gradient(ellipse 60% 64% at 50% 36%,#000 52%,transparent 94%);
 }
-.build-title{
-  color:var(--accent);font-family:'Cinzel',serif;font-weight:700;font-size:1.05rem;
-  letter-spacing:.5px;margin:-4px 0 12px;text-shadow:0 0 16px var(--accent-dim);
-  position:relative;z-index:1;display:none;
+
+.bScrim{
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 68% 55% at 50% 28%,transparent 40%,rgba(8,6,4,.5) 78%,rgba(8,6,4,.85) 100%),
+    linear-gradient(to top,rgba(8,6,4,.95) 0%,rgba(8,6,4,.35) 34%,transparent 58%);
 }
-.build-panel h2,.build-panel .grid,.build-panel .prep-note{position:relative;z-index:1}
+.bFlash{position:absolute;inset:0;z-index:1;pointer-events:none;background:var(--c,var(--gold));opacity:0}
+.bFlash.pulse{animation:bFlashPulse .55s ease}
+@keyframes bFlashPulse{0%{opacity:.28}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.bFlash.pulse{animation:none}}
+
+.bArrow{
+  position:absolute;top:34%;translate:0 -50%;z-index:3;width:40px;height:40px;border-radius:50%;
+  background:rgba(20,16,10,.55);border:1px solid rgba(255,255,255,.18);color:var(--gold-lt);
+  font-size:1.2rem;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+  cursor:pointer;transition:background .15s,border-color .15s,transform .15s;
+}
+.bArrow:hover{background:rgba(20,16,10,.8);border-color:var(--gold-dim);transform:translateY(-50%) scale(1.06)}
+.bArrowSm{width:32px;height:32px;font-size:1rem}
+.bArrowL{left:14px}
+.bArrowR{right:14px}
+
+.bContent{position:relative;z-index:2;flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding:0 6% 2px}
+.bContentMini{padding-bottom:12px}
+.bEyebrow{font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.24em;font-size:.72rem;color:var(--gold)}
+.bName{
+  font-family:'Cinzel',serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em;
+  font-size:clamp(1.6rem,4.2vw,2.5rem);color:var(--gold-lt);margin:5px 0 10px;line-height:1.05;
+  text-shadow:0 8px 30px rgba(0,0,0,.85);
+}
+.bNameMini{font-size:clamp(1.15rem,2.4vw,1.5rem);margin:3px 0 0}
+.bFields{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:2px}
+.bFld{min-width:140px;text-align:left}
+.bFld span{color:var(--muted)}
+
+.bRail{position:relative;z-index:2;display:flex;justify-content:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding:0 4% 14px}
+/* 46 races don't fit a single scrolling row well — wrap into a grid instead, grouped by
+   Common/Exotic/Monstrous, scrolling vertically (themed via the app's global thin-scrollbar
+   rule) rather than one long horizontal filmstrip. */
+.bRailMini{
+  flex-wrap:wrap;justify-content:flex-start;align-content:flex-start;
+  gap:10px 8px;overflow-x:hidden;overflow-y:auto;max-height:216px;padding:4px 5% 10px;
+}
+.bRailGroupLabel{
+  flex-basis:100%;font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.16em;
+  font-size:.62rem;color:var(--faint);text-shadow:0 1px 3px rgba(0,0,0,.85);padding:8px 0 1px;
+}
+.bRailGroupLabel:first-child{padding-top:0}
+.bRailItem{--c:#c9a227;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.bThumb{
+  width:44px;height:44px;border-radius:50%;background-size:cover;background-position:center top;
+  border:2px solid rgba(255,255,255,.15);box-shadow:0 4px 10px rgba(0,0,0,.5);
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
+.bThumbSm{width:32px;height:32px}
+.bLabel{font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.03em;font-size:.55rem;color:var(--muted);text-shadow:0 1px 3px rgba(0,0,0,.8);white-space:nowrap;transition:color .2s ease}
+.bLabelSm{font-size:.48rem}
+.bRailItem:hover .bThumb{transform:translateY(-3px)}
+.bRailItem.active .bThumb{border-color:var(--c);transform:translateY(-5px) scale(1.12);box-shadow:0 7px 16px rgba(0,0,0,.55),0 0 0 3px color-mix(in srgb,var(--c) 45%,transparent)}
+.bRailItem.active .bLabel{color:var(--gold-lt);font-weight:700}
+
+.bPillRow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.bFlexGroup{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0}
+.bFlexGroupLbl{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.bPill{
+  background:var(--panel2);border:1px solid var(--border);border-radius:999px;color:var(--muted);
+  padding:6px 13px;font-size:.8rem;cursor:pointer;transition:background .15s,color .15s,border-color .15s;
+}
+.bPill:hover{border-color:var(--gold-dim);color:var(--text)}
+.bPill.active{background:var(--gold-dim);border-color:var(--gold);color:var(--ink);font-weight:700}
+
+@media (max-width:640px){
+  .bHero{min-height:52vh}
+  .bPortraitWrap{width:min(70%,280px)}
+  .bName{font-size:1.4rem}
+  .bArrow{width:34px;height:34px;font-size:1rem}
+}
 
 /* ---------- Inputs ---------- */
 input[type=text],input[type=number],textarea,select{

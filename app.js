@@ -292,17 +292,48 @@ overview:`
 
 build:`
   <div class="panel build-panel" id="buildPanel">
-    <div class="build-icon" id="buildIcon">⚔</div>
-    <h2>Build — Class &amp; Race</h2>
-    <div class="build-title" id="buildTitle"></div>
-    <div class="grid g3">
-      <label class="fld"><span>Class</span><select id="classSel"><option value="">— choose —</option></select></label>
-      <label class="fld"><span>Level</span><input type="number" id="levelIn" min="1" max="20" value="1"></label>
-      <label class="fld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="e.g. Gloom Stalker"></label>
-      <label class="fld"><span>Race</span><select id="raceSel"><option value="">— choose —</option></select></label>
-      <label class="fld" id="subraceFld" style="display:none"><span>Subrace</span><select id="subraceSel"></select></label>
-      <label class="fld flex-fld" id="flex0Fld" style="display:none"><span id="flex0Lbl">Bonus +1 (choice 1)</span><select id="flex0"></select></label>
-      <label class="fld flex-fld" id="flex1Fld" style="display:none"><span id="flex1Lbl">Bonus +1 (choice 2)</span><select id="flex1"></select></label>
+    <section class="bHero" id="bHero">
+      <img class="bLayer bBgA visible" id="bBgA" alt="">
+      <img class="bLayer bBgB" id="bBgB" alt="">
+      <div class="bPortraitWrap" id="bPortraitWrap">
+        <img class="bLayer bPortA visible" id="bPortA" alt="">
+        <img class="bLayer bPortB" id="bPortB" alt="">
+      </div>
+      <div class="bScrim"></div>
+      <div class="bFlash" id="bFlash"></div>
+      <button class="bArrow bArrowL" id="classPrevBtn" type="button" aria-label="Previous class">‹</button>
+      <button class="bArrow bArrowR" id="classNextBtn" type="button" aria-label="Next class">›</button>
+      <div class="bContent">
+        <div class="bEyebrow" id="bEyebrow">Choose your class</div>
+        <h2 class="bName" id="bName">—</h2>
+        <div class="bFields">
+          <label class="fld bFld"><span>Level</span><input type="number" id="levelIn" min="1" max="20" value="1"></label>
+          <label class="fld bFld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="e.g. Gloom Stalker"></label>
+        </div>
+      </div>
+      <div class="bRail" id="classRail"></div>
+    </section>
+
+    <section class="bHero bHeroMini" id="bHeroMini">
+      <img class="bLayer bMbgA visible" id="bMbgA" alt="">
+      <img class="bLayer bMbgB" id="bMbgB" alt="">
+      <div class="bMiniPortraitWrap">
+        <img class="bLayer bMportA visible" id="bMportA" alt="">
+        <img class="bLayer bMportB" id="bMportB" alt="">
+      </div>
+      <div class="bScrim"></div>
+      <button class="bArrow bArrowL bArrowSm" id="racePrevBtn" type="button" aria-label="Previous heritage">‹</button>
+      <button class="bArrow bArrowR bArrowSm" id="raceNextBtn" type="button" aria-label="Next heritage">›</button>
+      <div class="bContent bContentMini">
+        <div class="bEyebrow">Heritage</div>
+        <h3 class="bName bNameMini" id="bRaceName">—</h3>
+      </div>
+      <div class="bRail bRailMini" id="raceRail"></div>
+    </section>
+
+    <div class="grid g3" id="subDetails">
+      <label class="fld" id="subraceFld" style="display:none"><span>Subrace</span><div class="bPillRow" id="subracePills"></div></label>
+      <label class="fld flex-fld" id="flexFld" style="display:none"><span id="flexLbl">Flexible Bonus</span><div class="bPillRow" id="flexPills"></div></label>
     </div>
     <p class="prep-note" id="buildNote">Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses. Subclass features are searchable in the Features tab once picked here.</p>
   </div>
@@ -3236,25 +3267,85 @@ function wireHpButtons(){
 const AB_NAMES=Object.fromEntries(ABILITIES);
 
 // Fill the dropdowns to match current state (called on load & import)
+const CLASS_ORDER=Object.keys(CLASSES);
+const RACE_ORDER_BUILD=Object.keys(RACES);
+// Which A/B image layer is currently on top for each hero, and the id last painted onto it —
+// renderBuildTheme() only crossfades when the id actually changes (it's called on every recalc(),
+// including level/subclass edits that shouldn't retrigger the portrait swap).
+let bClassFront='A', bRaceFront='A', bLastClassId=null, bLastRaceId=null;
+
+// Swaps which of an A/B <img> pair is on top. from/to are resolved once by the caller and
+// applied to every layer-pair together (bg + portrait), so paired layers can't drift out of
+// sync the way they would if each call independently flipped a shared tracker.
+function crossfadeImg(prefix,from,to,src){
+  const show=$('#'+prefix+to), hide=$('#'+prefix+from);
+  if(!show||!hide) return;
+  if(src) show.src=src;
+  show.classList.add('visible'); hide.classList.remove('visible');
+}
+
 function renderBuildSelectors(){
-  const cs=$('#classSel');
-  cs.innerHTML='<option value="">— choose —</option>'+
-    Object.entries(CLASSES).map(([id,c])=>`<option value="${id}">${CLASS_ICON[id]||''} ${c.name}</option>`).join('');
-  cs.value=S.classId||'';
+  renderClassRail();
+  renderRaceRail();
   $('#levelIn').value=S.level||1;
-  const rs=$('#raceSel');
-  const groups=['Common','Exotic','Monstrous'];
-  rs.innerHTML='<option value="">— choose —</option>'+groups.map(g=>
-    `<optgroup label="${g}">`+
-    Object.entries(RACES).filter(([,r])=>r.group===g)
-      .map(([id,r])=>`<option value="${id}">${r.name}</option>`).join('')+
-    '</optgroup>').join('');
-  rs.value=S.raceId||'';
   renderSubraceAndFlex();
   renderBuildTheme();
 }
-// Class-flavored theming for the Build screen — accent color + icon + a "Level X Class —
-// Subclass" nameplate, so picking a class feels like forging a character, not filling a form.
+function renderClassRail(){
+  const rail=$('#classRail'); if(!rail) return;
+  if(!rail.children.length){
+    rail.innerHTML=CLASS_ORDER.map(id=>`
+      <div class="bRailItem" data-id="${id}" style="--c:${CLASS_COLOR[id]}">
+        <div class="bThumb" style="background-image:url(class-art/${id}.jpg)"></div>
+        <span class="bLabel">${CLASSES[id].name}</span>
+      </div>`).join('');
+    [...rail.children].forEach(el=>el.addEventListener('click',()=>{
+      if(el.dataset.id===S.classId) return;
+      S.classId=el.dataset.id; applyBuild();
+    }));
+  }
+  [...rail.children].forEach(el=>el.classList.toggle('active',el.dataset.id===S.classId));
+}
+function renderRaceRail(){
+  const rail=$('#raceRail'); if(!rail) return;
+  if(!rail.children.length){
+    // 46 races is too many for a single scroll row — group into Common/Exotic/Monstrous
+    // (RACES already carries this grouping) and let the grid wrap+scroll vertically instead.
+    let lastGroup=null;
+    rail.innerHTML=RACE_ORDER_BUILD.map(id=>{
+      const grp=RACES[id].group;
+      const label=grp!==lastGroup?`<span class="bRailGroupLabel">${grp}</span>`:'';
+      lastGroup=grp;
+      return label+`
+      <div class="bRailItem" data-id="${id}">
+        <div class="bThumb bThumbSm" style="background-image:url(race-art/${RACE_IMG[id]}.jpg)"></div>
+        <span class="bLabel bLabelSm">${RACES[id].name}</span>
+      </div>`;
+    }).join('');
+    $$('#raceRail .bRailItem').forEach(el=>el.addEventListener('click',()=>{
+      if(el.dataset.id===S.raceId) return;
+      S.raceId=el.dataset.id; S.subraceId=''; S.flexBonus=['',''];
+      renderSubraceAndFlex(); applyBuild();
+    }));
+  }
+  $$('#raceRail .bRailItem').forEach(el=>el.classList.toggle('active',el.dataset.id===S.raceId));
+}
+function stepClass(delta){
+  if(!CLASS_ORDER.length) return;
+  const i=CLASS_ORDER.indexOf(S.classId);
+  S.classId=CLASS_ORDER[(i<0?0:i+delta+CLASS_ORDER.length)%CLASS_ORDER.length];
+  applyBuild();
+}
+function stepRace(delta){
+  if(!RACE_ORDER_BUILD.length) return;
+  const i=RACE_ORDER_BUILD.indexOf(S.raceId);
+  S.raceId=RACE_ORDER_BUILD[(i<0?0:i+delta+RACE_ORDER_BUILD.length)%RACE_ORDER_BUILD.length];
+  S.subraceId=''; S.flexBonus=['',''];
+  renderSubraceAndFlex(); applyBuild();
+}
+
+// Class-flavored theming for the Build screen — accent color + a big crossfading portrait
+// banner, so picking a class feels like forging a character, not filling a form.
 // (The Subclass field's suggestion list reads subclassNamesForClass(S.classId) live on focus,
 // so it always matches the currently chosen class with no syncing needed here.)
 function renderBuildTheme(){
@@ -3263,42 +3354,75 @@ function renderBuildTheme(){
   const accent=CLASS_COLOR[S.classId]||'#c9a227';
   panel.style.setProperty('--accent',accent);
   panel.style.setProperty('--accent-dim',accent+'30');
-  $('#buildIcon').textContent=CLASS_ICON[S.classId]||'⚔';
-  const title=$('#buildTitle');
-  if(c){
-    title.textContent=`Level ${num(S.level)||1} ${c.name}${S.subclass?' — '+S.subclass:''}`;
-    title.style.display='block';
-  }else{
-    title.style.display='none';
+
+  if(c&&S.classId!==bLastClassId){
+    const src='class-art/'+S.classId+'.jpg';
+    if(bLastClassId===null){ $('#bBgA').src=src; $('#bPortA').src=src; } // first paint — A is already .visible
+    else{
+      const to=bClassFront==='A'?'B':'A';
+      crossfadeImg('bBg',bClassFront,to,src); crossfadeImg('bPort',bClassFront,to,src);
+      bClassFront=to;
+      const flash=$('#bFlash');
+      flash.style.setProperty('--c',accent);
+      flash.classList.remove('pulse'); void flash.offsetWidth; flash.classList.add('pulse');
+    }
+    bLastClassId=S.classId;
   }
+  $('#bEyebrow').textContent=c?`Level ${num(S.level)||1}`:'Choose your class';
+  $('#bName').textContent=c?(c.name+(S.subclass?' — '+S.subclass:'')):'—';
+
+  const ri=raceInfo();
+  if(ri&&S.raceId!==bLastRaceId){
+    const img=RACE_IMG[S.raceId];
+    if(img){
+      const src='race-art/'+img+'.jpg';
+      if(bLastRaceId===null){ $('#bMbgA').src=src; $('#bMportA').src=src; }
+      else{
+        const to=bRaceFront==='A'?'B':'A';
+        crossfadeImg('bMbg',bRaceFront,to,src); crossfadeImg('bMport',bRaceFront,to,src);
+        bRaceFront=to;
+      }
+    }
+    bLastRaceId=S.raceId;
+  }
+  $('#bRaceName').textContent=ri?((ri.sub&&ri.sub.name)||ri.r.name):'—';
+
+  renderClassRail();
+  renderRaceRail();
 }
 function renderSubraceAndFlex(){
   const r=RACES[S.raceId];
-  const fld=$('#subraceFld'), sel=$('#subraceSel');
+  const fld=$('#subraceFld'), wrap=$('#subracePills');
   if(r&&r.subs){
     fld.style.display='';
-    sel.innerHTML=Object.entries(r.subs).map(([id,s])=>`<option value="${id}">${s.name}</option>`).join('');
     if(!r.subs[S.subraceId]) S.subraceId=Object.keys(r.subs)[0];
-    sel.value=S.subraceId;
+    wrap.innerHTML=Object.entries(r.subs).map(([id,s])=>
+      `<button type="button" class="bPill ${id===S.subraceId?'active':''}" data-subid="${id}">${s.name}</button>`).join('');
+    $$('#subracePills [data-subid]').forEach(b=>b.addEventListener('click',()=>{
+      S.subraceId=b.dataset.subid; S.flexBonus=['','']; renderSubraceAndFlex(); applyBuild();
+    }));
   }else{ fld.style.display='none'; S.subraceId=''; }
   // flexible bonus pickers: MotM lineages (+2 / +1) or Half-Elf / Variant Human (two +1s)
   const n=flexCount();
   const motm=r&&r.motm;
-  $('#flex0Lbl').textContent=motm?'Bonus +2 to':'Bonus +1 (choice 1)';
-  $('#flex1Lbl').textContent=motm?'Bonus +1 to':'Bonus +1 (choice 2)';
-  [0,1].forEach(i=>{
-    const f=$('#flex'+i+'Fld'), s=$('#flex'+i);
-    if(i<n){
-      f.style.display='';
-      const ri=raceInfo();
-      // can't pick an ability with a fixed racial bonus, or the same ability twice
-      const fixed=k=>motm?false:(((ri.r.bonus&&ri.r.bonus[k])||0)+((ri.sub&&ri.sub.bonus&&ri.sub.bonus[k])||0))>0;
-      s.innerHTML='<option value="">— pick —</option>'+ABILITIES
-        .filter(([k])=>!fixed(k)&&S.flexBonus[1-i]!==k)
-        .map(([k,l])=>`<option value="${k}">${l}</option>`).join('');
-      s.value=S.flexBonus[i]||'';
-    }else{ f.style.display='none'; S.flexBonus[i]=''; }
-  });
+  const flexFld=$('#flexFld'), flexWrap=$('#flexPills');
+  if(n>0){
+    flexFld.style.display='';
+    $('#flexLbl').textContent=motm?'Flexible Bonus — +2 to one ability, +1 to another':'Flexible Bonus — +1 to two different abilities';
+    const ri=raceInfo();
+    // can't pick an ability with a fixed racial bonus, or the same ability twice
+    const fixed=k=>motm?false:(((ri.r.bonus&&ri.r.bonus[k])||0)+((ri.sub&&ri.sub.bonus&&ri.sub.bonus[k])||0))>0;
+    flexWrap.innerHTML=Array.from({length:n},(_,i)=>{
+      const label=motm?(i===0?'+2 to':'+1 to'):'+1 (choice '+(i+1)+')';
+      return `<div class="bFlexGroup"><span class="bFlexGroupLbl">${label}</span>`+
+        ABILITIES.filter(([k])=>!fixed(k)&&S.flexBonus[1-i]!==k).map(([k,l])=>
+          `<button type="button" class="bPill ${S.flexBonus[i]===k?'active':''}" data-flexi="${i}" data-flexab="${k}">${l}</button>`).join('')+
+        `</div>`;
+    }).join('');
+    $$('#flexPills [data-flexab]').forEach(b=>b.addEventListener('click',()=>{
+      S.flexBonus[+b.dataset.flexi]=b.dataset.flexab; renderSubraceAndFlex(); applyBuild();
+    }));
+  }else{ flexFld.style.display='none'; S.flexBonus=['','']; }
 }
 
 // ---------- ASI / Feat rows ----------
@@ -3389,23 +3513,14 @@ function applyBuild(){
 }
 
 function wireBuild(){
-  $('#classSel').addEventListener('change',e=>{ S.classId=e.target.value; applyBuild(); });
   $('#levelIn').addEventListener('change',e=>{
     S.level=Math.max(1,Math.min(20,num(e.target.value)||1));
     e.target.value=S.level; applyBuild();
   });
-  $('#raceSel').addEventListener('change',e=>{
-    S.raceId=e.target.value; S.subraceId=''; S.flexBonus=['',''];
-    renderSubraceAndFlex(); applyBuild();
-  });
-  $('#subraceSel').addEventListener('change',e=>{
-    S.subraceId=e.target.value; S.flexBonus=['',''];
-    renderSubraceAndFlex(); applyBuild();
-  });
-  [0,1].forEach(i=>$('#flex'+i).addEventListener('change',e=>{
-    S.flexBonus[i]=e.target.value;
-    renderSubraceAndFlex(); applyBuild();
-  }));
+  $('#classPrevBtn').addEventListener('click',()=>stepClass(-1));
+  $('#classNextBtn').addEventListener('click',()=>stepClass(1));
+  $('#racePrevBtn').addEventListener('click',()=>stepRace(-1));
+  $('#raceNextBtn').addEventListener('click',()=>stepRace(1));
 }
 
 // ---------- Hit dice & rests ----------
