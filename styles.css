@@ -94,7 +94,12 @@ nav::-webkit-scrollbar{display:none}
 }
 .tab-btn:hover{color:var(--text)}
 .tab-btn.active{color:var(--gold-lt);border-bottom-color:var(--gold)}
-main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
+main{max-width:1180px;margin:0 auto;padding:22px 20px 80px;transition:max-width .2s ease}
+/* Wide mode: a UI-only preference toggled from the Combat HUD (⤢ button) — the 1180px column
+   reads fine for most panels but crowds the Combat tab's card grid and turn plan on a big
+   screen. body-level, not main-level, so it applies the moment it's toggled regardless of
+   which tab is showing. */
+body.wide-mode main{max-width:min(1700px,96vw)}
 .tab-page{display:none;animation:fadein .18s ease}
 .tab-page.active{display:block}
 @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -1354,6 +1359,18 @@ label.fld.sug-wrap{display:block}
   border-radius:10px;padding:9px 16px 7px;margin-bottom:14px;
   box-shadow:0 6px 20px rgba(0,0,0,.5),inset 0 40px 34px -34px rgba(201,162,39,.1);
 }
+/* Wide-mode toggle — the last item in the primary row (after AC/Init/states), so it takes its
+   own spot in the space-between flow and wraps along with everything else on a narrow screen,
+   instead of an absolutely-positioned corner button fighting the states/conc cluster for the
+   same top-right real estate. */
+.chud-wide-btn{
+  flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+  width:28px;height:26px;background:var(--panel3);border:1px solid var(--border-lt);border-radius:6px;
+  color:var(--muted);font-size:.92rem;cursor:pointer;line-height:1;margin-left:auto;
+  transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+.chud-wide-btn:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
+.chud-wide-btn.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-lt)}
 /* space-between (not center): HP anchors the left edge, AC/Init/states dock to the right — the
    strip actually spans the panel now instead of clumping in the middle with dead space either side. */
 .chud-primary{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between}

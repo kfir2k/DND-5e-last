@@ -231,6 +231,7 @@ function combatHudHTML(){
     <span class="chud-sep chud-sep-conc"></span>
     <span class="ck-conc"></span>
     <span class="ck-topstates"></span>
+    <button type="button" class="chud-wide-btn" data-widetoggle title="Widen the layout for more room" aria-pressed="false">⤢</button>
     </div>
     <div class="chud-senses">
       <span class="chud-senses-lbl">Senses &amp; Movement</span>
@@ -4488,11 +4489,36 @@ function wireSkillFx(){
     if(chip) chip.classList.toggle('open');
   });
 }
+// ---------- Wide-mode toggle ----------
+// A UI-only preference, not part of the character sheet — the 1180px column is comfortable for
+// most panels but cramped for the Combat tab's card grid and turn plan on a big screen, so a
+// button in the HUD (shared by Overview and Combat — combatHudHTML() renders it into both, hence
+// looping over every match instead of a single #id) widens the whole layout. Kept in its own
+// localStorage key, independent of which character/roster slot is active.
+const WIDE_KEY='dnd5e-binder-wide-v1';
+function applyWideMode(on){
+  document.body.classList.toggle('wide-mode',on);
+  $$('[data-widetoggle]').forEach(b=>{
+    b.classList.toggle('on',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+    b.title=on?'Back to normal width':'Widen the layout for more room';
+  });
+}
+function wireWideMode(){
+  let on=false;
+  try{ on=localStorage.getItem(WIDE_KEY)==='1'; }catch(e){}
+  applyWideMode(on);
+  $$('[data-widetoggle]').forEach(b=>b.addEventListener('click',()=>{
+    on=!document.body.classList.contains('wide-mode');
+    applyWideMode(on);
+    try{ localStorage.setItem(WIDE_KEY,on?'1':'0'); }catch(e){}
+  }));
+}
 initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes();
+wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
