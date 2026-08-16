@@ -534,20 +534,18 @@ SPELL_RAW.split('\n').forEach(line=>{
 function spellSlug(name){
   return name.toLowerCase().replace(/[’']/g,'').replace(/[:/]/g,' ').trim().replace(/[^a-z0-9]+/g,'-');
 }
-// Readable text pills under the spell name — cast type (Action / Bonus Action / Reaction /
-// longer cast), plus Concentration and Ritual when they apply. Replaced the old school-icon +
-// single-letter tags, which forced players to memorize a private emoji code; words cost a bit
-// more width but read instantly at the table.
-function spellPillsHTML(name){
+// Cast-type/Concentration/Ritual starting point for a newly picked spell — the player owns and
+// can edit all three from here on (see castTag/conc/ritual on the spell object), the same way
+// meta/desc are auto-filled once and then freely rewritten. Only Action/Bonus/Reaction get a tag;
+// longer cast times (1 minute, 1 hour…) already show in full in the Cast stat cell.
+function spellTagsDefault(name){
   const sp=SPELL_DB[(name||'').trim().toLowerCase()];
-  if(!sp) return '';
+  if(!sp) return {castTag:'',conc:false,ritual:false};
   const ritual=sp.t.endsWith('r');
   const base=ritual?sp.t.slice(0,-1):sp.t;
-  const cls=base==='A'?'pill-action':base==='B'?'pill-bonus':base==='R'?'pill-react':'pill-cast';
+  const castTag=base==='A'?'action':base==='B'?'bonus':base==='R'?'reaction':'';
   const conc=(SP_DUR[sp.du]||'').startsWith('Conc');
-  return `<span class="sp-pill ${cls}">${esc(SP_TIME[base]||base)}</span>`+
-    (conc?'<span class="sp-pill pill-conc">Concentration</span>':'')+
-    (ritual?'<span class="sp-pill pill-ritual">Ritual</span>':'');
+  return {castTag,conc,ritual};
 }
 // Default text for the editable meta line: "1 Action · 60 ft · Concentration, up to 1 hour".
 // Auto-filled when a spell is picked, then the player owns the text.

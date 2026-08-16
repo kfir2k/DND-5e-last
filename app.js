@@ -2714,17 +2714,30 @@ function toRoman(n){ return ['','I','II','III','IV','V','VI','VII','VIII','IX'][
 // "Cantrip"/"1st"/"2nd"... — shared by the search results grouping and each spell row's
 // move-to-level select.
 function ordinalLevel(L){ return L===0?'Cantrip':L+(L===1?'st':L===2?'nd':L===3?'rd':'th'); }
+// Read-only pills built from the spell's own castTag/conc/ritual — owned, editable state (see
+// the tag-picker in spellRowEdit below), not a live DB lookup, so a homebrew spell with no DB
+// entry can carry pills too.
+function spellTagsHTML(sp){
+  let out='';
+  if(sp.castTag==='action') out+='<span class="sp-pill pill-action">Action</span>';
+  else if(sp.castTag==='bonus') out+='<span class="sp-pill pill-bonus">Bonus Action</span>';
+  else if(sp.castTag==='reaction') out+='<span class="sp-pill pill-react">Reaction</span>';
+  if(sp.conc) out+='<span class="sp-pill pill-conc">Concentration</span>';
+  if(sp.ritual) out+='<span class="sp-pill pill-ritual">Ritual</span>';
+  return out;
+}
 // Reading-mode row: prepared dot, name, and everything needed to run the spell at the table —
-// cast/range/duration/components in their own cells, then whatever save/attack and damage the
-// description implies pulled into a highlighted line above the flavor text. Full prose + the SRD
+// cast/range/duration/components in their own cells, tags, then whatever save the description
+// implies (still auto-detected live) plus the damage/heal line (now a real field — see dmg/heal
+// on the spell object) pulled into a highlighted line above the flavor text. Full prose + the SRD
 // facts/link stay one tap away, same as before.
 function spellRowLocked(sp,L,i){
-  const pills=spellPillsHTML(sp.name);
+  const pills=spellTagsHTML(sp);
   const detail=spellDetailHTML(sp.name,L);
   const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
   const [t,rg,du]=splitMeta(sp.meta);
   const comp=db?db.cp.split('').join(', '):'';
-  const rules=spellRulesCallout(sp.desc);
+  const resolve=spellRulesCallout(sp.desc).resolve;
   return `
   <div class="spell-entry">
     <div class="spell-row-lock" data-spellopen>
@@ -2739,8 +2752,8 @@ function spellRowLocked(sp,L,i){
       <div class="ss-cell"><b>Comp.</b><span>${esc(comp)||'—'}</span></div>
     </div>
     ${pills?`<div class="spell-pills">${pills}</div>`:''}
-    ${rules.resolve?`<div class="spell-resolve ${rules.resolve.kind}">${rules.resolve.glyph} ${esc(rules.resolve.label)}</div>`:''}
-    ${rules.damage?`<div class="spell-damage${rules.damage.heal?' heal':''}">${rules.damage.heal?'✨':'🔥'} ${esc(rules.damage.label)}</div>`:''}
+    ${resolve?`<div class="spell-resolve">${resolve.glyph} ${esc(resolve.label)}</div>`:''}
+    ${sp.dmg?`<div class="spell-damage${sp.heal?' heal':''}">${sp.heal?'✨':'🔥'} ${esc(sp.dmg)}</div>`:''}
     <div class="spell-detail-lock">
       ${sp.desc?`<p class="spell-desc-ro">${esc(sp.desc)}</p>`:''}
       ${detail}
@@ -2750,9 +2763,11 @@ function spellRowLocked(sp,L,i){
 // Editing-mode row — same stat-strip skeleton as the locked row above (three of its four cells
 // just become inputs instead of text), so unlocking never reflows the layout, only what's inside
 // the cells. Cast/Range/Duration stay one underlying `meta` string (see splitMeta) so unlocking
-// never risks losing anything a player typed in there before this existed.
+// never risks losing anything a player typed in there before this existed. Pills become a
+// tag-picker (click to set/clear Action/Bonus/Reaction, toggle Concentration/Ritual) and the
+// damage line becomes a plain text field + a heal toggle — both auto-filled once when the spell
+// is picked, then fully owned by the player, same as everything else on this row.
 function spellRowEdit(sp,L,i){
-  const pills=spellPillsHTML(sp.name);
   const detail=spellDetailHTML(sp.name,L);
   const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
   const [t,rg,du]=splitMeta(sp.meta);
@@ -2762,6 +2777,7 @@ function spellRowEdit(sp,L,i){
   const lvlSelect=`<select class="spell-lvlsel" data-spellmove="${L}.${i}" title="Move to a different level">
     ${Array.from({length:10},(_,k)=>`<option value="${k}" ${k===L?'selected':''}>${ordinalLevel(k)}</option>`).join('')}
   </select>`;
+  const tagBtn=(val,label,cls)=>`<button class="tagbtn ${cls}${sp.castTag===val?' on':''}" data-tagcast="${L}.${i}.${val}">${label}</button>`;
   return `
   <div class="spell-entry">
     <div class="spell-row">
@@ -2777,7 +2793,17 @@ function spellRowEdit(sp,L,i){
       <div class="ss-cell"><b>Duration</b><input type="text" value="${esc(du)}" data-metafield="${L}.${i}" placeholder="Instantaneous"></div>
       <div class="ss-cell"><b>Comp.</b><span>${esc(comp)||'—'}</span></div>
     </div>
-    ${pills?`<div class="spell-pills">${pills}</div>`:''}
+    <div class="tag-picker">
+      ${tagBtn('action','Action','pill-action')}
+      ${tagBtn('bonus','Bonus','pill-bonus')}
+      ${tagBtn('reaction','Reaction','pill-react')}
+      <button class="tagbtn pill-conc${sp.conc?' on':''}" data-tagconc="${L}.${i}">Concentration</button>
+      <button class="tagbtn pill-ritual${sp.ritual?' on':''}" data-tagritual="${L}.${i}">Ritual</button>
+    </div>
+    <div class="dmg-edit">
+      <button class="heal-toggle${sp.heal?' on':''}" data-healtoggle="${L}.${i}" title="${sp.heal?'Healing — tap to switch to damage':'Damage — tap to mark as healing'}">${sp.heal?'✨':'🔥'}</button>
+      <input type="text" class="dmg-input" value="${esc(sp.dmg)}" data-dmgfield="${L}.${i}" placeholder="Damage/healing, e.g. 8d6 Fire (optional)">
+    </div>
     <textarea class="spell-desc" data-li="spellLevels.${L}.spells.${i}.desc" placeholder="What does this spell do?">${esc(sp.desc)}</textarea>
     ${detail?`<div class="spell-detail">${detail}</div>`:''}
   </div>`;
@@ -2797,10 +2823,13 @@ function renderSpellLevels(){
       <div class="pips">${Array.from({length:lv.total},(_,i)=>
         `<button class="pip ${i<lv.used?'used':''}" data-pip="${L}.${i}"></button>`).join('')}</div>`;
     const rows = lv.spells.map((sp,i)=>{
-      // Older saves only stored {name,prep}; backfill the editable meta/description fields
-      // from the spell index the first time this row renders.
+      // Older saves only stored {name,prep}; backfill the editable meta/description/tags/damage
+      // fields from the spell index the first time this row renders. From then on every one of
+      // these is fully owned by the player, same as meta/desc already were.
       if(sp.meta==null) sp.meta=spellMetaDefault(sp.name);
       if(sp.desc==null) sp.desc=spellDescDefault(sp.name);
+      if(sp.castTag==null||sp.conc==null||sp.ritual==null) Object.assign(sp,spellTagsDefault(sp.name));
+      if(sp.dmg==null){ const d=spellRulesCallout(sp.desc).damage; sp.dmg=d?d.label:''; sp.heal=d?d.heal:false; }
       return locked ? spellRowLocked(sp,L,i) : spellRowEdit(sp,L,i);
     }).join('');
     return `
@@ -2845,21 +2874,57 @@ function renderSpellLevels(){
   }));
   // wire add-spell buttons
   $$('[data-addspell]').forEach(b=>b.addEventListener('click',()=>{
-    S.spellLevels[+b.dataset.addspell].spells.push({name:'',prep:false,meta:'',desc:''});
+    S.spellLevels[+b.dataset.addspell].spells.push({name:'',prep:false,meta:'',desc:'',castTag:'',conc:false,ritual:false,dmg:'',heal:false});
     renderSpellLevels(); save();
     focusLast('#spellLevels');
   }));
   // re-render after picking/typing a full spell name so pills + detail toggle appear; a
-  // recognized name also refreshes the editable meta/description with that spell's defaults
+  // recognized name also refreshes the editable meta/description/tags/damage with that spell's
+  // defaults — typing over a blank or reflavored row re-syncs it same as picking from search does.
   $$('[data-spellrow]').forEach(inp=>inp.addEventListener('change',()=>{
     const [L,i]=inp.dataset.spellrow.split('.').map(Number);
     const sp=S.spellLevels[L].spells[i];
     if(sp && SPELL_DB[(sp.name||'').trim().toLowerCase()]){
       sp.meta=spellMetaDefault(sp.name);
       sp.desc=spellDescDefault(sp.name);
+      Object.assign(sp,spellTagsDefault(sp.name));
+      const d=spellRulesCallout(sp.desc).damage;
+      sp.dmg=d?d.label:''; sp.heal=d?d.heal:false;
       save();
     }
     renderSpellLevels();
+  }));
+  // wire the cast-type tag buttons (Action/Bonus/Reaction) — click the active one again to clear
+  // it back to "no tag", click a different one to switch.
+  $$('[data-tagcast]').forEach(b=>b.addEventListener('click',()=>{
+    const [L,i,val]=b.dataset.tagcast.split('.');
+    const sp=S.spellLevels[+L].spells[+i];
+    sp.castTag = sp.castTag===val ? '' : val;
+    renderSpellLevels(); save();
+  }));
+  // wire the Concentration/Ritual toggles — independent booleans, either can be on with any
+  // cast-type tag or with none at all.
+  $$('[data-tagconc]').forEach(b=>b.addEventListener('click',()=>{
+    const [L,i]=b.dataset.tagconc.split('.').map(Number);
+    const sp=S.spellLevels[L].spells[i];
+    sp.conc=!sp.conc; renderSpellLevels(); save();
+  }));
+  $$('[data-tagritual]').forEach(b=>b.addEventListener('click',()=>{
+    const [L,i]=b.dataset.tagritual.split('.').map(Number);
+    const sp=S.spellLevels[L].spells[i];
+    sp.ritual=!sp.ritual; renderSpellLevels(); save();
+  }));
+  // wire the damage/healing text field and its heal toggle — a plain field, not re-derived from
+  // the description once touched, so correcting or clearing it here always sticks.
+  $$('[data-dmgfield]').forEach(inp=>inp.addEventListener('input',()=>{
+    const [L,i]=inp.dataset.dmgfield.split('.').map(Number);
+    S.spellLevels[L].spells[i].dmg=inp.value;
+    save();
+  }));
+  $$('[data-healtoggle]').forEach(b=>b.addEventListener('click',()=>{
+    const [L,i]=b.dataset.healtoggle.split('.').map(Number);
+    const sp=S.spellLevels[L].spells[i];
+    sp.heal=!sp.heal; renderSpellLevels(); save();
   }));
   // wire the three cast/range/duration cells (edit mode) — they're a view over the single
   // `meta` string, not separate fields, so editing any of the three just rejoins all three.
@@ -2978,7 +3043,9 @@ function wireSpellLibrary(){
   panel.addEventListener('click',e=>{
     const item=e.target.closest('[data-spellpick]'); if(!item) return;
     const sp=SPELL_DB[item.dataset.spellpick.toLowerCase()]; if(!sp) return;
-    S.spellLevels[sp.lv].spells.push({name:sp.n,prep:false,meta:spellMetaDefault(sp.n),desc:spellDescDefault(sp.n)});
+    const desc=spellDescDefault(sp.n), dmg=spellRulesCallout(desc).damage;
+    S.spellLevels[sp.lv].spells.push({name:sp.n,prep:false,meta:spellMetaDefault(sp.n),desc,
+      ...spellTagsDefault(sp.n),dmg:dmg?dmg.label:'',heal:dmg?dmg.heal:false});
     input.value=''; close();
     renderSpellLevels(); save();
   });
