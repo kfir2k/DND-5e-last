@@ -559,6 +559,40 @@ function spellMetaDefault(name){
   const rg=/^\d+$/.test(sp.rg)?sp.rg+' ft':sp.rg;
   return [t,rg,SP_DUR[sp.du]||''].filter(Boolean).join(' · ');
 }
+// Splits the single meta string back into [time, range, duration] so the Spells tab's glance
+// strip can give each its own labeled cell instead of one dash-joined line. Lossless in the other
+// direction too — [t,r,d].filter(Boolean).join(' · ') reconstructs whatever was there before,
+// even if a row was hand-typed as one odd fragment with no ' · ' separators at all (it just lands
+// entirely in the first cell).
+function splitMeta(meta){
+  const parts=(meta||'').split(' · ');
+  return [parts[0]||'', parts[1]||'', parts.slice(2).join(' · ')];
+}
+// Pulls the "how do I resolve this" line out of the free-text description, without needing a new
+// data field per spell: a save/attack/check phrase and a dice-plus-damage-type phrase, both
+// already present in ordinary rules text. Heuristic, not a parser — good on plainly written text,
+// occasionally silent or wrong on an oddly phrased one. Read-only surfacing, never touches desc.
+function spellRulesCallout(desc){
+  const text=desc||'';
+  const ABBR={str:'STR',dex:'DEX',con:'CON',int:'INT',wis:'WIS',cha:'CHA'};
+  let resolve=null;
+  // This app's own one-line spell summaries (SPELL_DESC_RAW) mark saves as "(Dex save)" or
+  // "(Dex half)" — that shorthand is what's actually in the data, not SRD prose like "Dexterity
+  // saving throw", so it's what gets matched. Attack-roll spells don't follow a consistent enough
+  // phrase in this corpus to detect reliably, so those are left to the damage line alone.
+  const sv=text.match(/\((str|dex|con|int|wis|cha)\s+(save|half)\)/i);
+  if(sv){
+    const half=sv[2].toLowerCase()==='half';
+    resolve={kind:'save',glyph:'🛡',label:ABBR[sv[1].toLowerCase()]+' Save'+(half?' · half on success':'')};
+  }
+  let damage=null;
+  const dm=text.match(/(\d+d\d+(?:\s*\+\s*\d+)?)\s*(fire|cold|acid|force|radiant|necrotic|poison|psychic|thunder|lightning|bludgeoning|piercing|slashing)?/i);
+  if(dm){
+    const type=dm[2]?(dm[2][0].toUpperCase()+dm[2].slice(1).toLowerCase()):(/heal|regain/i.test(text)?'Healing':'');
+    damage={label:dm[1]+(type?' '+type:''),heal:type==='Healing'};
+  }
+  return {resolve,damage};
+}
 // Default text for the editable description box — one-line summary from SPELL_DESC below.
 function spellDescDefault(name){
   const sp=SPELL_DB[(name||'').trim().toLowerCase()];

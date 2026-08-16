@@ -23,7 +23,7 @@ function defaultState(){
     // Features
     features:[{title:'',desc:'',fx:[]}], profLang:'', languages:[], featuresLocked:false,
     // Spells (page 3): level 0 = cantrips
-    spellClass:'', spellAbility:'',
+    spellClass:'', spellAbility:'', spellsLocked:false,
     spellLevels:Array.from({length:10},()=>({total:0,used:0,spells:[]})),
     // Inventory UI: active pack chip, folded Equipped panel
     eqTab:'ALL', invEqOpen:true,
@@ -450,31 +450,57 @@ skills:`
   <div class="panel"><h2>Skills</h2><div id="skillList"></div></div>`,
 
 spells:`
-  <div class="panel"><h2>Spellcasting</h2>
-    <div class="grid g3">
-      <label class="fld"><span>Spellcasting Class</span><input type="text" data-bind="spellClass"></label>
-      <label class="fld"><span>Spellcasting Ability</span>
-        <select data-bind="spellAbility">
-          <option value="">— none —</option>
-          <option value="int">Intelligence</option>
-          <option value="wis">Wisdom</option>
-          <option value="cha">Charisma</option>
-        </select>
-      </label>
-      <div class="stats-row" style="grid-template-columns:1fr 1fr">
-        <div class="stat computed stat-dc"><span class="stat-label">🔮 Spell Save DC</span><span class="big" data-calc="spellDC">—</span></div>
-        <div class="stat computed stat-dc"><span class="stat-label">✨ Spell Attack</span><span class="big" data-calc="spellAtk">—</span></div>
+  <div class="grimoire">
+    <div class="ledger-head">
+      <div class="stat-row">
+        <div class="stat-cell">
+          <div class="sc-label">Spellcasting Class</div>
+          <input type="text" class="sc-input" data-bind="spellClass" placeholder="—">
+        </div>
+        <div class="stat-cell">
+          <div class="sc-label">Ability</div>
+          <select class="sc-input" data-bind="spellAbility">
+            <option value="">— none —</option>
+            <option value="int">Intelligence</option>
+            <option value="wis">Wisdom</option>
+            <option value="cha">Charisma</option>
+          </select>
+        </div>
+        <div class="stat-cell">
+          <div class="sc-label">Save DC</div>
+          <div class="sc-computed" data-calc="spellDC">—</div>
+        </div>
+        <div class="stat-cell">
+          <div class="sc-label">Attack</div>
+          <div class="sc-computed" data-calc="spellAtk">—</div>
+        </div>
+      </div>
+      <div class="search-row">
+        <div class="search-label">+ Add a spell</div>
+        <div style="position:relative">
+          <input type="text" id="spellSearch" placeholder="Search your spellbook…" autocomplete="off">
+          <div id="spellResults" class="lib-results"></div>
+        </div>
+      </div>
+      <div class="toolbar-row">
+        <button class="lock-toggle" id="spellsLockBtn"></button>
+        <div class="spell-jumprow">
+          <button class="jump-chip tier0" data-jump="0" title="Cantrips">✦</button>
+          <button class="jump-chip tier1" data-jump="1" title="1st Level">I</button>
+          <button class="jump-chip tier1" data-jump="2" title="2nd Level">II</button>
+          <button class="jump-chip tier1" data-jump="3" title="3rd Level">III</button>
+          <button class="jump-chip tier2" data-jump="4" title="4th Level">IV</button>
+          <button class="jump-chip tier2" data-jump="5" title="5th Level">V</button>
+          <button class="jump-chip tier2" data-jump="6" title="6th Level">VI</button>
+          <button class="jump-chip tier3" data-jump="7" title="7th Level">VII</button>
+          <button class="jump-chip tier3" data-jump="8" title="8th Level">VIII</button>
+          <button class="jump-chip tier3" data-jump="9" title="9th Level">IX</button>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="fx-addrow" id="spellSearchBar" style="margin:0 0 12px;position:relative">
-    <div style="position:relative;flex:1 1 300px;max-width:420px">
-      <input type="text" id="spellSearch" style="width:100%" placeholder="+ Search your spellbook…" autocomplete="off">
-      <div id="spellResults" class="lib-results"></div>
-    </div>
-    <span class="prep-note" style="margin:0">Tap a result to add it at the right level · ● = prepared · ◆ = slots remaining</span>
-  </div>
-  <div id="spellLevels"></div>`,
+    <p class="prep-note" style="margin:8px 4px 0">Tap a search result to add it at the right level · tap a spell to read its full text · ◆ = slots remaining</p>
+    <div id="spellLevels"></div>
+  </div>`,
 
 inventory:`
   <div class="money-hud">
@@ -2688,10 +2714,86 @@ function toRoman(n){ return ['','I','II','III','IV','V','VI','VII','VIII','IX'][
 // "Cantrip"/"1st"/"2nd"... — shared by the search results grouping and each spell row's
 // move-to-level select.
 function ordinalLevel(L){ return L===0?'Cantrip':L+(L===1?'st':L===2?'nd':L===3?'rd':'th'); }
+// Reading-mode row: prepared dot, name, and everything needed to run the spell at the table —
+// cast/range/duration/components in their own cells, then whatever save/attack and damage the
+// description implies pulled into a highlighted line above the flavor text. Full prose + the SRD
+// facts/link stay one tap away, same as before.
+function spellRowLocked(sp,L,i){
+  const pills=spellPillsHTML(sp.name);
+  const detail=spellDetailHTML(sp.name,L);
+  const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
+  const [t,rg,du]=splitMeta(sp.meta);
+  const comp=db?db.cp.split('').join(', '):'';
+  const rules=spellRulesCallout(sp.desc);
+  return `
+  <div class="spell-entry">
+    <div class="spell-row-lock" data-spellopen>
+      ${L===0?'':`<button class="dot ${sp.prep?'on':''}" data-prep="${L}.${i}" title="Prepared"></button>`}
+      <span class="spell-name-lock">${esc(sp.name)||'Unnamed spell'}</span>
+      <span class="spell-chev">›</span>
+    </div>
+    <div class="spell-stats">
+      <div class="ss-cell"><b>Cast</b><span>${esc(t)||'—'}</span></div>
+      <div class="ss-cell"><b>Range</b><span>${esc(rg)||'—'}</span></div>
+      <div class="ss-cell"><b>Duration</b><span>${esc(du)||'—'}</span></div>
+      <div class="ss-cell"><b>Comp.</b><span>${esc(comp)||'—'}</span></div>
+    </div>
+    ${pills?`<div class="spell-pills">${pills}</div>`:''}
+    ${rules.resolve?`<div class="spell-resolve ${rules.resolve.kind}">${rules.resolve.glyph} ${esc(rules.resolve.label)}</div>`:''}
+    ${rules.damage?`<div class="spell-damage${rules.damage.heal?' heal':''}">${rules.damage.heal?'✨':'🔥'} ${esc(rules.damage.label)}</div>`:''}
+    <div class="spell-detail-lock">
+      ${sp.desc?`<p class="spell-desc-ro">${esc(sp.desc)}</p>`:''}
+      ${detail}
+    </div>
+  </div>`;
+}
+// Editing-mode row — same stat-strip skeleton as the locked row above (three of its four cells
+// just become inputs instead of text), so unlocking never reflows the layout, only what's inside
+// the cells. Cast/Range/Duration stay one underlying `meta` string (see splitMeta) so unlocking
+// never risks losing anything a player typed in there before this existed.
+function spellRowEdit(sp,L,i){
+  const pills=spellPillsHTML(sp.name);
+  const detail=spellDetailHTML(sp.name,L);
+  const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
+  const [t,rg,du]=splitMeta(sp.meta);
+  const comp=db?db.cp.split('').join(', '):'';
+  // Picked the wrong level, or a spell got reflavored to a different one? Move it in place
+  // instead of deleting the row and retyping the name in the right level's section.
+  const lvlSelect=`<select class="spell-lvlsel" data-spellmove="${L}.${i}" title="Move to a different level">
+    ${Array.from({length:10},(_,k)=>`<option value="${k}" ${k===L?'selected':''}>${ordinalLevel(k)}</option>`).join('')}
+  </select>`;
+  return `
+  <div class="spell-entry">
+    <div class="spell-row">
+      ${L===0?'':`<button class="dot ${sp.prep?'on':''}" data-prep="${L}.${i}" title="Prepared"></button>`}
+      <input type="text" value="${esc(sp.name)}" data-li="spellLevels.${L}.spells.${i}.name" data-spellrow="${L}.${i}" placeholder="Spell name…">
+      ${detail?`<button class="spell-info-btn" data-spellinfo title="More info">ℹ</button>`:''}
+      ${lvlSelect}
+      <button class="del-btn" data-del="spellLevels.${L}.spells.${i}">✕</button>
+    </div>
+    <div class="spell-stats">
+      <div class="ss-cell"><b>Cast</b><input type="text" value="${esc(t)}" data-metafield="${L}.${i}" placeholder="1 Action"></div>
+      <div class="ss-cell"><b>Range</b><input type="text" value="${esc(rg)}" data-metafield="${L}.${i}" placeholder="60 ft"></div>
+      <div class="ss-cell"><b>Duration</b><input type="text" value="${esc(du)}" data-metafield="${L}.${i}" placeholder="Instantaneous"></div>
+      <div class="ss-cell"><b>Comp.</b><span>${esc(comp)||'—'}</span></div>
+    </div>
+    ${pills?`<div class="spell-pills">${pills}</div>`:''}
+    <textarea class="spell-desc" data-li="spellLevels.${L}.spells.${i}.desc" placeholder="What does this spell do?">${esc(sp.desc)}</textarea>
+    ${detail?`<div class="spell-detail">${detail}</div>`:''}
+  </div>`;
+}
 function renderSpellLevels(){
-  $('#spellLevels').innerHTML = S.spellLevels.map((lv,L)=>{
+  const locked=S.spellsLocked;
+  const anyContent=S.spellLevels.some(lv=>lv.total>0||lv.spells.length>0);
+  $('#spellLevels').innerHTML = (locked && !anyContent)
+    ? '<p class="spell-empty" style="padding:16px 14px">Your spellbook is empty — unlock to add spells and set slot totals.</p>'
+    : S.spellLevels.map((lv,L)=>{
+    // Reading mode skips a level entirely once it has neither slots nor spells — a 1st-level
+    // wizard doesn't need to scroll past eight empty "Level 9" chapters to read their own spells.
+    // Editing mode still shows every level, since that's where slots get set up ahead of time.
+    if(locked && lv.total===0 && lv.spells.length===0) return '';
     const pips = L===0 ? '' : `
-      <span class="slot-total">Slots <input type="number" min="0" max="9" value="${lv.total}" data-slottotal="${L}"></span>
+      <span class="slot-total">Slots ${locked?`<b>${lv.total}</b>`:`<input type="number" min="0" max="9" value="${lv.total}" data-slottotal="${L}">`}</span>
       <div class="pips">${Array.from({length:lv.total},(_,i)=>
         `<button class="pip ${i<lv.used?'used':''}" data-pip="${L}.${i}"></button>`).join('')}</div>`;
     const rows = lv.spells.map((sp,i)=>{
@@ -2699,54 +2801,36 @@ function renderSpellLevels(){
       // from the spell index the first time this row renders.
       if(sp.meta==null) sp.meta=spellMetaDefault(sp.name);
       if(sp.desc==null) sp.desc=spellDescDefault(sp.name);
-      const pills=spellPillsHTML(sp.name);
-      const detail=spellDetailHTML(sp.name,L);
-      // Picked the wrong level, or a spell got reflavored to a different one? Move it in place
-      // instead of deleting the row and retyping the name in the right level's section.
-      const lvlSelect=`<select class="spell-lvlsel" data-spellmove="${L}.${i}" title="Move to a different level">
-        ${Array.from({length:10},(_,k)=>`<option value="${k}" ${k===L?'selected':''}>${ordinalLevel(k)}</option>`).join('')}
-      </select>`;
-      return `
-      <div class="spell-entry">
-        <div class="spell-row">
-          ${L===0?'':`<button class="dot ${sp.prep?'on':''}" data-prep="${L}.${i}" title="Prepared"></button>`}
-          <input type="text" value="${esc(sp.name)}" data-li="spellLevels.${L}.spells.${i}.name" data-spellrow="${L}.${i}" placeholder="Spell name…">
-          ${detail?`<button class="spell-info-btn" data-spellinfo title="More info">ℹ</button>`:''}
-          ${lvlSelect}
-          <button class="del-btn" data-del="spellLevels.${L}.spells.${i}">✕</button>
-        </div>
-        ${pills?`<div class="spell-pills">${pills}</div>`:''}
-        <input type="text" class="spell-meta" value="${esc(sp.meta)}" data-li="spellLevels.${L}.spells.${i}.meta" placeholder="Casting time · range · duration">
-        <textarea class="spell-desc" data-li="spellLevels.${L}.spells.${i}.desc" placeholder="What does this spell do?">${esc(sp.desc)}</textarea>
-        ${detail?`<div class="spell-detail">${detail}</div>`:''}
-      </div>`;
+      return locked ? spellRowLocked(sp,L,i) : spellRowEdit(sp,L,i);
     }).join('');
     return `
-    <div class="spell-level tier${spellTier(L)}">
+    <div class="spell-level tier${spellTier(L)}" id="spell-ch-${L}">
       <span class="spell-numeral">${L===0?'✦':toRoman(L)}</span>
       <div class="spell-level-head">
         <h3>${L===0?'Cantrips':'Level '+L}</h3>${pips}
       </div>
-      ${rows}
-      <button class="add-btn" data-addspell="${L}">+ Add ${L===0?'cantrip':'spell'}</button>
+      ${rows || (locked?'':`<p class="spell-empty">No ${L===0?'cantrips':'level '+L+' spells'} yet.</p>`)}
+      ${locked?'':`<button class="add-btn" data-addspell="${L}">+ Add ${L===0?'cantrip':'spell'}</button>`}
     </div>`;
   }).join('');
-  // wire slot totals
+  // wire slot totals (edit mode only — the input doesn't exist when locked)
   $$('[data-slottotal]').forEach(inp=>inp.addEventListener('change',()=>{
     const L=+inp.dataset.slottotal;
     S.spellLevels[L].total=Math.max(0,Math.min(9,num(inp.value)));
     S.spellLevels[L].used=Math.min(S.spellLevels[L].used,S.spellLevels[L].total);
     renderSpellLevels(); save();
   }));
-  // wire pips
+  // wire pips — usable in both locked and unlocked views; spending a slot mid-session isn't editing
   $$('[data-pip]').forEach(p=>p.addEventListener('click',()=>{
     const [L,i]=p.dataset.pip.split('.').map(Number);
     const lv=S.spellLevels[L];
     lv.used = (i<lv.used) ? i : i+1;
     renderSpellLevels(); save();
   }));
-  // wire prepared dots
-  $$('[data-prep]').forEach(d=>d.addEventListener('click',()=>{
+  // wire prepared dots — also usable in both views. Stops propagation because the locked row's
+  // dot sits inside the same element that toggles the description open on click.
+  $$('[data-prep]').forEach(d=>d.addEventListener('click',e=>{
+    e.stopPropagation();
     const [L,i]=d.dataset.prep.split('.').map(Number);
     const sp=S.spellLevels[L].spells[i];
     sp.prep=!sp.prep; d.classList.toggle('on'); save();
@@ -2777,8 +2861,54 @@ function renderSpellLevels(){
     }
     renderSpellLevels();
   }));
+  // wire the three cast/range/duration cells (edit mode) — they're a view over the single
+  // `meta` string, not separate fields, so editing any of the three just rejoins all three.
+  $$('.spell-stats').forEach(grid=>{
+    const inputs=grid.querySelectorAll('input[data-metafield]');
+    if(!inputs.length) return;
+    inputs.forEach(inp=>inp.addEventListener('input',()=>{
+      const [L,i]=inp.dataset.metafield.split('.').map(Number);
+      const vals=[...inputs].map(x=>x.value.trim());
+      S.spellLevels[L].spells[i].meta=vals.filter(Boolean).join(' · ');
+      save();
+    }));
+  });
   wireList('#spellLevels');
+  syncSpellJumpChips();
   renderCombatSlots();
+}
+// Bookmark-tab row in the ledger header (static markup, one per level) — greys out a level with
+// nothing in it, and hides it outright while locked, matching which chapters actually render.
+function syncSpellJumpChips(){
+  $$('.jump-chip').forEach(chip=>{
+    const L=+chip.dataset.jump;
+    const lv=S.spellLevels[L];
+    const has=lv.total>0||lv.spells.length>0;
+    chip.classList.toggle('empty',!has);
+    chip.style.display=(S.spellsLocked && !has)?'none':'';
+  });
+}
+function wireSpellJump(){
+  $$('.jump-chip').forEach(chip=>chip.addEventListener('click',()=>{
+    const el=document.getElementById('spell-ch-'+chip.dataset.jump);
+    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
+}
+// Lock toggle (compact read-only view) — same pattern as Features' lock, just swaps the panel
+// chrome and re-renders the list.
+function wireSpellsLock(){
+  const syncChrome=()=>{
+    const locked=!!S.spellsLocked;
+    const btn=$('#spellsLockBtn');
+    btn.textContent=locked?'🔒':'🔓';
+    btn.title=locked?'Locked — tap to unlock editing':'Unlocked — tap to lock into a compact reading view';
+    btn.classList.toggle('locked',locked);
+  };
+  $('#spellsLockBtn').addEventListener('click',()=>{
+    S.spellsLocked=!S.spellsLocked;
+    syncChrome(); renderSpellLevels(); save();
+  });
+  syncChrome();
 }
 // Compact slot tracker mirrored onto the Combat tab — a caster needs to spend slots mid-fight far
 // more often than they need to edit the spellbook, so this reads the same S.spellLevels data as
@@ -2811,11 +2941,15 @@ function wireCombatSlots(){
   });
 }
 // Tap-to-expand detail (range/duration/DC/wikidot link) — delegated once on the persistent
-// container so it survives every renderSpellLevels() re-render.
+// container so it survives every renderSpellLevels() re-render. Two triggers: the ℹ button
+// (edit mode, where the row itself is full of text inputs so tapping it can't mean "expand"),
+// and the whole row (locked/reading mode, where there's nothing to type into).
 function wireSpellDetails(){
   $('#spellLevels').addEventListener('click',e=>{
-    const btn=e.target.closest('[data-spellinfo]'); if(!btn) return;
-    btn.closest('.spell-entry').classList.toggle('open');
+    const btn=e.target.closest('[data-spellinfo]');
+    if(btn){ btn.closest('.spell-entry').classList.toggle('open'); return; }
+    const row=e.target.closest('[data-spellopen]');
+    if(row) row.closest('.spell-entry').classList.toggle('open');
   });
 }
 // Searchable spell index — same tap-to-add pattern as the Feature/Race library search. Picking
@@ -4518,7 +4652,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

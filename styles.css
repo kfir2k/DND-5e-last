@@ -1678,28 +1678,59 @@ select.add-btn{padding:6px 10px;font-size:.8rem;width:auto;align-self:flex-start
    and slot trackers cut as diamond runes rather than the round pips Combat uses, so the two
    "resource trackers" in the app never look interchangeable. Power tier (cantrip → 9th) still
    reads through color, carried by the numeral + spine, not a glow wash. */
-/* Back to CSS multi-column (a CSS grid pass here packed every card in the same row to that
-   row's tallest card, leaving big blank gaps under the shorter ones and throwing off the
-   reading order — worse than what it was meant to fix). column-width packs cards top-to-bottom
-   per column like the masonry layout this was always meant to be. */
-#spellLevels{column-width:340px;column-gap:20px}
+/* ---------- Spells: one connected ledger — identity + search + toolbar + chapters share a
+   single container instead of stacking separate panels with gaps between them. Chapters used to
+   be CSS multi-column masonry cards; the browser rebalances every column whenever any one card's
+   height changes, which visibly hopped unrelated cards to new spots the moment you expanded one.
+   One column, normal document flow: expanding a row only pushes what's below *that row* down. */
+.grimoire{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.35);margin-bottom:18px;
+  background-image:repeating-linear-gradient(180deg,transparent,transparent 30px,rgba(201,162,39,.035) 31px);
+}
+/* Sticky so identity + search + the lock/jump toolbar stay put while a long book scrolls beneath
+   — same position:sticky the Inventory coin purse already uses. Rounded to match the container's
+   own top corners by hand (not overflow:hidden on .grimoire) because an overflow:hidden ancestor
+   is exactly what breaks position:sticky. */
+.ledger-head{
+  position:sticky;top:0;z-index:5;background:var(--panel);border-radius:12px 12px 0 0;
+  border-bottom:1px solid var(--border-lt);box-shadow:0 8px 16px -12px rgba(0,0,0,.5);
+}
+.stat-row{display:grid;grid-template-columns:1.3fr 1fr .8fr .8fr}
+.stat-cell{padding:12px 16px;border-right:1px solid var(--border)}
+.stat-cell:last-child{border-right:none}
+.sc-label{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.sc-input{width:100%;background:transparent;border:none;border-bottom:1px dashed transparent;color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:600;font-size:.98rem;padding:2px 0}
+.sc-input:hover{border-bottom-color:var(--border-lt)}
+.sc-input:focus{outline:none;border-bottom-color:var(--gold)}
+select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
+.sc-computed{font-family:'Cinzel',serif;font-weight:700;font-size:1.2rem;color:var(--gold-lt)}
+.search-row{display:grid;grid-template-columns:auto 1fr;align-items:center;border-top:1px solid var(--border)}
+.search-row .search-label{padding:10px 16px;font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-right:1px solid var(--border);white-space:nowrap}
+.search-row input{width:100%;background:transparent;border:none;color:var(--text);font-size:.95rem;padding:10px 16px}
+.search-row input:focus{outline:none;background:var(--ink)}
+.toolbar-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:9px 16px;border-top:1px solid var(--border)}
+.spell-jumprow{display:flex;gap:6px;flex-wrap:wrap}
+.jump-chip{
+  width:26px;height:24px;border-radius:5px;border:1px solid var(--accent-dim,var(--border-lt));background:transparent;
+  color:var(--accent,var(--muted));font-family:'Cinzel',serif;font-weight:700;font-size:.68rem;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;-webkit-tap-highlight-color:transparent;
+}
+.jump-chip:hover{background:var(--accent-dim,var(--panel3))}
+.jump-chip.empty{opacity:.4;border-style:dashed}
+.jump-chip.tier0{--accent:#8b98ab;--accent-dim:rgba(139,152,171,.3)}
+.jump-chip.tier1{--accent:#5aa9e0;--accent-dim:rgba(90,169,224,.3)}
+.jump-chip.tier2{--accent:#a58ce0;--accent-dim:rgba(165,140,224,.3)}
+.jump-chip.tier3{--accent:#c9a227;--accent-dim:rgba(201,162,39,.3)}
+#spellLevels{padding:2px 4px 8px}
 .spell-level{
   --accent:var(--gold); --accent-dim:rgba(201,162,39,.18);
-  break-inside:avoid;margin-bottom:16px;position:relative;
-  background:var(--panel2);
-  border:1px solid var(--border-lt);border-left:4px solid var(--accent);
-  border-radius:3px 10px 10px 3px;padding:12px 14px 14px;
-  overflow:hidden;min-height:100px;
+  position:relative;padding:18px 12px 14px;border-bottom:1px solid var(--border);overflow:hidden;
 }
-/* overflow:hidden keeps row content (name/meta inputs, the description box) clipped to the
-   card — without it, anything that computes even slightly wider than the card visibly bled
-   past its rounded border instead of staying contained. That used to also clip the numeral on
-   short/header-only cards, which is what min-height guards against now: the card is always
-   tall enough (numeral needs ~4px + 3.4rem ≈ 66px) to show it in full without needing overflow
-   to stay open. */
+.spell-level:last-child{border-bottom:none}
 .spell-numeral{
-  position:absolute;top:4px;right:8px;font-family:'Cinzel',serif;font-weight:700;
-  font-size:3.4rem;line-height:1;color:var(--accent);opacity:.16;letter-spacing:-2px;
+  position:absolute;top:6px;right:10px;font-family:'Cinzel',serif;font-weight:700;
+  font-size:3.4rem;line-height:1;color:var(--accent);opacity:.14;letter-spacing:-2px;
   pointer-events:none;user-select:none;z-index:0;
 }
 .spell-level.tier0{--accent:#8b98ab;--accent-dim:rgba(139,152,171,.2)}
@@ -1714,6 +1745,8 @@ select.add-btn{padding:6px 10px;font-size:.8rem;width:auto;align-self:flex-start
 .spell-level-head h3{color:var(--accent);font-size:.8rem;letter-spacing:2.5px;text-transform:uppercase}
 .slot-total{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.85rem}
 .slot-total input{width:52px;text-align:center;padding:3px}
+.slot-total b{color:var(--accent);font-family:'Cinzel',serif}
+.spell-empty{color:var(--faint);font-size:.85rem;font-style:italic;padding:6px 2px 14px;position:relative;z-index:1}
 .pips{display:flex;gap:9px;flex-wrap:wrap}
 /* Rune-cut slot trackers: a rotated square reads as a carved sigil, distinct from Combat's
    round pips — the two rest-resource trackers in the app now read as different things. */
@@ -1740,15 +1773,12 @@ select.add-btn{padding:6px 10px;font-size:.8rem;width:auto;align-self:flex-start
   border-color:var(--accent,var(--gold-dim));opacity:.55;
 }
 .cslot-pips .pip.used{background:var(--accent,var(--gold));border-color:var(--accent,var(--gold));opacity:1}
-/* Compact spellbook row: name + inline tags (school seal, ritual/concentration, components) —
-   the old version always showed a full sentence of range/duration/etc. under every row; that's
-   now tucked behind the ℹ toggle so the list reads as a scannable page, not a wall of text. */
-.spell-entry{position:relative;z-index:1;border-bottom:1px solid var(--border);padding:4px 0}
-.spell-entry:last-of-type{border-bottom:none}
+.spell-entry{position:relative;z-index:1;padding:8px 0}
+.spell-entry+.spell-entry{border-top:1px solid var(--border)}
 /* flex-wrap:wrap is the last line of defense: if the name input, ℹ button, level select and
    delete button still can't all fit on one line on some narrow screen, the row breaks onto a
-   second line and grows the card taller — which the card always has room for — rather than any
-   of them getting pushed past the card's edge. */
+   second line and grows the chapter taller — which it always has room for — rather than any
+   of them getting pushed past the edge. */
 .spell-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:3px 0}
 /* Manuscript-line inputs: no box chrome until touched, so a filled-in spellbook page reads as
    handwritten entries on ruled paper rather than a stack of form fields. */
@@ -1758,13 +1788,19 @@ select.add-btn{padding:6px 10px;font-size:.8rem;width:auto;align-self:flex-start
 }
 .spell-row input[type=text]:hover{border-bottom-color:var(--border-lt)}
 .spell-row input[type=text]:focus{background:var(--ink);border-color:transparent;border-bottom-color:var(--accent);border-radius:4px}
-.spell-row .dot{border-color:var(--accent-dim)}
-.spell-row .dot.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px var(--accent-dim)}
+.spell-row .dot,.spell-row-lock .dot{border-color:var(--accent-dim)}
+.spell-row .dot.on,.spell-row-lock .dot.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px var(--accent-dim)}
 .sp-badge{
   font-size:.78rem;flex-shrink:0;width:20px;height:20px;border-radius:50%;
   display:inline-flex;align-items:center;justify-content:center;
   border:1px solid var(--accent-dim);background:var(--panel3);
 }
+/* Reading-mode row: tap anywhere to expand the full text — there's nothing to type into, unlike
+   the edit-mode row below, which needs a dedicated ℹ button since the row is full of inputs. */
+.spell-row-lock{display:flex;align-items:center;gap:10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.spell-name-lock{font-family:'Cinzel',serif;font-weight:600;font-size:1rem;color:var(--text);flex:1;min-width:0}
+.spell-chev{color:var(--faint);font-size:.85rem;transition:transform .15s;flex-shrink:0}
+.spell-entry.open .spell-chev{transform:rotate(90deg);color:var(--accent)}
 /* Readable text pills under the spell name — cast type + Concentration/Ritual flags */
 .spell-pills{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 4px 30px}
 .sp-pill{
@@ -1779,33 +1815,48 @@ select.add-btn{padding:6px 10px;font-size:.8rem;width:auto;align-self:flex-start
 .pill-conc{color:#b9a3ec;border-color:rgba(185,163,236,.45)}
 .pill-item{color:#6fd0c4;border-color:rgba(111,208,196,.45)}
 .pill-ritual{color:#6fd0c4;border-color:rgba(111,208,196,.45)}
-/* Editable meta line: "1 Action · 60 ft · Concentration, up to 1 hour". Selector is qualified
-   as input[type=text].spell-meta, not just .spell-meta — this is an <input type=text>, and the
-   generic base rule (input[type=text]{width:100%...}) matches on element+attribute, which beats
-   a plain class selector on specificity. A bare .spell-meta lost that fight silently: its
-   width:calc(100% - 30px) never actually applied, base's width:100% won instead, and combined
-   with the 30px left margin here that's still exactly 30px of guaranteed overflow past the
-   card's right edge every time — not a layout/viewport issue, a specificity one. */
-input[type=text].spell-meta{
-  display:block;width:calc(100% - 30px);margin:0 0 5px 30px;
-  background:transparent;border:1px solid transparent;border-radius:6px;
-  color:var(--muted);font-size:.8rem;padding:4px 8px;font-family:inherit;
+/* The glance strip: cast time / range / duration / components, each its own labeled cell instead
+   of one dash-joined line. Same grid skeleton whether reading or editing — three of the four
+   cells just swap text for an input — so unlocking never reflows the row, only what's inside it. */
+.spell-stats{
+  display:grid;grid-template-columns:repeat(4,1fr);margin:7px 0 0 30px;
+  background:rgba(0,0,0,.18);border:1px solid var(--border);border-radius:7px;overflow:hidden;
 }
-input[type=text].spell-meta:hover{border-color:var(--border)}
-input[type=text].spell-meta:focus{background:var(--ink);border-color:var(--accent);color:var(--text);outline:none}
+.ss-cell{padding:6px 10px;border-right:1px solid var(--border)}
+.ss-cell:last-child{border-right:none}
+.ss-cell b{display:block;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-bottom:2px;font-weight:600}
+.ss-cell span{font-size:.82rem;color:var(--text)}
+.ss-cell input{width:100%;background:transparent;border:none;color:var(--text);font-size:.82rem;padding:0;font-family:inherit}
+.ss-cell input:focus{outline:none}
+.ss-cell:focus-within{background:var(--ink)}
+/* Pulled out of the description text (see spellRulesCallout in data-spells.js) so the one thing
+   you need mid-fight — how do I resolve this, what does it hit for — reads without opening the
+   row at all. */
+.spell-resolve,.spell-damage{
+  margin:7px 0 0 30px;font-family:'Cinzel',serif;font-size:.78rem;font-weight:600;
+  display:flex;align-items:center;gap:7px;letter-spacing:.3px;
+}
+.spell-resolve{color:var(--ember-lt)}
+.spell-damage{color:var(--ember-lt)}
+.spell-damage.heal{color:var(--green)}
 /* Editable spell description — JS (autoGrow) sets the exact height to match its content on
    every render and keystroke, so this never needs its own scrollbar. resize:none because a
    manual drag would fight that auto-height and could shrink the box below its own text again,
    right back to hiding what you typed. overflow:hidden belt-and-suspenders against a scrollbar
    flashing for a frame before JS resizes it. */
 .spell-desc{
-  display:block;width:calc(100% - 30px);margin:0 0 7px 30px;
+  display:block;width:calc(100% - 30px);margin:7px 0 0 30px;
   background:rgba(0,0,0,.22);border:1px solid var(--border);border-radius:8px;
   color:var(--text);font-size:.85rem;line-height:1.45;padding:8px 11px;
   font-family:inherit;resize:none;overflow:hidden;min-height:38px;
 }
 .spell-desc:focus{border-color:var(--accent);outline:none;background:var(--ink)}
-.spell-desc::placeholder,.spell-meta::placeholder{color:var(--faint)}
+/* Reading mode's collapsed prose + SRD facts/link — same open/close mechanism as the edit-mode
+   .spell-detail panel below, just holding plain text instead of a form. */
+.spell-detail-lock{max-height:0;overflow:hidden;opacity:0;margin-left:30px;transition:max-height .25s ease,opacity .2s ease,margin-top .25s ease}
+.spell-entry.open .spell-detail-lock{max-height:320px;opacity:1;margin-top:9px}
+.spell-desc-ro{font-size:.86rem;color:var(--muted);line-height:1.55;margin-bottom:8px}
+.spell-desc::placeholder,.ss-cell input::placeholder{color:var(--faint)}
 .sp-tag{
   color:var(--accent);border:1px solid var(--accent-dim);border-radius:5px;
   font-size:.64rem;font-weight:700;padding:0 4px;flex-shrink:0;
