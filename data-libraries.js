@@ -124,6 +124,13 @@ const FEATURE_LIB=[
  {n:'Blessed Healer',g:'Cleric — Life Domain',l:6,d:'Spells that restore HP to others also heal you for 2 + the spell\'s level.'},
  {n:'Divine Strike (Life)',g:'Cleric — Life Domain',l:8,d:'Once per turn, add 1d8 radiant damage on a weapon hit (2d8 at 14th level).',combat:true},
  {n:'Supreme Healing',g:'Cleric — Life Domain',l:17,d:'Your healing spells restore the maximum possible HP instead of rolling.'},
+ // Cleric: Grave Domain
+ {n:'Circle of Mortality',g:'Cleric — Grave Domain',l:1,d:'Healing spells restore the maximum possible HP to a creature at 0 HP instead of rolling. Also learn Spare the Dying (doesn\'t count against cantrips known; 30 ft. range, bonus action for you).'},
+ {n:'Eyes of the Grave',g:'Cleric — Grave Domain',l:1,d:'Action: sense undead within 60 ft. (not behind total cover) and see a faint aura on any you can see. WIS mod uses (min 1) per long rest.',combat:true,usesPer:'long',usesScale:'wis'},
+ {n:'Path to the Grave (Channel Divinity)',g:'Cleric — Grave Domain',l:2,d:'Channel Divinity: curse one creature within 30 ft. until the end of your next turn — the next attack against it (yours or an ally\'s) gains vulnerability to all its damage, then the curse ends.',combat:true},
+ {n:'Sentinel at Death\'s Door',g:'Cleric — Grave Domain',l:6,d:'Reaction: turn a critical hit against you or a creature within 30 ft. into a normal hit, canceling crit effects. WIS mod uses (min 1) per long rest.',combat:true,usesPer:'long',usesScale:'wis'},
+ {n:'Potent Spellcasting (Grave)',g:'Cleric — Grave Domain',l:8,d:'Add your WIS mod to the damage you deal with Cleric cantrips.',combat:true},
+ {n:'Keeper of Souls',g:'Cleric — Grave Domain',l:17,d:'When an enemy dies within 60 ft. of you, regain HP equal to its Hit Dice and give them to yourself or one ally within 60 ft. (can\'t exceed their max HP). Not while incapacitated.',combat:true,usesMax:1,usesPer:'short'},
  // Druid: Circle of the Moon
  {n:'Combat Wild Shape',g:'Druid — Circle of the Moon',l:2,d:'Wild Shape as a bonus action; spend a spell slot while shapeshifted to heal yourself (1d8 per slot level).',combat:true},
  {n:'Circle Forms',g:'Druid — Circle of the Moon',l:2,d:'Wild Shape into higher-CR beasts than other druids (CR 1 at 2nd level, scaling with your druid level).'},
