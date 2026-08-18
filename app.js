@@ -5,7 +5,13 @@ function defaultState(){
     name:'', classLevel:'', background:'', playerName:'', race:'', alignment:'', xp:'',
     inspiration:false, profBonus:2,
     // Smart build (class/race presets)
-    classId:'', level:1, subclass:'', raceId:'', subraceId:'', flexBonus:['',''], asi:{}, asiExtra:[],
+    classId:'', level:1, subclass:'', subclassClassId:'', raceId:'', subraceId:'', flexBonus:['',''], asi:{}, asiExtra:[],
+    // Build-derived fields the player has taken manual control of (see BUILD_FIELDS). A key being
+    // present at all means "hands off" — applyBuild still computes the rules value to show as a
+    // reference, but writes yours. autoGrant mirrors class/subclass/race features into S.features;
+    // off by default, because which features you actually want on the sheet is the player's call,
+    // not something to decide for them the moment they tap a class.
+    buildOverride:{}, autoGrant:false, buildCustomOpen:false, buildMigrated:false,
     abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},
     saveProf:{str:false,dex:false,con:false,int:false,wis:false,cha:false},
     skills:Object.fromEntries(SKILLS.map(s=>[s[0],0])), // 0 none, 1 proficient, 2 expertise
@@ -63,7 +69,8 @@ function flexCount(){
   if(ri.r.motm) return 2; // MotM lineages: choose a +2 and a +1
   return (ri.sub&&ri.sub.flex)||ri.r.flex||0;
 }
-function racialBonus(k){
+// What the lineage data itself grants.
+function racialBonusRules(k){
   const ri=raceInfo(); if(!ri) return 0;
   if(ri.r.motm){ // flexBonus[0] gets +2, flexBonus[1] gets +1
     let b=0;
@@ -74,6 +81,17 @@ function racialBonus(k){
   let b=((ri.r.bonus&&ri.r.bonus[k])||0)+((ri.sub&&ri.sub.bonus&&ri.sub.bonus[k])||0);
   if(flexCount()>0 && S.flexBonus.includes(k)) b+=1;
   return b;
+}
+// What actually applies. RACES carries one canonical spread per lineage — Tiefling is +2 CHA
+// +1 INT, which is really the Asmodeus bloodline — but the variant bloodlines just move that
+// third point somewhere else (Dispater +1 DEX, Zariel +1 STR, and so on for a dozen more).
+// Fanning all 46 lineages out into every published variant would be a lot of near-identical
+// data for something a player can state in one line, so the whole spread is instead one
+// overridable field: take it over in Build ▸ Customize and type what your bloodline, uncommon
+// lineage or DM actually gave you. Same override rule as every other build-derived value.
+function racialBonus(k){
+  const ov=bovHas('raceBonus')&&S.buildOverride.raceBonus;
+  return ov ? num(ov[k]) : racialBonusRules(k);
 }
 // Bonuses from Ability Score Improvements chosen at ASI levels, plus any DM-granted bonus picks
 // (S.asiExtra — outside the normal level progression, so they always count regardless of level).
@@ -250,7 +268,7 @@ overview:`
     <div class="ov-id-main">
       <input type="text" class="ov-id-name" data-bind="name" placeholder="Character Name" autocomplete="off">
       <div class="ov-id-line">
-        <input type="text" class="ov-id-field" data-bind="subclass" placeholder="Subclass" size="12">
+        <input type="text" class="ov-id-field" id="subclassOv" data-bind="subclass" placeholder="Subclass" size="12" autocomplete="off" readonly>
         <span class="ov-id-dot">·</span>
         <input type="text" class="ov-id-field" data-bind="classLevel" placeholder="Class &amp; Level" size="12">
         <span class="ov-id-dot">·</span>
@@ -364,6 +382,10 @@ build:`
       <label class="fld flex-fld" id="flexFld" style="display:none"><span id="flexLbl">Flexible Bonus</span><div class="bPillRow" id="flexPills"></div></label>
     </div>
     <p class="prep-note" id="buildNote">Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses. Subclass features are searchable in the Features tab once picked here.</p>
+    <div class="bCustom">
+      <button type="button" class="bCustomBtn" id="buildCustomBtn" title="Override any of the values your class and heritage set — they stop being overwritten once you do">✎ Customize defaults</button>
+      <div class="bCustomBody" id="buildCustomBody" style="display:none"></div>
+    </div>
   </div>
   <div class="panel" id="asiPanel" style="display:none"><h2>Level-Up Choices — ASI &amp; Feats</h2>
     <p class="prep-note" style="margin:0 0 10px">ASI = two +1s (same ability twice for +2), added automatically. Or pick a Feat.</p>
@@ -674,6 +696,7 @@ features:`
         <input type="text" id="raceSearch" style="width:100%" placeholder="+ Search race traits…" autocomplete="off">
         <div id="raceResults" class="lib-results"></div>
       </div>
+      <button type="button" class="lib-scope" id="libScope" title="Narrow both searches to what your class, subclass, heritage and level actually give you"></button>
       <span class="prep-note" style="margin:0">effects come pre-attached</span>
     </div>
     <div id="featureList"></div>
@@ -804,6 +827,40 @@ function load(){
   }catch(e){ /* corrupt data -> start fresh */ }
   migrateAttacks();
   migrateNotes();
+  migrateBuild();
+}
+// Build overrides and feature auto-granting arrived after these characters were already written.
+// A subclass typed before subclassClassId existed is adopted by the current class every load,
+// so it isn't misread as "left over from a class you switched away from" and cleared.
+//
+// The rest runs once per sheet (buildMigrated pins it, so it survives export/import too) and
+// settles two things an existing character can't answer for itself:
+//  - Anything already different from what the class and heritage rules would hand you — a
+//    hand-typed "90FT" darkvision, an extra save proficiency, a multiclass "Cleric 3 / Rogue 2" —
+//    is recorded as a deliberate override instead of being normalised away the first time someone
+//    taps the Build tab. applyBuild now writes speed/vision/race, which it partly didn't before,
+//    so without this pass those edits would silently vanish on upgrade.
+// Auto-granting needs no migration: it is off by default for everyone, new sheets included, so
+// an existing Features tab is never touched until the player asks for it in Build ▸ Customize.
+// A blank value is never claimed — an unfilled field is not an edit, and pinning "" would freeze
+// the field empty forever. A non-blank one always is, even where the class grants nothing: slots
+// on a non-casting class are either a deliberate Eldritch Knight or a leftover from a class the
+// sheet used to be, and there's no telling which apart, so they're kept and flagged "custom" with
+// a ↺ rather than silently deleted.
+const bovBlank=v=>v===''||v==null||(Array.isArray(v)&&(!v.length||v.every(x=>!x)));
+function migrateBuild(){
+  if(!S.buildOverride||typeof S.buildOverride!=='object') S.buildOverride={};
+  if(S.subclass && !S.subclassClassId) S.subclassClassId=S.classId;
+  if(S.buildMigrated) return;
+  S.buildMigrated=true;
+  const authored=(S.features||[]).some(f=>(f.title||'').trim()||(f.desc||'').trim());
+  if(!authored && !S.classId && !S.raceId) return; // brand-new sheet: nothing to preserve
+  BUILD_FIELDS.forEach(f=>{
+    if(!f.avail()) return;
+    const cur=f.get();
+    if(bovBlank(cur)) return;
+    if(JSON.stringify(cur)!==JSON.stringify(f.rules())) S.buildOverride[f.key]=cur;
+  });
 }
 // Notes predate tags/session (the Session Timeline layout) — backfill both on any older save
 // so every note has a shape renderNotes() can rely on instead of scattering `||[]` everywhere.
@@ -874,6 +931,11 @@ function bindAll(){
     el.addEventListener('input',()=>{
       const val = el.type==='number' ? num(el.value) : el.value;
       setPath(S,el.dataset.bind,val);
+      // Editing a build-derived field in its natural home — the header's Class & Level and Race,
+      // the Overview vitals' Speed / Prof / Vision — takes it over from the class or heritage
+      // default (see BUILD_FIELDS). Without this the value looked editable but the next tap on
+      // the Build tab stamped the computed one straight back over it.
+      if(buildField(el.dataset.bind)){ bovClaim(el.dataset.bind); renderBuildNote(); renderBuildCustom(); }
       syncBound(el.dataset.bind,el);
       if(el.tagName==='TEXTAREA') autoGrow(el);
       recalc(); save();
@@ -925,7 +987,11 @@ function renderSaves(){
   $$('#saveList, #ovSaves').forEach(el=>el.innerHTML=html);
   $$('[data-save]').forEach(b=>b.addEventListener('click',()=>{
     S.saveProf[b.dataset.save]=!S.saveProf[b.dataset.save];
-    renderSaves(); recalc(); save();
+    // Toggling a save by hand takes the field over from the class default — otherwise the next
+    // tap on the Build tab would stamp c.saves straight back over it. ↺ in Build ▸ Customize
+    // hands it back to the class.
+    bovClaim('saves');
+    renderSaves(); renderBuildNote(); renderBuildCustom(); recalc(); save();
   }));
 }
 // Terse feature badges for a skill — permanent grants (✦, green) and situational reminders
@@ -1572,6 +1638,12 @@ function featureSourceMeta(f){
   if(s.kind==='class'){
     const c=CLASSES[s.classId];
     return {byline:s.className||(c&&c.name)||'',color:CLASS_COLOR[s.classId]||'#c9a227'};
+  }
+  // Subclass features wear their class's color too — they're the same pillar of the character —
+  // but the byline carries the full "Cleric — Life Domain" so the two read apart at a glance.
+  if(s.kind==='subclass'){
+    const c=CLASSES[s.classId];
+    return {byline:s.className||((c?c.name+' — ':'')+(s.subclassName||'')),color:CLASS_COLOR[s.classId]||'#c9a227'};
   }
   if(s.kind==='race') return {byline:s.raceName||'',color:'#7dc26a'};
   if(s.kind==='feat') return {byline:'Feat',color:'#a58ce0'};
@@ -2370,15 +2442,63 @@ function libEntryToFeature(ent,source){
   const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
   return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source};
 }
+// Same job for RACE_LIB entries — shared by the race-trait search box below and the heritage
+// auto-grant (syncGrantedFeatures), so a trait added either way comes out identically wired.
+function raceEntryToFeature(ent,source){
+  // deep-copy effects; Dwarven Toughness scales with current level
+  let fx=(ent.fx||[]).map(x=>({...x}));
+  if(ent.n==='Dwarven Toughness (Hill Dwarf)') fx=[{t:'stat',stat:'hpmax',n:Math.max(1,num(S.level))}];
+  // Traits like Orc's Adrenaline Rush (proficiency) or a CHA/WIS/etc-scaled one carry usesScale
+  // so their max uses stay synced to that stat automatically as you level up.
+  const usesScale=ent.usesScale||'';
+  const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
+  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source};
+}
 // ----- Feature library: searchable instead of one giant native <select> (a lot of options) -----
+// Both search boxes used to list the entire library — all twelve classes, every subclass, every
+// heritage — no matter who you were playing, so finding your own Channel Divinity meant scrolling
+// past eleven other classes' features. They now default to "yours": your class, your subclass,
+// your heritage, capped at your level, plus feats (which anyone can take). The scope button flips
+// back to the full list for multiclassing, homebrew, or just browsing.
+let LIB_SCOPE_MINE=true;
+function libEntryIsMine(e){
+  const c=CLASSES[S.classId];
+  if(e.g==='Feats') return true;
+  if(!c) return false;
+  const own = e.g===c.name || (S.subclass && e.g===c.name+' — '+S.subclass);
+  return own && num(e.l)<=num(S.level);
+}
+function raceEntryIsMine(e){
+  const ri=raceInfo(); if(!ri) return false;
+  return e.g===ri.r.name && raceTraitApplies(e.n,(ri.sub&&ri.sub.name)||'');
+}
+function renderLibScope(){
+  const b=$('#libScope'); if(!b) return;
+  b.textContent=LIB_SCOPE_MINE?'⌾ Mine only':'◎ Whole library';
+  b.classList.toggle('on',LIB_SCOPE_MINE);
+}
+function wireLibScope(){
+  renderLibScope();
+  $('#libScope')?.addEventListener('click',()=>{
+    LIB_SCOPE_MINE=!LIB_SCOPE_MINE;
+    renderLibScope();
+    // Repaint whichever list is open so the change is visible immediately.
+    $('#libSearch')?.dispatchEvent(new Event('input',{bubbles:true}));
+    $('#raceSearch')?.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+}
 function wireLibrary(){
   const input=$('#libSearch'), panel=$('#libResults');
   const groupsOrder=[...new Set(FEATURE_LIB.map(e=>e.g))];
   const matches=(e,q)=>!q || e.n.toLowerCase().includes(q) || e.g.toLowerCase().includes(q) || (e.d||'').toLowerCase().includes(q);
   function renderResults(){
     const q=input.value.trim().toLowerCase();
-    const items=FEATURE_LIB.map((e,idx)=>({...e,idx})).filter(e=>matches(e,q));
-    if(!items.length){ panel.innerHTML='<div class="empty">No matches</div>'; return; }
+    const items=FEATURE_LIB.map((e,idx)=>({...e,idx}))
+      .filter(e=>(!LIB_SCOPE_MINE||libEntryIsMine(e))&&matches(e,q));
+    if(!items.length){
+      panel.innerHTML=`<div class="empty">No matches${LIB_SCOPE_MINE?' — "Mine only" is on, tap it to search the whole library':''}</div>`;
+      return;
+    }
     panel.innerHTML=groupsOrder.map(g=>{
       const inGroup=items.filter(e=>e.g===g);
       if(!inGroup.length) return '';
@@ -2399,7 +2519,12 @@ function wireLibrary(){
     // so their max stays synced automatically as you level up or raise that ability.
     // Tag where this came from — class feature vs. feat — so the card can wear its source
     // as a colored wax seal instead of every feature looking identical.
-    const source = ent.g==='Feats' ? {kind:'feat'} : {kind:'class',classId:classIdFromGroupName(ent.g),className:ent.g};
+    // "Cleric — Life Domain" groups are subclass features and get their own source kind, so a
+    // subclass card is distinguishable from a base-class one instead of both reading as "class".
+    const isSub=ent.g.includes(' — ');
+    const source = ent.g==='Feats' ? {kind:'feat'}
+      : {kind:isSub?'subclass':'class',classId:classIdFromGroupName(ent.g),className:ent.g,
+         ...(isSub?{subclassName:ent.g.split(' — ')[1]}:{})};
     S.features.push(libEntryToFeature(ent,source));
     input.value=''; close();
     fxRefresh();
@@ -2415,8 +2540,12 @@ function wireRaceLibrary(){
   const matches=(e,q)=>!q || e.n.toLowerCase().includes(q) || e.g.toLowerCase().includes(q) || (e.d||'').toLowerCase().includes(q);
   function renderResults(){
     const q=input.value.trim().toLowerCase();
-    const items=RACE_LIB.map((e,idx)=>({...e,idx})).filter(e=>matches(e,q));
-    if(!items.length){ panel.innerHTML='<div class="empty">No matches</div>'; return; }
+    const items=RACE_LIB.map((e,idx)=>({...e,idx}))
+      .filter(e=>(!LIB_SCOPE_MINE||raceEntryIsMine(e))&&matches(e,q));
+    if(!items.length){
+      panel.innerHTML=`<div class="empty">No matches${LIB_SCOPE_MINE?' — "Mine only" is on, tap it to search every heritage':''}</div>`;
+      return;
+    }
     panel.innerHTML=groupsOrder.map(g=>{
       const inGroup=items.filter(e=>e.g===g);
       if(!inGroup.length) return '';
@@ -2431,15 +2560,7 @@ function wireRaceLibrary(){
   panel.addEventListener('click',e=>{
     const item=e.target.closest('[data-raceidx]'); if(!item) return;
     const ent=RACE_LIB[+item.dataset.raceidx];
-    // deep-copy effects; Dwarven Toughness scales with current level
-    let fx=(ent.fx||[]).map(x=>({...x}));
-    if(ent.n==='Dwarven Toughness (Hill Dwarf)') fx=[{t:'stat',stat:'hpmax',n:Math.max(1,num(S.level))}];
-    // Traits like Orc's Adrenaline Rush (proficiency) or a CHA/WIS/etc-scaled one carry usesScale
-    // so their max uses stay synced to that stat automatically as you level up.
-    const usesScale=ent.usesScale||'';
-    const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
-    const source={kind:'race',raceName:ent.g};
-    S.features.push({title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source});
+    S.features.push(raceEntryToFeature(ent,{kind:'race',raceName:ent.g}));
     input.value=''; close();
     fxRefresh();
   });
@@ -2847,7 +2968,10 @@ function renderSpellLevels(){
     const L=+inp.dataset.slottotal;
     S.spellLevels[L].total=Math.max(0,Math.min(9,num(inp.value)));
     S.spellLevels[L].used=Math.min(S.spellLevels[L].used,S.spellLevels[L].total);
-    renderSpellLevels(); save();
+    // Same deal as the save tiles: typing your own slot total takes the table over from the
+    // class's progression, so leveling up won't quietly overwrite it.
+    bovClaim('slots');
+    renderSpellLevels(); renderBuildNote(); renderBuildCustom(); save();
   }));
   // wire pips — usable in both locked and unlocked views; spending a slot mid-session isn't editing
   $$('[data-pip]').forEach(p=>p.addEventListener('click',()=>{
@@ -3540,6 +3664,9 @@ function renderBuildSelectors(){
   renderRaceRail();
   $('#levelIn').value=S.level||1;
   renderSubraceAndFlex();
+  renderSubclassField();
+  renderBuildNote();
+  renderBuildCustom();
   renderBuildTheme();
 }
 function renderClassRail(){
@@ -3648,7 +3775,7 @@ function renderBuildTheme(){
     bLastRaceId=S.raceId;
   }
   $('#bRaceName').textContent=ri?((ri.sub&&ri.sub.name)||ri.r.name):'—';
-  $('#bRaceChips').innerHTML=ri?raceFlavorChips(S.raceId,S.subraceId).map(t=>`<span class="bChip">${t}</span>`).join(''):'';
+  $('#bRaceChips').innerHTML=ri?liveRaceChips().map(t=>`<span class="bChip">${esc(t)}</span>`).join(''):'';
 
   renderClassRail();
   renderRaceRail();
@@ -3665,8 +3792,10 @@ function renderSubraceAndFlex(){
       S.subraceId=b.dataset.subid; S.flexBonus=['','']; renderSubraceAndFlex(); applyBuild();
     }));
   }else{ fld.style.display='none'; S.subraceId=''; }
-  // flexible bonus pickers: MotM lineages (+2 / +1) or Half-Elf / Variant Human (two +1s)
-  const n=flexCount();
+  // flexible bonus pickers: MotM lineages (+2 / +1) or Half-Elf / Variant Human (two +1s).
+  // Hidden while the ability bonuses are being set by hand in Build ▸ Customize — the pills would
+  // still light up but change nothing, since racialBonus() reads the override instead.
+  const n=bovHas('raceBonus')?0:flexCount();
   const motm=r&&r.motm;
   const flexFld=$('#flexFld'), flexWrap=$('#flexPills');
   if(n>0){
@@ -3685,7 +3814,24 @@ function renderSubraceAndFlex(){
     $$('#flexPills [data-flexab]').forEach(b=>b.addEventListener('click',()=>{
       S.flexBonus[+b.dataset.flexi]=b.dataset.flexab; renderSubraceAndFlex(); applyBuild();
     }));
-  }else{ flexFld.style.display='none'; S.flexBonus=['','']; }
+  // Only wipe the picks when the lineage genuinely has no flexible bonus — not when they're
+  // merely hidden behind a custom spread, so resetting that override gets them back.
+  }else{ flexFld.style.display='none'; if(!flexCount()) S.flexBonus=['','']; }
+}
+// The heritage chips under the portrait describe *this character*, not the textbook lineage, so
+// they read live values — an overridden speed, darkvision or ability spread shows up here rather
+// than the chips quietly contradicting the sheet.
+function liveRaceChips(){
+  const ri=raceInfo(); if(!ri) return [];
+  const chips=[ri.r.group+' lineage','Speed '+(S.speed||raceSpeedValue()+' ft.')];
+  ABILITIES.forEach(([k])=>{ const b=racialBonus(k); if(b) chips.push(fmt(b)+' '+abbr3(k)); });
+  const picked=S.flexBonus.filter(Boolean).length;
+  if(!bovHas('raceBonus') && flexCount()>picked)
+    chips.push(ri.r.motm?'+2/+1 (your choice)':'+'+(flexCount()-picked)+' (your choice)');
+  const dv=(S.vision||'').trim();
+  if(dv && dv.toLowerCase()!=='none') chips.push('Darkvision '+dv);
+  if(ri.r.move) chips.push(ri.r.move[0].toUpperCase()+ri.r.move.slice(1));
+  return chips;
 }
 
 // ---------- ASI / Feat rows ----------
@@ -3841,45 +3987,386 @@ function renderAsi(){
   });
 }
 
+// ---------- Build overrides ----------
+// applyBuild() used to stamp its computed values straight over proficiency bonus, hit dice, save
+// proficiencies, spell slots, speed and darkvision every single time you touched the Build tab.
+// The fields stayed editable, but nothing *remembered* the edit — so a hand-set speed or an extra
+// save proficiency silently reverted the next time you tapped a rail arrow, and line "saveProf[k]=
+// c.saves.includes(k)" assigned all six at once, wiping a manually-added save rather than merging.
+//
+// Every derived field now routes through this one table. applyBuild always computes the rules
+// value (still shown, greyed, as the reference), but only *writes* it when the player hasn't taken
+// that field over. Taking it over = the key exists in S.buildOverride, set either by editing the
+// field in Build ▸ Customize or by editing it in its natural home (tapping a save tile, typing a
+// slot total) — so a manual change can never be clobbered without you asking for it back with ↺.
+// Same auto-vs-manual split the AC engine already uses (S.equip.acAuto).
+function raceDisplayName(){
+  const ri=raceInfo(); if(!ri) return '';
+  return (ri.sub&&ri.sub.name)||ri.r.name;
+}
+function raceSpeedValue(){ const ri=raceInfo(); return ri?((ri.sub&&ri.sub.speed)||ri.r.speed):0; }
+// Darkvision range: subrace overrides the race default (e.g. Drow 120 ft. vs. base Elf 60 ft.);
+// races with no "dark" field at all (Human, Halfling, Dragonborn...) have no darkvision.
+function raceDarkValue(){
+  const ri=raceInfo(); if(!ri) return 0;
+  return (ri.sub&&ri.sub.dark!=null)?ri.sub.dark:(ri.r.dark||0);
+}
+// A class with no casting progression grants an empty table, not "no opinion" — otherwise
+// switching from Cleric to Fighter would leave the cleric's 4/3 slots sitting on a Fighter sheet
+// forever. Slots you set yourself are protected the normal way, by being an override.
+function rulesSlots(){
+  const c=CLASSES[S.classId]; if(!c||!c.cast) return Array(9).fill(0);
+  const s = c.cast==='pact' ? pactSlots(S.level)
+          : c.cast==='half' ? (S.level<2?[]:FULL_SLOTS[Math.ceil(S.level/2)])
+          : FULL_SLOTS[S.level];
+  return Array.from({length:9},(_,i)=>s[i]||0);
+}
+const abbr3=k=>AB_NAMES[k].slice(0,3).toUpperCase();
+// type drives the Customize panel's editor: 'text'/'num' a plain input, 'abset' a row of six
+// toggle pills, 'ability' a row of six pick-one pills, 'slots' nine little number boxes.
+const BUILD_FIELDS=[
+  {key:'classLevel',label:'Class & Level',type:'text',hint:'Free text — write "Cleric 3 / Rogue 2" for a multiclass.',
+   avail:()=>!!CLASSES[S.classId],
+   rules:()=>CLASSES[S.classId].name+' '+S.level,
+   get:()=>S.classLevel||'', set:v=>S.classLevel=String(v??'').trim(), show:v=>v||'—'},
+  {key:'profBonus',label:'Proficiency Bonus',type:'num',hint:'5e progression is +2 at level 1, +1 more every 4 levels.',
+   avail:()=>true,
+   rules:()=>2+Math.floor((Math.max(1,num(S.level))-1)/4),
+   get:()=>num(S.profBonus), set:v=>S.profBonus=Math.max(0,num(v)), show:v=>fmt(num(v))},
+  {key:'hdTotal',label:'Hit Dice',type:'text',hint:'Total pool, e.g. "5d10" — or "3d8 + 2d6" if you multiclass.',
+   avail:()=>!!CLASSES[S.classId],
+   rules:()=>S.level+'d'+CLASSES[S.classId].hd,
+   get:()=>S.hdTotal||'', set:v=>S.hdTotal=String(v??'').trim(), show:v=>v||'—'},
+  {key:'saves',label:'Saving Throws',type:'abset',hint:'Tap to add or drop one — your class defaults stop applying once you do.',
+   avail:()=>!!CLASSES[S.classId],
+   rules:()=>CLASSES[S.classId].saves.slice(),
+   get:()=>ABILITIES.filter(([k])=>S.saveProf[k]).map(([k])=>k),
+   set:v=>{const on=v||[];ABILITIES.forEach(([k])=>S.saveProf[k]=on.includes(k));},
+   show:v=>(v&&v.length)?v.map(abbr3).join('/')+' saves':'no save proficiencies'},
+  // Spellcasting is offered whatever your class is. Plenty of characters cast without their class
+  // table saying so — Eldritch Knight, Arcane Trickster, a multiclass dip, a race or item that
+  // grants slots, homebrew — and gating these two on CLASSES[...].cast meant those players had no
+  // way to set them here at all. A non-casting class still grants nothing (so a class switch
+  // clears the old table); noRules() only changes how the reference is worded, since "rules: none"
+  // reads like a rule about spellcasting rather than the absence of one.
+  {key:'spellAbility',label:'Spellcasting Ability',type:'ability',hint:'Drives spell save DC and attack bonus.',
+   avail:()=>true, noRules:()=>!(CLASSES[S.classId]&&CLASSES[S.classId].cast),
+   rules:()=>{const c=CLASSES[S.classId];return (c&&c.cast)?c.ab:'';},
+   get:()=>S.spellAbility||'', set:v=>S.spellAbility=v||'', show:v=>v?AB_NAMES[v]:'—'},
+  {key:'slots',label:'Spell Slots',type:'slots',hint:'Slots per spell level 1–9.',
+   avail:()=>true, noRules:()=>!(CLASSES[S.classId]&&CLASSES[S.classId].cast),
+   rules:rulesSlots,
+   get:()=>Array.from({length:9},(_,i)=>num(S.spellLevels[i+1].total)),
+   set:v=>{for(let L=1;L<=9;L++){const lv=S.spellLevels[L];lv.total=Math.max(0,num((v||[])[L-1]));lv.used=Math.min(num(lv.used),lv.total);}},
+   show:v=>{const on=(v||[]).map((n,i)=>n?`${n}×L${i+1}`:'').filter(Boolean);return on.length?on.join(' '):'none';}},
+  {key:'race',label:'Race',type:'text',hint:'The name shown in the header — rename it freely, e.g. "Tiefling (Bloodline of Dispater)".',
+   avail:()=>!!raceInfo(),
+   rules:raceDisplayName,
+   get:()=>S.race||'', set:v=>S.race=String(v??'').trim(), show:v=>v||'—'},
+  // The only field with no home of its own on the sheet: racial bonuses are never written into
+  // S.abilities (so changing heritage can't double-apply them), they're added live by
+  // racialBonus(). That reads the override directly, so there is nothing for set() to write.
+  {key:'raceBonus',label:'Ability Bonuses',type:'abmap',hint:'',
+   avail:()=>!!raceInfo(),
+   rules:()=>Object.fromEntries(ABILITIES.map(([k])=>[k,racialBonusRules(k)])),
+   get:()=>Object.fromEntries(ABILITIES.map(([k])=>[k,racialBonus(k)])),
+   set:()=>{},
+   show:v=>{
+     const on=ABILITIES.filter(([k])=>num((v||{})[k])).map(([k])=>`${fmt(num(v[k]))} ${abbr3(k)}`);
+     return on.length?on.join(' '):'none';
+   }},
+  {key:'speed',label:'Speed',type:'text',hint:'Feature bonuses (e.g. Fast Movement) are added on top of this.',
+   avail:()=>!!raceInfo(),
+   rules:()=>raceSpeedValue()+' ft.',
+   get:()=>S.speed||'', set:v=>S.speed=String(v??'').trim(), show:v=>v||'—'},
+  {key:'vision',label:'Darkvision',type:'text',hint:'"None" if you have none.',
+   avail:()=>!!raceInfo(),
+   rules:()=>{const dv=raceDarkValue();return dv>0?dv+' ft.':'None';},
+   get:()=>S.vision||'', set:v=>S.vision=String(v??'').trim(), show:v=>v||'—'},
+];
+const buildField=key=>BUILD_FIELDS.find(f=>f.key===key);
+function bovHas(key){ return !!S.buildOverride && Object.prototype.hasOwnProperty.call(S.buildOverride,key); }
+// Take a field over at its current value. Called from the Customize panel and from the fields'
+// natural homes (save tiles, slot inputs) so editing one in place is enough to keep it.
+function bovClaim(key){
+  const f=buildField(key); if(!f) return;
+  (S.buildOverride||(S.buildOverride={}))[key]=f.get();
+}
+function bovSet(key,val){
+  const f=buildField(key); if(!f) return;
+  (S.buildOverride||(S.buildOverride={}))[key]=val;
+  f.set(val);
+}
+function bovReset(key){ if(S.buildOverride) delete S.buildOverride[key]; }
+
 // Apply class/level/race choices to the sheet.
-// Only overwrites the fields these choices control; everything stays editable.
+// Only writes the fields these choices control, and only those you haven't taken over above.
 function applyBuild(){
   S.level=Math.max(1,Math.min(20,num(S.level)||1));
-  S.profBonus=2+Math.floor((S.level-1)/4);   // 5e proficiency progression
   const c=CLASSES[S.classId];
-  const notes=[];
+  // Settle subrace and flexible bonuses first — speed, darkvision and the ability spread all
+  // read them, and this is also what shows/hides the flex picker when its override changes.
+  renderSubraceAndFlex();
+  BUILD_FIELDS.forEach(f=>{
+    if(!f.avail()) return;
+    f.set(bovHas(f.key) ? S.buildOverride[f.key] : f.rules());
+  });
+  if(c&&c.cast&&!S.spellClass) S.spellClass=c.name;
+  syncSubclass();
+  syncGrantedFeatures();
+  renderBuildNote();
+  renderBuildCustom();
+  renderAsi(); renderSaves(); renderSpellLevels(); renderFeatures(); syncBound(); recalc(); save();
+}
+// The build summary line. Each derived value reads from the sheet (so an override shows *your*
+// number, not the rules one) and is marked ✎ when you've taken it over, so the summary never
+// claims to have set something it didn't.
+function renderBuildNote(){
+  const el=$('#buildNote'); if(!el) return;
+  const mark=key=>bovHas(key)?'✎':'';
+  const val=key=>{const f=buildField(key);return f.show(f.get());};
+  const c=CLASSES[S.classId], notes=[];
   if(c){
-    S.hdTotal=S.level+'d'+c.hd;
-    ABILITIES.forEach(([k])=>S.saveProf[k]=c.saves.includes(k));
-    S.classLevel=c.name+' '+S.level;
-    if(c.cast){
-      S.spellClass=c.name; S.spellAbility=c.ab;
-      const slots = c.cast==='pact' ? pactSlots(S.level)
-                  : c.cast==='half' ? (S.level<2?[]:FULL_SLOTS[Math.ceil(S.level/2)])
-                  : FULL_SLOTS[S.level];
-      for(let L=1;L<=9;L++){
-        const lv=S.spellLevels[L];
-        lv.total=slots[L-1]||0;
-        lv.used=Math.min(lv.used,lv.total);
-      }
-    }
-    notes.push(`${c.name} ${S.level}: proficiency +${S.profBonus}, hit dice ${S.hdTotal}, ${c.saves.map(k=>AB_NAMES[k].slice(0,3).toUpperCase()).join('/')} saves`+
-      (c.cast?`, ${c.name==='Warlock'?'pact magic':'spell'} slots set (${AB_NAMES[c.ab]})`:''));
+    const bits=[`proficiency ${val('profBonus')}${mark('profBonus')}`,`hit dice ${val('hdTotal')}${mark('hdTotal')}`,`${val('saves')}${mark('saves')}`];
+    // Mentioned for a non-casting class too once you've set slots or an ability yourself.
+    if(c.cast||bovHas('slots')||bovHas('spellAbility'))
+      bits.push(`${c.name==='Warlock'?'pact magic':'spell'} slots set (${val('spellAbility')}${mark('spellAbility')})${mark('slots')}`);
+    notes.push(`${val('classLevel')||c.name+' '+S.level}${mark('classLevel')}: ${bits.join(', ')}`);
   }
   const ri=raceInfo();
   if(ri){
-    const spd=(ri.sub&&ri.sub.speed)||ri.r.speed;
-    S.speed=spd+' ft.';
-    // Darkvision range: subrace overrides the race default (e.g. Drow 120 ft. vs. base Elf 60 ft.);
-    // races with no "dark" field at all (Human, Halfling, Dragonborn...) have no darkvision.
-    const dv=(ri.sub&&ri.sub.dark!=null)?ri.sub.dark:(ri.r.dark||0);
-    S.vision = dv>0 ? dv+' ft.' : 'None';
-    const bs=ABILITIES.filter(([k])=>racialBonus(k)>0).map(([k])=>`+${racialBonus(k)} ${AB_NAMES[k].slice(0,3).toUpperCase()}`);
-    notes.push(`${(ri.sub&&ri.sub.name)||ri.r.name}: ${spd} ft.${ri.r.move?' ('+ri.r.move+')':''}${dv>0?', darkvision '+dv+' ft.':''}${bs.length?', '+bs.join(' '):''}`+
+    const bs=ABILITIES.filter(([k])=>racialBonus(k)>0).map(([k])=>`+${racialBonus(k)} ${abbr3(k)}`);
+    const dv=val('vision');
+    notes.push(`${val('race')||raceDisplayName()}${mark('race')}: ${val('speed')}${mark('speed')}${ri.r.move?' ('+ri.r.move+')':''}`+
+      `${dv&&dv!=='None'?', darkvision '+dv+mark('vision'):''}${bs.length?', '+bs.join(' '):''}`+
       (flexCount()>0&&S.flexBonus.filter(Boolean).length<flexCount()?' — pick your bonus abilities above!':''));
   }
-  $('#buildNote').textContent=notes.join('  ·  ')||'Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses.';
-  renderAsi(); renderSaves(); renderSpellLevels(); syncBound(); recalc(); save();
+  el.textContent=notes.join('  ·  ')||'Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses.';
+}
+
+// ---------- Build ▸ Customize panel ----------
+// One row per BUILD_FIELDS entry: the live value as an editor, the rules value beside it as a
+// greyed reference, and ↺ to hand the field back to the class/race defaults. Editing any row
+// claims that field (see bovClaim) so applyBuild stops writing it. Folded away behind a button
+// by default — the summary line above stays the everyday view, this is the "actually, mine is
+// different" drawer underneath it.
+function bcEditorHTML(f){
+  const v=f.get(), k=f.key;
+  if(f.type==='abset'){
+    const on=Array.isArray(v)?v:[];
+    return `<div class="bPillRow">${ABILITIES.map(([a,label])=>
+      `<button type="button" class="bPill ${on.includes(a)?'active':''}" data-bcab="${k}.${a}" title="${esc(label)}">${abbr3(a)}</button>`).join('')}</div>`;
+  }
+  if(f.type==='ability'){
+    return `<div class="bPillRow">${ABILITIES.map(([a,label])=>
+      `<button type="button" class="bPill ${v===a?'active':''}" data-bcabone="${k}.${a}" title="${esc(label)}">${abbr3(a)}</button>`).join('')}</div>`;
+  }
+  if(f.type==='slots'){
+    const on=Array.isArray(v)?v:[];
+    return `<div class="bcSlots">${Array.from({length:9},(_,i)=>
+      `<label class="bcSlot"><span>L${i+1}</span><input type="number" min="0" max="9" value="${num(on[i])}" data-bcslot="${k}.${i}"></label>`).join('')}</div>`;
+  }
+  if(f.type==='abmap'){
+    const m=v||{};
+    return `<div class="bcSlots">${ABILITIES.map(([a,label])=>
+      `<label class="bcSlot" title="${esc(label)}"><span>${abbr3(a)}</span><input type="number" min="-5" max="10" value="${num(m[a])}" data-bcabmap="${k}.${a}"></label>`).join('')}</div>`;
+  }
+  const type=f.type==='num'?'number':'text';
+  return `<input class="bcIn" type="${type}" value="${esc(v)}" data-bcin="${k}">`;
+}
+// Where a field's reference value comes from. A class that doesn't cast grants no slots at all,
+// which is worth wording as "your class doesn't grant this" rather than "rules: none" — the
+// latter reads like a rule about spellcasting instead of the absence of one.
+function bcRulesLabel(f){
+  if(f.noRules&&f.noRules()) return 'not granted by your class';
+  return 'rules: '+f.show(f.rules());
+}
+function renderBuildCustom(){
+  const box=$('#buildCustomBody'), btn=$('#buildCustomBtn'); if(!box||!btn) return;
+  const open=!!S.buildCustomOpen;
+  btn.textContent=open?'✕ Done customizing':'✎ Customize defaults';
+  btn.classList.toggle('on',open);
+  box.style.display=open?'':'none';
+  if(!open) return;
+  const rows=BUILD_FIELDS.filter(f=>f.avail());
+  if(!rows.length){ box.innerHTML='<p class="prep-note" style="margin:0">Pick a class or heritage above and its defaults show up here, ready to be overridden.</p>'; return; }
+  box.innerHTML=rows.map(f=>{
+    const on=bovHas(f.key);
+    return `
+    <div class="bcRow ${on?'on':''}">
+      <div class="bcTop">
+        <span class="bcLbl">${esc(f.label)}</span>
+        ${on?'<span class="bcTag">custom</span>':''}
+        <span class="bcRules" title="What the class/heritage rules give you">${esc(bcRulesLabel(f))}</span>
+        ${on?`<button type="button" class="bcReset" data-bcreset="${f.key}" title="Drop your version and follow the rules value again">↺</button>`:''}
+      </div>
+      ${bcEditorHTML(f)}
+      ${f.hint?`<div class="bcHint">${esc(f.hint)}</div>`:''}
+    </div>`;
+  }).join('')
+  + `<label class="bcAuto"><input type="checkbox" id="bcAutoGrant" ${S.autoGrant?'checked':''}>
+       <span><b>Auto-add features</b> — grant the class, subclass and heritage features you qualify for, on the Features tab. They stay fully editable; the ones you've edited are kept even if you change your mind later.</span></label>`;
+  wireBuildCustomRows();
+}
+function wireBuildCustomRows(){
+  const commit=()=>{ applyBuild(); };
+  $$('[data-bcin]').forEach(inp=>inp.addEventListener('change',()=>{
+    bovSet(inp.dataset.bcin,inp.value); commit();
+  }));
+  $$('[data-bcab]').forEach(b=>b.addEventListener('click',()=>{
+    const [key,ab]=b.dataset.bcab.split('.');
+    const f=buildField(key), cur=f.get();
+    bovSet(key,cur.includes(ab)?cur.filter(x=>x!==ab):[...cur,ab]);
+    commit();
+  }));
+  $$('[data-bcabone]').forEach(b=>b.addEventListener('click',()=>{
+    const [key,ab]=b.dataset.bcabone.split('.');
+    bovSet(key,buildField(key).get()===ab?'':ab); commit();
+  }));
+  $$('[data-bcslot]').forEach(inp=>inp.addEventListener('change',()=>{
+    const [key,i]=inp.dataset.bcslot.split('.');
+    const next=buildField(key).get(); next[+i]=Math.max(0,Math.min(9,num(inp.value)));
+    bovSet(key,next); commit();
+  }));
+  $$('[data-bcabmap]').forEach(inp=>inp.addEventListener('change',()=>{
+    const [key,ab]=inp.dataset.bcabmap.split('.');
+    const next=buildField(key).get(); next[ab]=Math.max(-5,Math.min(10,num(inp.value)));
+    bovSet(key,next); commit();
+  }));
+  $$('[data-bcreset]').forEach(b=>b.addEventListener('click',()=>{
+    bovReset(b.dataset.bcreset); commit();
+  }));
+  $('#bcAutoGrant')?.addEventListener('change',e=>{
+    S.autoGrant=e.target.checked;
+    // Turning it off doesn't rip anything out — granted cards just stop being managed (see
+    // syncGrantedFeatures), same unlink-not-delete rule the rest of the sheet follows.
+    if(!S.autoGrant) S.features.forEach(f=>{ if(f.source) delete f.source.grantKey; });
+    applyBuild();
+  });
+}
+function wireBuildCustom(){
+  $('#buildCustomBtn')?.addEventListener('click',()=>{
+    S.buildCustomOpen=!S.buildCustomOpen;
+    renderBuildCustom(); save();
+  });
+}
+
+// ---------- Subclass ----------
+// The subclass used to be a bare string with no owner: switching from Ranger to Cleric left
+// "Gloom Stalker" sitting in the field, so "Cleric — Gloom Stalker" was reachable. It now
+// remembers which class it was picked for and clears itself when that class changes.
+// Level gate is advisory only (a DM handing one out early is a legitimate thing to want) —
+// it just annotates the field rather than blocking the pick.
+const SUBCLASS_LEVEL={cleric:1,sorcerer:1,warlock:1,druid:2,wizard:2};
+function subclassLevel(classId){ return SUBCLASS_LEVEL[classId]||3; }
+function syncSubclass(){
+  if(!S.subclass){ S.subclassClassId=''; return; }
+  if(S.subclassClassId && S.subclassClassId!==S.classId){ S.subclass=''; S.subclassClassId=''; return; }
+  if(!S.subclassClassId) S.subclassClassId=S.classId;
+}
+function renderSubclassField(){
+  const inp=$('#subclassIn'); if(!inp) return;
+  inp.value=S.subclass||'';
+  const c=CLASSES[S.classId];
+  const need=c?subclassLevel(S.classId):0;
+  inp.placeholder = c ? (subclassNamesForClass(S.classId).length?`Tap to choose — ${c.name} picks at level ${need}`:'Tap to type your own') : 'Pick a class first';
+  const lbl=inp.closest('.bFld')?.querySelector('span');
+  if(lbl) lbl.textContent = (c&&S.subclass&&num(S.level)<need) ? `Subclass (normally level ${need})` : 'Subclass';
+}
+
+// ---------- Granted features (class / subclass / heritage) ----------
+// Choosing a class, subclass or heritage used to grant exactly nothing — you had to know to go to
+// the Features tab and search each entry out by hand, and the subclass in particular had no CRUD
+// at all: nothing created its features, nothing listed them, nothing cleaned them up when you
+// changed your mind. Every entry you qualify for is now mirrored into S.features automatically,
+// stamped with a grantKey saying where it came from, and is a completely normal editable card
+// from that moment on.
+//
+// The retire rule is the same paper-trail philosophy as the ASI feat mirror above: a granted card
+// you never touched is removed when you stop qualifying for it (no litter after a level-down or a
+// subclass swap), but one you've *edited* is only unlinked — it stays on the sheet as a plain
+// feature, because deleting someone's writing to tidy up is never the right trade.
+const GRANT_SEP='|';
+const GENERIC_SUB_WORDS=new Set(['elf','dwarf','halfling','human','gnome','orc','aasimar','of','the']);
+// Race traits mark subrace-only entries with a parenthetical suffix — "Fleet of Foot (Wood Elf)",
+// "Elf Weapon Training (High/Wood Elf)". Unmarked traits belong to everyone; a marked one is
+// granted only when the chosen subrace shares a distinctive word with the marker, so a High Elf
+// gets Cantrip but not Superior Darkvision. A marker that's really a level note ("3rd level+")
+// isn't a subrace marker at all, so it counts as unmarked.
+function raceTraitApplies(name,subName){
+  const m=/\(([^)]*)\)\s*$/.exec(name||'');
+  if(!m) return true;
+  const marker=m[1];
+  if(/level/i.test(marker)) return true;
+  if(!subName) return false;
+  const words=s=>String(s).toLowerCase().split(/[^a-z]+/).filter(w=>w&&!GENERIC_SUB_WORDS.has(w));
+  const sub=new Set(words(subName));
+  return words(marker).some(w=>sub.has(w));
+}
+// Everything the current class + level + subclass + heritage entitles you to, as {key,ent,source}.
+function grantedPlan(){
+  const out=[], L=num(S.level), c=CLASSES[S.classId];
+  if(c){
+    FEATURE_LIB.forEach(e=>{
+      if(e.g===c.name && num(e.l)<=L)
+        out.push({key:['class',S.classId,e.n].join(GRANT_SEP),ent:e,lib:'feature',
+          source:{kind:'class',classId:S.classId,className:c.name}});
+    });
+    if(S.subclass){
+      const g=c.name+' — '+S.subclass;
+      FEATURE_LIB.forEach(e=>{
+        if(e.g===g && num(e.l)<=L)
+          out.push({key:['sub',S.classId,S.subclass,e.n].join(GRANT_SEP),ent:e,lib:'feature',
+            source:{kind:'subclass',classId:S.classId,className:g,subclassName:S.subclass}});
+      });
+    }
+  }
+  const ri=raceInfo();
+  if(ri){
+    const g=ri.r.name, subName=(ri.sub&&ri.sub.name)||'';
+    RACE_LIB.forEach(e=>{
+      if(e.g===g && raceTraitApplies(e.n,subName))
+        out.push({key:['race',g,e.n].join(GRANT_SEP),ent:e,lib:'race',source:{kind:'race',raceName:g}});
+    });
+  }
+  return out;
+}
+function grantLibEntry(key){
+  const parts=String(key).split(GRANT_SEP), name=parts[parts.length-1];
+  return (parts[0]==='race'?RACE_LIB:FEATURE_LIB).find(e=>e.n===name);
+}
+// "Still exactly what the library handed you" — safe to remove without losing anyone's work.
+function featureIsPristine(f){
+  const ent=grantLibEntry((f.source||{}).grantKey||'');
+  if(!ent) return false;
+  return (f.title||'')===ent.n && (f.desc||'')===(ent.d||'') && !num(f.usesUsed) && !f.combatEdited;
+}
+function syncGrantedFeatures(){
+  if(!S.autoGrant) return;
+  const plan=grantedPlan();
+  const want=new Set(plan.map(p=>p.key));
+  S.features=S.features.filter(f=>{
+    const k=f.source&&f.source.grantKey;
+    if(!k||want.has(k)) return true;
+    if(featureIsPristine(f)) return false;
+    delete f.source.grantKey;   // edited — keep the card, just stop managing it
+    return true;
+  });
+  const have=new Set(S.features.map(f=>(f.source||{}).grantKey).filter(Boolean));
+  let added=0;
+  plan.forEach(p=>{
+    if(have.has(p.key)) return;
+    // Already added by hand from the search box? Adopt that card instead of stacking a twin.
+    const dup=S.features.find(f=>!(f.source&&f.source.grantKey)&&(f.title||'').trim().toLowerCase()===p.ent.n.toLowerCase());
+    if(dup){ dup.source={...(dup.source||{}),...p.source,grantKey:p.key}; return; }
+    const f = p.lib==='race' ? raceEntryToFeature(p.ent,p.source) : libEntryToFeature(p.ent,p.source);
+    f.source.grantKey=p.key;
+    S.features.push(f); added++;
+  });
+  // defaultState() seeds one blank feature row; once real cards land it's just an empty box at
+  // the top of the list. Only swept when something was actually granted, so a blank row you just
+  // added yourself on the Features tab isn't yanked out from under you.
+  if(added) S.features=S.features.filter(f=>(f.title||'').trim()||(f.desc||'').trim()||(f.fx||[]).length);
 }
 
 function wireBuild(){
@@ -3891,6 +4378,15 @@ function wireBuild(){
   $('#classNextBtn').addEventListener('click',()=>stepClass(1));
   $('#racePrevBtn').addEventListener('click',()=>stepRace(-1));
   $('#raceNextBtn').addEventListener('click',()=>stepRace(1));
+  // Either Subclass field (Build or Overview header) runs the full build pass, so picking one
+  // grants its features immediately instead of leaving the choice as a label with nothing behind
+  // it. Delegated because the Overview field is re-rendered with the rest of that tab.
+  document.addEventListener('change',e=>{
+    if(!isSubclassInput(e.target)) return;
+    S.subclass=e.target.value.trim();
+    S.subclassClassId=S.subclass?S.classId:'';
+    renderSubclassField(); applyBuild();
+  });
 }
 
 // ---------- Hit dice & rests ----------
@@ -4402,9 +4898,13 @@ const FEAT_SUGGESTIONS=(()=>{
   const extra=FEATS.filter(n=>!known.has(n.toLowerCase())).map(n=>({n,d:''}));
   return [...detailed,...extra].sort((a,b)=>a.n.localeCompare(b.n));
 })();
+// Both Subclass fields — the Build tab's and the Overview header's — go through the same picker.
+// They used to behave differently (Build opened this modal, Overview was a bare text box), which
+// meant the same field offered its own class's subclasses in one place and nothing in the other.
+const isSubclassInput=el=>!!el&&(el.id==='subclassIn'||el.id==='subclassOv');
 function suggestSourceFor(el){
   if(!el||el.tagName!=='INPUT') return null;
-  if(el.id==='subclassIn') return subclassNamesForClass(S.classId);
+  if(isSubclassInput(el)) return subclassNamesForClass(S.classId);
   if(el.dataset&&el.dataset.asifeat!=null) return FEAT_SUGGESTIONS;
   return null;
 }
@@ -4425,7 +4925,7 @@ function suggestKeydown(e){ if(e.key==='Escape') closeSuggest(); }
 function openSuggestModal(inp){
   const src=suggestSourceFor(inp); if(!src) return;
   const all=src.map(x=>typeof x==='string'?{n:x,d:''}:x);
-  const label=inp.id==='subclassIn'?'Choose a Subclass':'Choose a Feat';
+  const label=isSubclassInput(inp)?'Choose a Subclass':'Choose a Feat';
   const wrap=document.createElement('div');
   wrap.className='ui-dlg-bg sel-sheet-bg open';
   wrap.innerHTML=`<div class="sel-sheet sug-sheet" role="dialog" aria-label="${esc(label)}">
@@ -4443,7 +4943,11 @@ function openSuggestModal(inp){
     const exact=all.some(x=>x.n.toLowerCase()===ql);
     const customRow=q&&!exact
       ?`<button type="button" class="sel-opt sel-opt-custom" data-sugpick="${esc(q)}"><span>Use "${esc(q)}"</span><small>Not in the list — free text works too</small></button>`:'';
-    list.innerHTML=customRow+(items.length
+    // Clearing the field was previously only reachable by pressing Enter on an empty search box —
+    // undiscoverable, and the field is readonly so there was no other way out of a wrong pick.
+    const clearRow=inp.value.trim()
+      ?`<button type="button" class="sel-opt sel-opt-clear" data-sugclear="1"><span>None</span><small>Clear this field${isSubclassInput(inp)?' — its granted features go with it':''}</small></button>`:'';
+    list.innerHTML=clearRow+customRow+(items.length
       ?items.slice(0,80).map(x=>`<button type="button" class="sel-opt" data-sugpick="${esc(x.n)}"><span>${esc(x.n)}</span>${x.d?`<small>${esc(x.d)}</small>`:''}</button>`).join('')
       :(q?'':'<div class="empty">Start typing to search…</div>'));
   };
@@ -4459,6 +4963,7 @@ function openSuggestModal(inp){
   search.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(search.value); } });
   wrap.addEventListener('click',e=>{
     if(e.target===wrap) return closeSuggest(); // backdrop tap cancels, leaves the field as it was
+    if(e.target.closest('[data-sugclear]')) return commit('');
     const b=e.target.closest('[data-sugpick]');
     if(b) commit(b.dataset.sugpick);
   });
@@ -4719,7 +5224,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLibrary(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
