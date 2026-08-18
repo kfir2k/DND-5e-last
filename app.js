@@ -3547,7 +3547,7 @@ function renderClassRail(){
   if(!rail.children.length){
     rail.innerHTML=CLASS_ORDER.map(id=>`
       <div class="bRailItem" data-id="${id}" style="--c:${CLASS_COLOR[id]}">
-        <div class="bThumb" style="background-image:url(class-art/${id}.jpg)"></div>
+        <div class="bThumb" style="background-image:url(class-art/${id}-portrait.jpg)"></div>
         <span class="bLabel">${CLASSES[id].name}</span>
       </div>`).join('');
     [...rail.children].forEach(el=>el.addEventListener('click',()=>{
@@ -3607,11 +3607,11 @@ function renderBuildTheme(){
   panel.style.setProperty('--accent-dim',accent+'30');
 
   if(c&&S.classId!==bLastClassId){
-    const src='class-art/'+S.classId+'.jpg';
-    if(bLastClassId===null){ $('#bBgA').src=src; $('#bPortA').src=src; } // first paint — A is already .visible
+    const bgSrc='class-art/'+S.classId+'-hero.jpg', portSrc='class-art/'+S.classId+'-portrait.jpg';
+    if(bLastClassId===null){ $('#bBgA').src=bgSrc; $('#bPortA').src=portSrc; } // first paint — A is already .visible
     else{
       const to=bClassFront==='A'?'B':'A';
-      crossfadeImg('bBg',bClassFront,to,src); crossfadeImg('bPort',bClassFront,to,src);
+      crossfadeImg('bBg',bClassFront,to,bgSrc); crossfadeImg('bPort',bClassFront,to,portSrc);
       bClassFront=to;
       const flash=$('#bFlash');
       flash.style.setProperty('--c',accent);
