@@ -456,6 +456,10 @@ combat:`
     </div>
     <div class="ck-col ck-right">
       <div class="panel ov-spellslots-panel" id="combatSlotsPanel"><h2>🔮 Spell Slots</h2>
+        <div class="stats-row" style="grid-template-columns:1fr 1fr">
+          <div class="stat computed stat-dc"><span class="stat-label">🔮 Spell Save DC</span><span class="big" data-calc="spellDC">—</span></div>
+          <div class="stat computed stat-dc"><span class="stat-label">✨ Spell Attack</span><span class="big" data-calc="spellAtk">—</span></div>
+        </div>
         <div class="ov-spellslots-list" id="combatSlots"></div>
       </div>
       <div class="panel"><h2>🏷 States</h2>
@@ -1864,6 +1868,13 @@ function spellIsConc(sp){
   if(db) return (SP_DUR[db.du]||'').startsWith('Conc');
   return (sp.meta||'').toLowerCase().includes('conc');
 }
+// Spell Save DC / Spell Attack bonus — one formula, shared by recalc() (which paints it onto every
+// data-calc="spellDC"/"spellAtk" element) and the cockpit spell cards (which need the raw numbers).
+function spellDCAtk(){
+  if(!S.spellAbility) return {dc:null,atk:null};
+  const m=amod(S.spellAbility), P=num(S.profBonus);
+  return {dc:8+P+m, atk:P+m};
+}
 // Assemble every card the grid can show, from all four sources.
 function cockpitCards(){
   const c=ck(), cards=[];
@@ -1998,7 +2009,17 @@ function ckSubHTML(card,withRoll){
   }
   if(card.kind==='sp'){
     const sp=ckRef(card.key);
-    return `${card.L===0?'Cantrip':ordinalLevel(card.L)+' level'}${sp.meta?' · '+esc(sp.meta):''}${card.L>0?' '+ckSlotPips(card.L):''}`;
+    // Same "what you need to know without opening the card" bar the weapon-attack branch above
+    // gives Hit/Damage — a save spell shows its DC, an attack spell shows the spell attack bonus,
+    // and any damage/healing line (sp.dmg) rides along either way. Resolve heuristic is the same
+    // one already used by the Spells-tab modal (spellRulesCallout), just surfaced here too.
+    const bits=[`${card.L===0?'Cantrip':ordinalLevel(card.L)+' level'}${sp.meta?' · '+esc(sp.meta):''}`];
+    const resolve=spellRulesCallout(sp.desc).resolve;
+    const sca=spellDCAtk();
+    if(resolve) bits.push(`${resolve.glyph} ${esc(resolve.label)}${sca.dc!=null?' DC '+sca.dc:''}`);
+    else if(sp.dmg&&!sp.heal&&sca.atk!=null) bits.push(`✨ Attack ${fmt(sca.atk)}`);
+    if(sp.dmg) bits.push(`${sp.heal?'✨':'🔥'} ${esc(sp.dmg)}`);
+    return bits.join(' · ')+(card.L>0?' '+ckSlotPips(card.L):'');
   }
   if(card.kind==='ft'){
     const f=ckRef(card.key), max=num(f.usesMax), used=Math.min(num(f.usesUsed),max);
@@ -3381,13 +3402,9 @@ function recalc(){
     }).join(''));
   });
   // spellcasting
-  if(S.spellAbility){
-    const m=amod(S.spellAbility);
-    setCalc('spellDC',8+P+m);
-    setCalc('spellAtk',fmt(P+m));
-  }else{
-    setCalc('spellDC','—'); setCalc('spellAtk','—');
-  }
+  const sca=spellDCAtk();
+  setCalc('spellDC', sca.dc!=null?sca.dc:'—');
+  setCalc('spellAtk', sca.atk!=null?fmt(sca.atk):'—');
   // Attack rows stay in sync with ability/proficiency/magic/buff/roll changes. Each of these
   // data-atk* markers can appear more than once for the same attack at the same time (the
   // Attacks panel row, its "Do Something" grid card, and — if queued up — its Turn Plan step
