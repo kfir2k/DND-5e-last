@@ -2219,6 +2219,46 @@ input.ov-id-field:focus{border-bottom-color:var(--gold)}
 .ov-attune-list{list-style:none;margin-top:4px}
 .ov-attune-list li{color:var(--text);font-size:.85rem;padding:2px 0}
 .ov-attune-list li::before{content:'✦ ';color:#a58ce0}
+/* ---------- Stress meter ---------- */
+/* A radial "loader" ring (pure CSS conic-gradient, no SVG) instead of a plain number or bar —
+   the fill and color both escalate with stress so the state reads at a glance. Deliberately just
+   a tracker: it doesn't touch any ability/save/skill/attack bonus elsewhere on the sheet (see the
+   comment on renderOverviewStress in app.js) — the note underneath is the one place the penalty
+   is spelled out, same as every other situational modifier on this sheet. */
+.stress-panel h2{text-align:center}
+.stress-widget{display:flex;align-items:center;justify-content:center;gap:18px;padding:4px 0 10px}
+.stress-btn{
+  flex-shrink:0;width:34px;height:34px;border-radius:50%;cursor:pointer;
+  background:var(--panel2);border:1px solid var(--border-lt);color:var(--muted);
+  font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+.stress-btn:hover{background:var(--panel3);border-color:var(--gold-dim);color:var(--gold-lt)}
+.stress-btn:active{transform:scale(.94)}
+.stress-ring{
+  --pct:0; --ring:var(--gold-dim);
+  width:100px;height:100px;border-radius:50%;flex-shrink:0;
+  background:conic-gradient(var(--ring) calc(var(--pct)*1%),var(--panel3) 0);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .3s ease;
+}
+.stress-ring.mid{--ring:#e0ab4a}
+.stress-ring.high{--ring:var(--red);animation:stressPulse 1.6s ease-in-out infinite}
+@keyframes stressPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(192,80,70,.45)}
+  50%{box-shadow:0 0 0 8px rgba(192,80,70,0)}
+}
+@media (prefers-reduced-motion:reduce){ .stress-ring.high{animation:none} }
+.stress-ring-inner{
+  width:76px;height:76px;border-radius:50%;background:var(--panel);
+  border:1px solid var(--border);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+}
+.stress-num{font-family:'Cinzel',serif;font-weight:700;font-size:1.7rem;color:var(--gold-lt);line-height:1.1}
+.stress-ring.mid .stress-num{color:#e0ab4a}
+.stress-ring.high .stress-num{color:var(--red)}
+.stress-max{font-size:.62rem;color:var(--faint);letter-spacing:.5px}
+.stress-note{text-align:center;margin:0}
 /* Character whisper: a quiet closing line per non-empty personality field — skipped entirely
    when the Character tab hasn't been filled in yet. */
 .ov-whisper{padding:12px 18px}

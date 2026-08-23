@@ -20,6 +20,7 @@ function defaultState(){
     ac:10, initiativeMisc:0, speed:'30 ft.', vision:'None',
     hpMax:10, hpCurrent:10, hpTemp:0, hdTotal:'', hd:'', hdUsed:0,
     deathS:[false,false,false], deathF:[false,false,false],
+    stress:0, // homebrew: subtract this from every d20 roll while it's above 0 — tracked, not auto-applied
     attacks:[{name:'Longsword',weapon:'longsword',die:'1d8',dmgStat:'auto',magic:0,miscAtk:0,miscDmg:0,rolled:'',buffs:[]}], atkNotes:'',
     // Inventory
     equip:{armor:'none',armorMagic:0,shield:false,shieldMagic:0,acAuto:false,
@@ -289,6 +290,19 @@ overview:`
     <div class="ov-col">
       <div class="panel"><h2>Ability Scores</h2><div class="abilities" id="abilityCards"></div></div>
       <div class="panel"><h2>Saving Throws</h2><div class="save-list-mini" id="ovSaves"></div></div>
+      <div class="panel stress-panel"><h2>Stress</h2>
+        <div class="stress-widget">
+          <button class="stress-btn stress-down" data-stress="-1" title="Reduce stress">−</button>
+          <div class="stress-ring" id="stressRing" style="--pct:0">
+            <div class="stress-ring-inner">
+              <span class="stress-num" id="stressNum">0</span>
+              <span class="stress-max">/ 10</span>
+            </div>
+          </div>
+          <button class="stress-btn stress-up" data-stress="1" title="Gain stress">+</button>
+        </div>
+        <p class="prep-note stress-note" id="stressNote">No stress — rolls are unaffected.</p>
+      </div>
     </div>
     <div class="ov-col">
       <div class="panel"><h2>Trained Skills</h2><div id="ovSkillChips"></div></div>
@@ -3531,8 +3545,33 @@ function renderOverviewWhisper(){
   }).join('');
   $$('[data-ovwhisper]').forEach(p=>p.addEventListener('click',()=>showTab('character')));
 }
+// Stress is tracked, not wired into every ability/save/skill/attack number the way a feature
+// effect would be — same idea as every other situational modifier on this sheet (see the ★
+// reminders elsewhere): the sheet tells you the penalty, you apply it yourself when you roll.
+// Baking it into 20-odd bonus displays across four tabs would be a much bigger, riskier change
+// for a homebrew rule that's really just "read this number, subtract it."
+const STRESS_MAX=10;
+function renderOverviewStress(){
+  const ring=$('#stressRing'); if(!ring) return;
+  const val=Math.max(0,Math.min(STRESS_MAX,num(S.stress)));
+  const pct=Math.round(val/STRESS_MAX*100);
+  ring.style.setProperty('--pct',pct);
+  ring.classList.toggle('mid',pct>=40&&pct<70);
+  ring.classList.toggle('high',pct>=70);
+  $('#stressNum').textContent=val;
+  $('#stressNote').textContent = val>0
+    ? `Apply −${val} to every d20 roll while stressed.`
+    : 'No stress — rolls are unaffected.';
+}
 function renderOverview(){
   renderOverviewIdentity(); renderOverviewSkillChips(); renderOverviewWealth(); renderOverviewWhisper();
+  renderOverviewStress();
+}
+function wireStress(){
+  $$('[data-stress]').forEach(b=>b.addEventListener('click',()=>{
+    S.stress=Math.max(0,Math.min(STRESS_MAX,num(S.stress)+(+b.dataset.stress)));
+    renderOverviewStress(); save();
+  }));
 }
 
 // ---------- Character tab: portrait upload ----------
@@ -5271,7 +5310,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
