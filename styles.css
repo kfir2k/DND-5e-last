@@ -76,8 +76,17 @@ header{
 /* Rest controls — folded into the header itself instead of a separate bar, so it stays
    compact and shows up on every tab without costing an extra strip of vertical space. */
 .rest-inline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.rest-inline .prep-note{margin:0;font-size:.72rem;max-width:240px}
-.rest-inline .prep-note:empty{display:none}
+/* Wide-mode toggle — a single global button in the header (not per-tab) so it's the same tap
+   target everywhere instead of only existing on Overview/Combat, where it used to live inside
+   the Combat HUD strip. */
+.chud-wide-btn{
+  flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+  width:32px;height:32px;background:var(--panel2);border:1px solid var(--border-lt);border-radius:8px;
+  color:var(--gold);font-size:.95rem;cursor:pointer;line-height:1;
+  transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+.chud-wide-btn:hover{background:var(--panel3);border-color:var(--gold-dim)}
+.chud-wide-btn.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-lt)}
 
 /* ---------- Tabs ---------- */
 nav{
@@ -1421,18 +1430,6 @@ label.fld.sug-wrap{display:block}
   border-radius:10px;padding:9px 16px 7px;margin-bottom:14px;
   box-shadow:0 6px 20px rgba(0,0,0,.5),inset 0 40px 34px -34px rgba(201,162,39,.1);
 }
-/* Wide-mode toggle — the last item in the primary row (after AC/Init/states), so it takes its
-   own spot in the space-between flow and wraps along with everything else on a narrow screen,
-   instead of an absolutely-positioned corner button fighting the states/conc cluster for the
-   same top-right real estate. */
-.chud-wide-btn{
-  flex:0 0 auto;display:flex;align-items:center;justify-content:center;
-  width:28px;height:26px;background:var(--panel3);border:1px solid var(--border-lt);border-radius:6px;
-  color:var(--muted);font-size:.92rem;cursor:pointer;line-height:1;margin-left:auto;
-  transition:background .15s ease,border-color .15s ease,color .15s ease;
-}
-.chud-wide-btn:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
-.chud-wide-btn.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-lt)}
 /* space-between (not center): HP anchors the left edge, AC/Init/states dock to the right — the
    strip actually spans the panel now instead of clumping in the middle with dead space either side. */
 .chud-primary{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between}

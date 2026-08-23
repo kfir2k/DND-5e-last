@@ -249,7 +249,6 @@ function combatHudHTML(){
     <span class="chud-sep chud-sep-conc"></span>
     <span class="ck-conc"></span>
     <span class="ck-topstates"></span>
-    <button type="button" class="chud-wide-btn" data-widetoggle title="Widen the layout for more room" aria-pressed="false">⤢</button>
     </div>
     <div class="chud-senses">
       <span class="chud-senses-lbl">Senses &amp; Movement</span>
@@ -4466,16 +4465,8 @@ function wireRest(){
     recalc(); save();
   });
   $('#shortRestBtn').addEventListener('click',()=>{
-    const notes=['Short rest taken.'];
-    if(CLASSES[S.classId]&&CLASSES[S.classId].cast==='pact'){
-      S.spellLevels.forEach(lv=>lv.used=0);
-      notes.push('Pact magic slots restored.');
-    }
-    let combatRestored=0;
-    S.features.forEach(f=>{ if(f.combat && num(f.usesMax)>0 && f.usesPer!=='long'){ f.usesUsed=0; combatRestored++; } });
-    if(combatRestored) notes.push(`${combatRestored} combat feature${combatRestored>1?'s':''} recharged.`);
-    notes.push('Spend hit dice (− button above) to heal: roll the die + CON mod.');
-    $('#restNote').textContent=notes.join(' ');
+    if(CLASSES[S.classId]&&CLASSES[S.classId].cast==='pact') S.spellLevels.forEach(lv=>lv.used=0);
+    S.features.forEach(f=>{ if(f.combat && num(f.usesMax)>0 && f.usesPer!=='long') f.usesUsed=0; });
     renderSpellLevels(); renderCombatFeatures(); recalc(); save();
   });
   $('#longRestBtn').addEventListener('click',()=>{
@@ -4487,7 +4478,6 @@ function wireRest(){
     S.hdUsed=Math.max(0,num(S.hdUsed)-regained);
     S.deathS=[false,false,false]; S.deathF=[false,false,false];
     S.features.forEach(f=>{ if(f.combat && num(f.usesMax)>0) f.usesUsed=0; }); // long rest recharges everything
-    $('#restNote').textContent=`Long rest: HP restored, all spell slots back, regained ${regained} hit dice, death saves cleared, combat features recharged.`;
     renderSpellLevels(); renderDeathSaves(); renderCombatFeatures(); syncBound(); recalc(); save();
   });
 }
@@ -5256,9 +5246,8 @@ function wireSkillFx(){
 // ---------- Wide-mode toggle ----------
 // A UI-only preference, not part of the character sheet — the 1180px column is comfortable for
 // most panels but cramped for the Combat tab's card grid and turn plan on a big screen, so a
-// button in the HUD (shared by Overview and Combat — combatHudHTML() renders it into both, hence
-// looping over every match instead of a single #id) widens the whole layout. Kept in its own
-// localStorage key, independent of which character/roster slot is active.
+// single button in the header (present on every tab, not just Combat/Overview) widens the whole
+// layout. Kept in its own localStorage key, independent of which character/roster slot is active.
 const WIDE_KEY='dnd5e-binder-wide-v1';
 function applyWideMode(on){
   document.body.classList.toggle('wide-mode',on);
