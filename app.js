@@ -522,6 +522,9 @@ spells:`
     </div>
     <p class="prep-note" style="margin:8px 4px 0">Tap a search result to add it at the right level · tap a spell to read its full text · ◆ = slots remaining</p>
     <div id="spellLevels"></div>
+  </div>
+  <div class="modal-bg" id="spellModalBg">
+    <div class="modal spell-modal" id="spellModalPanel"></div>
   </div>`,
 
 inventory:`
@@ -2847,25 +2850,48 @@ function spellTagsHTML(sp){
   if(sp.ritual) out+='<span class="sp-pill pill-ritual">Ritual</span>';
   return out;
 }
-// Reading-mode row: prepared dot, name, and everything needed to run the spell at the table —
-// cast/range/duration/components in their own cells, tags, then whatever save the description
-// implies (still auto-detected live) plus the damage/heal line (now a real field — see dmg/heal
-// on the spell object) pulled into a highlighted line above the flavor text. Full prose + the SRD
-// facts/link stay one tap away, same as before.
-function spellRowLocked(sp,L,i){
+// Compact grid tile for locked/reading mode. Only what a player needs to decide "do I cast this"
+// stays always-visible (name, action type, range/duration, damage/heal, one-line effect) — packed
+// into a multi-column grid (see .tome-grid) instead of one full-width row per spell, so many more
+// spells are scannable without scrolling. Tapping the card (wireSpellModal, delegated on
+// #spellLevels) opens the exact same depth of detail spellRowLocked used to reveal inline —
+// stats/pills/resolve/damage/description/SRD facts — now in a modal so the grid itself never
+// reflows under the reader.
+function spellCardHTML(sp,L,i){
+  const [,rg,du]=splitMeta(sp.meta);
+  const dot=L===0?'':`<button class="dot ${sp.prep?'on':''}" data-prep="${L}.${i}" title="Prepared"></button>`;
+  // Spelled out, not abbreviated to a bare letter — a player scanning mid-combat shouldn't have
+  // to decode a badge (or hover a tooltip that doesn't exist on a tablet) to know Action from
+  // Reaction. Same .sp-pill/.pill-* the modal already uses, so the color coding matches too.
+  const actWord={action:'Action',bonus:'Bonus Action',reaction:'Reaction'}[sp.castTag];
+  const actPill=actWord?`<span class="sp-pill pill-${sp.castTag==='reaction'?'react':sp.castTag}">${actWord}</span>`:'';
+  const meta=[rg,du].filter(Boolean).join(' · ');
+  const effect=sp.dmg?`<div class="sc-effect${sp.heal?' heal':''}">${sp.heal?'✨':'🔥'} ${esc(sp.dmg)}</div>`:'';
+  return `
+  <div class="spell-card" data-spellcard="${L}.${i}">
+    <div class="sc-head">${dot}<span class="sc-name">${esc(sp.name)||'Unnamed spell'}</span></div>
+    ${actPill||meta?`<div class="sc-meta">${actPill}${meta?`<span>${esc(meta)}</span>`:''}</div>`:''}
+    ${effect}
+    ${sp.desc?`<p class="sc-desc">${esc(sp.desc)}</p>`:''}
+  </div>`;
+}
+// The full-detail modal for a Tome Grid card — reuses spellRowLocked's own building blocks
+// (spellTagsHTML, spellDetailHTML, spellRulesCallout) so opening a card shows literally the same
+// depth of information the old inline-expand used to, just staged in an overlay instead.
+function spellModalHTML(sp,L,i){
   const pills=spellTagsHTML(sp);
   const detail=spellDetailHTML(sp.name,L);
   const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
   const [t,rg,du]=splitMeta(sp.meta);
   const comp=db?db.cp.split('').join(', '):'';
   const resolve=spellRulesCallout(sp.desc).resolve;
+  const dot=L===0?'':`<button class="dot ${sp.prep?'on':''}" data-prep="${L}.${i}" title="Prepared"></button>`;
   return `
-  <div class="spell-entry">
-    <div class="spell-row-lock" data-spellopen>
-      ${L===0?'':`<button class="dot ${sp.prep?'on':''}" data-prep="${L}.${i}" title="Prepared"></button>`}
-      <span class="spell-name-lock">${esc(sp.name)||'Unnamed spell'}</span>
-      <span class="spell-chev">›</span>
-    </div>
+  <button class="close-x" data-spellmodalclose type="button">✕</button>
+  <span class="spell-modal-numeral">${L===0?'✦':toRoman(L)}</span>
+  <div class="spell-modal-head">${dot}<div class="spell-modal-name">${esc(sp.name)||'Unnamed spell'}</div></div>
+  <div class="spell-modal-level">${L===0?'Cantrip':ordinalLevel(L)+' Level'}</div>
+  <div class="spell-modal-body">
     <div class="spell-stats">
       <div class="ss-cell"><b>Cast</b><span>${esc(t)||'—'}</span></div>
       <div class="ss-cell"><b>Range</b><span>${esc(rg)||'—'}</span></div>
@@ -2875,10 +2901,8 @@ function spellRowLocked(sp,L,i){
     ${pills?`<div class="spell-pills">${pills}</div>`:''}
     ${resolve?`<div class="spell-resolve">${resolve.glyph} ${esc(resolve.label)}</div>`:''}
     ${sp.dmg?`<div class="spell-damage${sp.heal?' heal':''}">${sp.heal?'✨':'🔥'} ${esc(sp.dmg)}</div>`:''}
-    <div class="spell-detail-lock">
-      ${sp.desc?`<p class="spell-desc-ro">${esc(sp.desc)}</p>`:''}
-      ${detail}
-    </div>
+    ${sp.desc?`<p class="spell-desc-ro">${esc(sp.desc)}</p>`:''}
+    ${detail}
   </div>`;
 }
 // Editing-mode row — same stat-strip skeleton as the locked row above (three of its four cells
@@ -2943,7 +2967,7 @@ function renderSpellLevels(){
       <span class="slot-total">Slots ${locked?`<b>${lv.total}</b>`:`<input type="number" min="0" max="9" value="${lv.total}" data-slottotal="${L}">`}</span>
       <div class="pips">${Array.from({length:lv.total},(_,i)=>
         `<button class="pip ${i<lv.used?'used':''}" data-pip="${L}.${i}"></button>`).join('')}</div>`;
-    const rows = lv.spells.map((sp,i)=>{
+    const rowsHTML = lv.spells.map((sp,i)=>{
       // Older saves only stored {name,prep}; backfill the editable meta/description/tags/damage
       // fields from the spell index the first time this row renders. From then on every one of
       // these is fully owned by the player, same as meta/desc already were.
@@ -2951,8 +2975,11 @@ function renderSpellLevels(){
       if(sp.desc==null) sp.desc=spellDescDefault(sp.name);
       if(sp.castTag==null||sp.conc==null||sp.ritual==null) Object.assign(sp,spellTagsDefault(sp.name));
       if(sp.dmg==null){ const d=spellRulesCallout(sp.desc).damage; sp.dmg=d?d.label:''; sp.heal=d?d.heal:false; }
-      return locked ? spellRowLocked(sp,L,i) : spellRowEdit(sp,L,i);
+      return locked ? spellCardHTML(sp,L,i) : spellRowEdit(sp,L,i);
     }).join('');
+    // Locked mode packs its cards into the responsive grid; edit mode keeps its own full-width
+    // stacked rows (there's no room to spare a text-input-heavy row in a narrow grid column).
+    const rows = locked ? (rowsHTML?`<div class="tome-grid">${rowsHTML}</div>`:'') : rowsHTML;
     return `
     <div class="spell-level tier${spellTier(L)}" id="spell-ch-${L}">
       <span class="spell-numeral">${L===0?'✦':toRoman(L)}</span>
@@ -2980,14 +3007,8 @@ function renderSpellLevels(){
     lv.used = (i<lv.used) ? i : i+1;
     renderSpellLevels(); save();
   }));
-  // wire prepared dots — also usable in both views. Stops propagation because the locked row's
-  // dot sits inside the same element that toggles the description open on click.
-  $$('[data-prep]').forEach(d=>d.addEventListener('click',e=>{
-    e.stopPropagation();
-    const [L,i]=d.dataset.prep.split('.').map(Number);
-    const sp=S.spellLevels[L].spells[i];
-    sp.prep=!sp.prep; d.classList.toggle('on'); save();
-  }));
+  // Prepared dots are wired once, delegated, in wireSpellModal — they live in two places at once
+  // (the grid card and, when open, the modal) and need to stay in sync between them.
   // wire move-to-level selects
   $$('[data-spellmove]').forEach(sel=>sel.addEventListener('change',()=>{
     const [L,i]=sel.dataset.spellmove.split('.').map(Number);
@@ -3129,16 +3150,53 @@ function wireCombatSlots(){
     renderSpellLevels(); save(); // also refreshes this tracker — keeps Combat/Spells/Overview in sync
   });
 }
-// Tap-to-expand detail (range/duration/DC/wikidot link) — delegated once on the persistent
-// container so it survives every renderSpellLevels() re-render. Two triggers: the ℹ button
-// (edit mode, where the row itself is full of text inputs so tapping it can't mean "expand"),
-// and the whole row (locked/reading mode, where there's nothing to type into).
+// Tap-to-expand detail (range/duration/DC/wikidot link) for edit mode's ℹ button — delegated
+// once on the persistent container so it survives every renderSpellLevels() re-render. Locked/
+// reading mode gets the same depth of detail through the Tome Grid's modal instead (see
+// wireSpellModal) rather than an inline expand, since there's no row left to expand in place.
 function wireSpellDetails(){
   $('#spellLevels').addEventListener('click',e=>{
     const btn=e.target.closest('[data-spellinfo]');
-    if(btn){ btn.closest('.spell-entry').classList.toggle('open'); return; }
-    const row=e.target.closest('[data-spellopen]');
-    if(row) row.closest('.spell-entry').classList.toggle('open');
+    if(btn) btn.closest('.spell-entry').classList.toggle('open');
+  });
+}
+// Prepared toggles for a Tome Grid card, wired once here for both places its dot can appear —
+// the grid card itself, and (when open) the modal showing the same spell — so tapping either one
+// updates both without a full re-render of either.
+function togglePrep(L,i){
+  const sp=S.spellLevels[L].spells[i]; if(!sp) return;
+  sp.prep=!sp.prep;
+  $$(`[data-prep="${L}.${i}"]`).forEach(d=>d.classList.toggle('on',sp.prep));
+  save();
+}
+function openSpellModal(L,i){
+  const sp=S.spellLevels[L].spells[i]; if(!sp) return;
+  const panel=$('#spellModalPanel');
+  panel.className='modal spell-modal tier'+spellTier(L);
+  panel.innerHTML=spellModalHTML(sp,L,i);
+  $('#spellModalBg').classList.add('open');
+}
+function closeSpellModal(){ $('#spellModalBg').classList.remove('open'); }
+// Whole card is the tap target — clicking a Tome Grid card opens its full detail as a modal
+// instead of reflowing the grid in place. Delegated on #spellLevels (survives every
+// renderSpellLevels() re-render) and checks data-prep first so tapping the dot never also
+// opens the card underneath it.
+function wireSpellModal(){
+  $('#spellLevels').addEventListener('click',e=>{
+    const dot=e.target.closest('[data-prep]');
+    if(dot){ e.stopPropagation(); const [L,i]=dot.dataset.prep.split('.').map(Number); togglePrep(L,i); return; }
+    const card=e.target.closest('[data-spellcard]');
+    if(card){ const [L,i]=card.dataset.spellcard.split('.').map(Number); openSpellModal(L,i); }
+  });
+  $('#spellModalPanel').addEventListener('click',e=>{
+    const dot=e.target.closest('[data-prep]');
+    if(dot){ const [L,i]=dot.dataset.prep.split('.').map(Number); togglePrep(L,i); }
+  });
+  $('#spellModalBg').addEventListener('click',e=>{
+    if(e.target.id==='spellModalBg'||e.target.closest('[data-spellmodalclose]')) closeSpellModal();
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&$('#spellModalBg').classList.contains('open')) closeSpellModal();
   });
 }
 // Searchable spell index — same tap-to-add pattern as the Feature/Race library search. Picking
@@ -5224,7 +5282,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

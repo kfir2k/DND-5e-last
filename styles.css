@@ -1785,11 +1785,23 @@ select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
 .jump-chip.tier2{--accent:#a58ce0;--accent-dim:rgba(165,140,224,.3)}
 .jump-chip.tier3{--accent:#c9a227;--accent-dim:rgba(201,162,39,.3)}
 #spellLevels{padding:2px 4px 18px}
+/* Each level is its own soft tinted card (same elemental-accent-card language as the Skills tab's
+   .skill-group) instead of a plain block separated by divider lines — a light wash of the tier's
+   own color tells one chapter from the next, so there's no border-bottom stacking up alongside
+   the header's own rule and the card grid's own borders underneath it. */
 .spell-level{
   --accent:var(--gold); --accent-dim:rgba(201,162,39,.18);
-  position:relative;padding:18px 12px 14px;border-bottom:1px solid var(--border);overflow:hidden;
+  position:relative;padding:18px 14px 16px;margin-bottom:14px;overflow:hidden;
+  background:linear-gradient(165deg,var(--accent-dim),var(--panel) 78%);
+  border:1px solid var(--border-lt);border-top:2px solid var(--accent);
+  border-radius:14px;
 }
-.spell-level:last-child{border-bottom:none}
+.spell-level:last-child{margin-bottom:0}
+.spell-level::before{
+  content:'';position:absolute;top:-50%;left:50%;width:160%;height:160%;
+  transform:translateX(-50%);background:radial-gradient(circle,var(--accent-dim) 0%,transparent 60%);
+  pointer-events:none;
+}
 .spell-numeral{
   position:absolute;top:6px;right:10px;font-family:'Cinzel',serif;font-weight:700;
   font-size:3.4rem;line-height:1;color:var(--accent);opacity:.14;letter-spacing:-2px;
@@ -1800,11 +1812,10 @@ select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
 .spell-level.tier2{--accent:#a58ce0;--accent-dim:rgba(165,140,224,.2)}
 .spell-level.tier3{--accent:#c9a227;--accent-dim:rgba(201,162,39,.22)}
 /* margin-right clears the numeral watermark's widest case ("VIII", ~95px, sitting 10px from the
-   chapter's own right edge) — without it the header's own border-bottom rule cut straight through
-   the middle of the tall numeral glyph instead of stopping short of it. */
+   chapter's own right edge). */
 .spell-level-head{
   display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-  padding-bottom:9px;margin-bottom:7px;margin-right:120px;border-bottom:1px solid var(--accent-dim);
+  padding-bottom:6px;margin-bottom:10px;margin-right:120px;
   position:relative;z-index:1;
 }
 .spell-level-head h3{color:var(--accent);font-size:.8rem;letter-spacing:2.5px;text-transform:uppercase}
@@ -1853,19 +1864,13 @@ select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
 }
 .spell-row input[type=text]:hover{border-bottom-color:var(--border-lt)}
 .spell-row input[type=text]:focus{background:var(--ink);border-color:transparent;border-bottom-color:var(--accent);border-radius:4px}
-.spell-row .dot,.spell-row-lock .dot{border-color:var(--accent-dim)}
-.spell-row .dot.on,.spell-row-lock .dot.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px var(--accent-dim)}
+.spell-row .dot,.spell-card .dot,.spell-modal-head .dot{border-color:var(--accent-dim)}
+.spell-row .dot.on,.spell-card .dot.on,.spell-modal-head .dot.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px var(--accent-dim)}
 .sp-badge{
   font-size:.78rem;flex-shrink:0;width:20px;height:20px;border-radius:50%;
   display:inline-flex;align-items:center;justify-content:center;
   border:1px solid var(--accent-dim);background:var(--panel3);
 }
-/* Reading-mode row: tap anywhere to expand the full text — there's nothing to type into, unlike
-   the edit-mode row below, which needs a dedicated ℹ button since the row is full of inputs. */
-.spell-row-lock{display:flex;align-items:center;gap:10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.spell-name-lock{font-family:'Cinzel',serif;font-weight:600;font-size:1rem;color:var(--text);flex:1;min-width:0}
-.spell-chev{color:var(--faint);font-size:.85rem;transition:transform .15s;flex-shrink:0}
-.spell-entry.open .spell-chev{transform:rotate(90deg);color:var(--accent)}
 /* Readable text pills under the spell name — cast type + Concentration/Ritual flags */
 .spell-pills{display:flex;flex-wrap:wrap;gap:6px;padding:7px 0 4px 30px}
 .sp-pill{
@@ -1944,10 +1949,8 @@ select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
   font-family:inherit;resize:none;overflow:hidden;min-height:38px;
 }
 .spell-desc:focus{border-color:var(--accent);outline:none;background:var(--ink)}
-/* Reading mode's collapsed prose + SRD facts/link — same open/close mechanism as the edit-mode
-   .spell-detail panel below, just holding plain text instead of a form. */
-.spell-detail-lock{max-height:0;overflow:hidden;opacity:0;margin-left:30px;transition:max-height .25s ease,opacity .2s ease,margin-top .25s ease}
-.spell-entry.open .spell-detail-lock{max-height:320px;opacity:1;margin-top:9px}
+/* Reading mode's prose + SRD facts/link now live in the spell modal (always fully shown there,
+   nothing to collapse) instead of an inline reveal — see .spell-modal-body below. */
 .spell-desc-ro{font-size:.86rem;color:var(--muted);line-height:1.55;margin-bottom:8px}
 .spell-desc::placeholder,.ss-cell input::placeholder{color:var(--faint)}
 .sp-tag{
@@ -1990,6 +1993,105 @@ select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
 .sd-link:hover{background:var(--accent-dim)}
 .sd-warn{display:block;margin-top:6px;color:var(--red);font-size:.76rem;font-style:italic}
 .prep-note{color:var(--faint);font-size:.78rem;margin:2px 0 8px 6px;font-style:italic}
+
+/* ---------- Tome Grid: locked/reading mode's spell cards ---------- */
+/* A responsive multi-column grid instead of one full-width row per spell — the old row always
+   showed a boxed Cast/Range/Duration/Comp grid, pills, and a resolve/damage line even collapsed,
+   so a real spellbook meant screens of scrolling to scan past spells you weren't about to cast.
+   The card keeps every scan-worthy fact (name, action type, range/duration, damage/heal, the
+   short effect line) but packs 2-3 per row; the full stat grid/pills/SRD facts move to the modal
+   (see .spell-modal below) so tapping a card never reflows this grid underneath it. */
+.tome-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;position:relative;z-index:1}
+.spell-card{
+  background:rgba(0,0,0,.16);border:1px solid var(--border);border-radius:9px;
+  padding:9px 12px 10px;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:border-color .15s ease,background .15s ease;
+}
+.spell-card:hover{border-color:var(--accent);background:rgba(0,0,0,.24)}
+.sc-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.sc-name{
+  flex:1;min-width:0;font-family:'Cinzel',serif;font-weight:600;font-size:.92rem;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.sc-meta{
+  display:flex;align-items:center;flex-wrap:wrap;gap:5px 8px;
+  color:var(--muted);font-size:.72rem;margin-bottom:5px;
+}
+.sc-meta .sp-pill{font-size:.62rem;padding:1px 8px}
+.sc-effect{
+  font-family:'Cinzel',serif;font-size:.78rem;font-weight:700;color:var(--ember-lt);
+  display:flex;align-items:center;gap:5px;margin-bottom:4px;
+}
+.sc-effect.heal{color:var(--green)}
+.sc-desc{margin:0;color:var(--muted);font-size:.8rem;line-height:1.45}
+
+/* ---------- Spell detail modal ---------- */
+/* Tapping a Tome Grid card opens the exact same depth of detail the old inline-expand used to
+   show (stat grid, pills, resolve/damage callout, full description, SRD facts+link) as a modal —
+   same .modal-bg/.modal idiom as the Gear Index (.eq-index-modal), just wide enough for prose.
+   Selectors below are the compound `.modal.spell-modal` (not bare `.spell-modal`) specifically
+   for max-width/padding: those also live on the base `.modal` rule further down this file, and a
+   bare single-class selector ties with it on specificity — whichever rule happens to sit later in
+   the file would silently win, which is exactly what was capping this at 440px instead of the
+   width set here. The compound selector out-specifies the base rule regardless of source order. */
+.modal.spell-modal{
+  --accent:var(--gold);--accent-dim:rgba(201,162,39,.18);
+  max-width:960px;max-height:88vh;display:flex;flex-direction:column;
+  position:relative;padding:34px 44px 10px;
+}
+.spell-modal.tier0{--accent:#8b98ab;--accent-dim:rgba(139,152,171,.2)}
+.spell-modal.tier1{--accent:#5aa9e0;--accent-dim:rgba(90,169,224,.2)}
+.spell-modal.tier2{--accent:#a58ce0;--accent-dim:rgba(165,140,224,.2)}
+.spell-modal.tier3{--accent:#c9a227;--accent-dim:rgba(201,162,39,.22)}
+.modal.spell-modal .close-x{position:absolute;top:16px;right:16px;float:none;z-index:2;font-size:1.4rem}
+/* Sized and placed to stay a background watermark, not compete with the title — top:8px (not a
+   negative offset that bled past the modal's own top edge) tucks it just under the close button,
+   and .spell-modal-head reserves matching padding-right so even a long, wrapping spell name
+   ("Delayed Blast Fireball") wraps before it ever runs under the glyph instead of through it. */
+.spell-modal-numeral{
+  position:absolute;top:8px;right:22px;font-family:'Cinzel',serif;font-weight:700;
+  font-size:5rem;line-height:1;color:var(--accent);opacity:.1;pointer-events:none;user-select:none;
+  z-index:0;
+}
+.spell-modal-head{
+  display:flex;align-items:center;gap:12px;flex-shrink:0;position:relative;z-index:1;
+  padding-right:130px;
+}
+.spell-modal-head .dot{width:20px;height:20px}
+.spell-modal-name{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:2rem;font-weight:700}
+.spell-modal-level{
+  color:var(--accent);font-size:.9rem;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;
+  margin:6px 0 16px;flex-shrink:0;position:relative;z-index:1;
+}
+.spell-modal-body{
+  flex:1 1 auto;overflow-y:auto;padding-bottom:26px;position:relative;z-index:1;font-size:1.06rem;
+}
+/* The reused stat-grid/pills/resolve/damage/SRD-fact components are sized for the old, much
+   narrower row — bump every one of them up to fill the bigger modal instead of leaving them
+   looking small and lost in the extra space. They also carried a 30px left indent to line up
+   under the name past the dot in the old row layout, which the modal doesn't need either. */
+.spell-modal-body .spell-stats{margin-left:0}
+.spell-modal-body .ss-cell{padding:12px 16px}
+.spell-modal-body .ss-cell b{font-size:.72rem}
+.spell-modal-body .ss-cell span,.spell-modal-body .ss-cell input{font-size:1.05rem}
+.spell-modal-body .spell-pills{padding-left:0;gap:9px;margin-bottom:16px}
+.spell-modal-body .sp-pill{font-size:.8rem;padding:4px 14px}
+.spell-modal-body .spell-resolve,.spell-modal-body .spell-damage{margin-left:0;font-size:1.05rem;gap:9px}
+/* Capped independently of the modal's own width — a much wider modal gives the stat grid and
+   pills room to breathe, but letting prose stretch edge-to-edge with it would just make it
+   harder to track from one line to the next. */
+.spell-modal-body .spell-desc-ro{font-size:1.05rem;line-height:1.75;margin-bottom:14px;max-width:66ch}
+.spell-modal-body .sd-facts{gap:8px 22px;margin-bottom:10px}
+.spell-modal-body .sd-fact{font-size:.92rem}
+.spell-modal-body .sd-fact b{font-size:.7rem}
+.spell-modal-body .sd-link{font-size:.88rem;padding:6px 15px}
+@media (max-width:640px){
+  .modal.spell-modal{padding:26px 22px 8px}
+  .spell-modal-name{font-size:1.5rem}
+  .spell-modal-head{padding-right:76px}
+  .spell-modal-numeral{font-size:3.2rem;top:2px;right:14px}
+  .spell-modal-body .spell-stats{grid-template-columns:repeat(2,1fr)}
+}
 
 /* ---------- Overview: title page ---------- */
 .insp-btn{
