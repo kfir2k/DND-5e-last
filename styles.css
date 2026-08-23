@@ -1764,6 +1764,11 @@ select.add-btn{padding:6px 10px;font-size:.8rem;width:auto;align-self:flex-start
 .sc-input:focus{outline:none;border-bottom-color:var(--gold)}
 select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
 .sc-computed{font-family:'Cinzel',serif;font-weight:700;font-size:1.2rem;color:var(--gold-lt)}
+/* Plain-language line under Save DC/Attack — always visible (not a hover tooltip, which doesn't
+   exist on a tablet at the table) so a player who's never seen this sheet before still knows what
+   the number means and why it's there, without having to ask. */
+.sc-hint{color:var(--faint);font-size:.68rem;line-height:1.35;margin-top:3px;font-family:'Crimson Pro',serif;font-style:italic}
+.sc-hint b{color:var(--muted);font-style:normal;font-weight:600}
 .search-row{display:grid;grid-template-columns:auto 1fr;align-items:center;border-top:1px solid var(--border)}
 .search-row .search-label{padding:10px 16px;font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-right:1px solid var(--border);white-space:nowrap}
 .search-row input{width:100%;background:transparent;border:none;color:var(--text);font-size:.95rem;padding:10px 16px}

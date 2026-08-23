@@ -504,10 +504,12 @@ spells:`
         <div class="stat-cell">
           <div class="sc-label">Save DC</div>
           <div class="sc-computed" data-calc="spellDC">—</div>
+          <div class="sc-hint"><b>8 + Prof + Ability mod.</b> Target rolls this or higher to resist your spell.</div>
         </div>
         <div class="stat-cell">
           <div class="sc-label">Attack</div>
           <div class="sc-computed" data-calc="spellAtk">—</div>
+          <div class="sc-hint"><b>Prof + Ability mod.</b> Your bonus to hit with a spell attack roll.</div>
         </div>
       </div>
       <div class="search-row">
