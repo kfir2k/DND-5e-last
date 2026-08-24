@@ -37,7 +37,7 @@ function defaultState(){
     // Combat cockpit
     customCards:[], states:[], concentration:null,
     turnPlans:[{name:'Default',steps:[]}], turnPlanIdx:0,
-    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false},
+    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false,hiddenZones:[],planCollapsed:false},
     // Page 2
     portrait:'',
     age:'',height:'',weight:'',eyes:'',skin:'',hair:'',
@@ -407,21 +407,29 @@ build:`
 
 combat:`
   ${combatHudHTML()}
-  <div class="ck-duo">
+  <div class="ck-duo" id="ckDuo">
     <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
       <div id="ckUndo"></div>
       <div class="ck-filters" id="ckFilters"></div>
-      <div class="ck-cards" id="ckCards"></div>
+      <div class="ck-zone-chips" id="ckZoneChips"></div>
+      <div class="ck-zones" id="ckCards"></div>
       <div class="fx-addrow" style="margin-top:8px">
         <button class="add-btn" id="ckAddCustom">+ Custom card</button>
         <button class="add-btn" id="ckSpellsToggle"></button>
       </div>
     </div>
-    <div class="panel ck-plan-panel"><h2>🗺 Turn Plan</h2>
-      <div class="ck-plan-head"><div class="ck-plan-tabs" id="ckPlanTabs"></div><button id="ckPlanWizard" style="display:none">🧙 Roll This Turn</button><button id="ckPlanClear" style="display:none">Clear</button></div>
-      <div class="ck-plan" id="ckPlan"></div>
+    <div class="panel ck-plan-panel" id="ckPlanPanel">
+      <div class="ck-plan-collapsed-tab" id="ckPlanCollapsedTab" title="Show Turn Plan">
+        <span>🗺 Turn Plan</span><span class="ck-plan-collapsed-count" id="ckPlanCollapsedCount"></span>
+      </div>
+      <div class="ck-plan-open">
+        <h2>🗺 Turn Plan<button class="ck-plan-collapse-btn" id="ckPlanCollapseBtn" title="Hide Turn Plan to widen Do Something">≫</button></h2>
+        <div class="ck-plan-head"><div class="ck-plan-tabs" id="ckPlanTabs"></div><button id="ckPlanWizard" style="display:none">🧙 Roll This Turn</button><button id="ckPlanClear" style="display:none">Clear</button></div>
+        <div class="ck-plan" id="ckPlan"></div>
+      </div>
     </div>
   </div>
+  <div class="ck-pop" id="ckPop"></div>
   <div class="ck-grid">
     <div class="ck-col ck-left">
       <div class="panel ck-death" id="ckDeathPanel"><h2 id="ckDeathHead">💀 Death Saves</h2>
@@ -1819,18 +1827,29 @@ function wireFeaturesLock(){
 const CK_TYPES=[['action','Action'],['bonus','Bonus Action'],['reaction','Reaction'],['item','Item'],['other','Other']];
 const CK_TYPE_ORDER={action:0,bonus:1,reaction:2,item:3,other:4};
 const CK_PILL={action:'pill-action',bonus:'pill-bonus',reaction:'pill-react',item:'pill-item',other:'pill-cast'};
+// Source categories the "Do Something" grid groups into — orthogonal to the action-economy
+// filter above (a Fireball is both "in the Spells zone" and "under the Action filter"). Each
+// zone can be shown/hidden independently via the rail (S.cockpit.hiddenZones) so a player who
+// only cares about spells this fight can tuck the others out of the way without losing them.
+const CK_ZONES=[['weap','⚔','Weapons'],['spell','🔮','Spells'],['feat','🎖','Features & Feats'],['item','🎒','Items & Notes']];
 // New tag list for a card, or the single-value legacy field wrapped in an array if it was
 // never migrated — every card format has always stored one of these two shapes.
 function ckTypesOf(obj,legacyVal,fallback){
   return Array.isArray(obj.actionTypes)&&obj.actionTypes.length ? obj.actionTypes : [legacyVal||fallback];
 }
 let CK_FILTER='all', CK_UNDO=null;
-const CK_OPEN=new Set(), CK_RULES_OPEN=new Set();
+// One card's detail can be open at a time in the "Do Something" grid — it floats in a popover
+// anchored to the card (see openCkPop/closeCkPop) rather than expanding the card in place, so
+// browsing the grid never reflows. Turn-plan steps are a separate, independent open-set (below):
+// a step's card sits in a normal vertical list, so expanding one in place there is just an
+// ordinary accordion, not the "grid card grows and shoves its neighbors down" problem this fixes.
+let CK_OPEN_KEY=null;
+const CK_RULES_OPEN=new Set();
 // Older saves may lack the cockpit fields entirely — normalize on every access.
 function ck(){
   S.cockpit=S.cockpit||{};
   const c=S.cockpit;
-  c.hidden=c.hidden||[]; c.pins=c.pins||[];
+  c.hidden=c.hidden||[]; c.pins=c.pins||[]; c.hiddenZones=c.hiddenZones||[];
   S.customCards=S.customCards||[]; S.states=S.states||[];
   // Plan templates: named step lists for different situations (boss fight, defensive...).
   // Saves from the single-plan era get their old steps folded into a "Default" template.
@@ -1881,14 +1900,14 @@ function cockpitCards(){
   (S.attacks||[]).forEach((a,i)=>{
     if(!(a.name||'').trim()) return;
     const types=ckTypesOf(a,a.actionType,'action');
-    cards.push({key:'atk:'+i,kind:'atk',i,name:a.name,types,type:types[0],cond:a.cond||''});
+    cards.push({key:'atk:'+i,kind:'atk',i,name:a.name,types,type:types[0],cond:a.cond||'',zone:'weap'});
   });
   const anyPrep=S.spellLevels.some((lv,L)=>L>0&&lv.spells.some(s=>s.prep));
   S.spellLevels.forEach((lv,L)=>lv.spells.forEach((sp,i)=>{
     if(!(sp.name||'').trim()) return;
     if(L>0&&anyPrep&&!c.showAllSpells&&!sp.prep) return;
     const types=Array.isArray(sp.actionTypes)&&sp.actionTypes.length?sp.actionTypes:[spellActionType(sp)];
-    cards.push({key:`sp:${L}.${i}`,kind:'sp',L,i,name:sp.name,types,type:types[0],cond:sp.cond||'',conc:spellIsConc(sp)});
+    cards.push({key:`sp:${L}.${i}`,kind:'sp',L,i,name:sp.name,types,type:types[0],cond:sp.cond||'',conc:spellIsConc(sp),zone:'spell'});
   }));
   S.features.forEach((f,gi)=>{
     const isFeat=!!(f.source&&f.source.kind==='feat');
@@ -1897,18 +1916,18 @@ function cockpitCards(){
     // filter, action-usable or not: "what feats do I have" is exactly what you want mid-fight.
     if(!f.combat && !isFeat) return;
     const types=ckTypesOf(f,f.actionType,num(f.usesMax)>0?'action':'other');
-    cards.push({key:'ft:'+gi,kind:'ft',gi,name:f.title||'Feature',types,type:types[0],cond:f.cond||'',isFeat});
+    cards.push({key:'ft:'+gi,kind:'ft',gi,name:f.title||'Feature',types,type:types[0],cond:f.cond||'',isFeat,zone:'feat'});
   });
   S.customCards.forEach((cc,i)=>{
     const types=ckTypesOf(cc,cc.type,'action');
-    cards.push({key:'cc:'+i,kind:'cc',i,name:cc.title||'Custom',types,type:types[0],cond:cc.cond||''});
+    cards.push({key:'cc:'+i,kind:'cc',i,name:cc.title||'Custom',types,type:types[0],cond:cc.cond||'',zone:'item'});
   });
   (S.equipment||[]).forEach((e,i)=>{
     if(!e.combat||!(e.name||'').trim()) return;
     // Blank qty = untracked (always usable); only an explicit 0 counts as "out of stock".
     const tracked=String(e.qty??'').trim()!=='';
     const types=ckTypesOf(e,e.actionType,'item');
-    cards.push({key:'it:'+i,kind:'it',i,name:e.name,types,type:types[0],cond:e.cond||'',out:tracked&&num(e.qty)<=0});
+    cards.push({key:'it:'+i,kind:'it',i,name:e.name,types,type:types[0],cond:e.cond||'',out:tracked&&num(e.qty)<=0,zone:'item'});
   });
   cards.forEach(x=>{ x.pin=c.pins.includes(x.key); });
   return cards;
@@ -2040,13 +2059,13 @@ function ckSubHTML(card,withRoll){
   return '';
 }
 function ckCardHTML(card){
-  const open=CK_OPEN.has(card.key);
+  const active=CK_OPEN_KEY===card.key;
   const sub=ckSubHTML(card);
   const tl=Object.fromEntries(CK_TYPES);
   // One pill per tag — usually just one, but a card tagged for more than one economy slot
   // (Action + Bonus Action) shows both right here, no need to open it to see where it lives.
   const pills=card.types.map(v=>`<span class="sp-pill ${CK_PILL[v]||'pill-cast'}">${tl[v]||'Other'}</span>`).join('');
-  return `<div class="ck-card ck-card-${card.type||'other'} ${card.kind==='sp'?'ck-card-spell':''} ${card.isFeat?'ck-card-feat':''} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${open?'open':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
+  return `<div class="ck-card ck-card-${card.type||'other'} ${card.kind==='sp'?'ck-card-spell':''} ${card.isFeat?'ck-card-feat':''} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${active?'ck-active':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
     <div class="ck-card-head">
       <span class="ck-drag-handle" data-ckdraghandle title="Drag to place in your turn plan">⠿</span>
       <span class="ck-card-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</span>
@@ -2056,29 +2075,43 @@ function ckCardHTML(card){
     </div>
     ${sub?`<div class="ck-card-sub">${sub}</div>`:''}
     ${card.cond?`<div class="ck-card-cond">⏱ ${esc(card.cond)}</div>`:''}
-    ${open?ckCardOpenHTML(card):''}
   </div>`;
 }
 function renderCockpitCards(){
   const box=$('#ckCards'); if(!box) return;
   const c=ck();
   let cards=cockpitCards();
-  const counts={all:cards.length,spell:cards.filter(x=>x.kind==='sp').length,feat:cards.filter(x=>x.isFeat).length};
-  // A card tagged with more than one economy slot counts (and shows up) under every tab it's
-  // tagged for, same idea as the spell facet below — nothing is forced into one exclusive bucket.
+  const counts={all:cards.length};
+  // A card tagged with more than one economy slot counts (and shows up) under every filter it's
+  // tagged for, rather than being forced into one exclusive bucket.
   CK_TYPES.forEach(([v])=>counts[v]=cards.filter(x=>x.types.includes(v)).length);
-  // "Spells" and "Feats" are source facets (kind), not action-type facets — they sit alongside
-  // Action/Bonus/etc. rather than replacing them, so a spell or feat that's also an Action shows
-  // up under either filter instead of being forced into one exclusive bucket.
-  if(CK_FILTER==='spell') cards=cards.filter(x=>x.kind==='sp');
-  else if(CK_FILTER==='feat') cards=cards.filter(x=>x.isFeat);
-  else if(CK_FILTER!=='all') cards=cards.filter(x=>x.types.includes(CK_FILTER));
+  // Zone (source) counts are computed from the full list too, same reasoning as the economy
+  // counts above — the rail's numbers shouldn't jump around as the economy filter changes.
+  const zoneCounts=Object.fromEntries(CK_ZONES.map(([z])=>[z,cards.filter(x=>x.zone===z).length]));
+  if(CK_FILTER!=='all') cards=cards.filter(x=>x.types.includes(CK_FILTER));
   cards.sort((a,b)=>(b.pin-a.pin)||(CK_TYPE_ORDER[a.type]-CK_TYPE_ORDER[b.type])||((a.cond?1:0)-(b.cond?1:0))||a.name.localeCompare(b.name));
-  $('#ckFilters').innerHTML=[['all','All'],...CK_TYPES,['spell','🔮 Spells'],['feat','🎖 Feats']].map(([v,l])=>
-    `<button class="ck-filter ${v==='spell'?'ck-filter-spell':v==='feat'?'ck-filter-feat':''} ${CK_FILTER===v?'on':''}" data-ckfilter="${v}">${l}${counts[v]?` <i>${counts[v]}</i>`:''}</button>`).join('');
-  box.innerHTML = cards.length
-    ? cards.map(ckCardHTML).join('')
-    : '<p class="prep-note" style="margin:0">Nothing here yet — add attacks below, pick spells on the Spells tab, add a feat on the Build tab, or add a custom card.</p>';
+  $('#ckFilters').innerHTML=[['all','All'],...CK_TYPES].map(([v,l])=>
+    `<button class="ck-filter ${CK_FILTER===v?'on':''}" data-ckfilter="${v}">${l}${counts[v]?` <i>${counts[v]}</i>`:''}</button>`).join('');
+  const hiddenZones=new Set(c.hiddenZones||[]);
+  const chipsBox=$('#ckZoneChips');
+  // Only a category the character actually has anything in earns a chip — an empty "Weapons"
+  // chip for a caster with no melee options is a control with nothing to control.
+  if(chipsBox) chipsBox.innerHTML=CK_ZONES.filter(([z])=>zoneCounts[z]>0).map(([z,icon,label])=>{
+    const hidden=hiddenZones.has(z);
+    return `<button class="ck-zone-chip ck-zc-${z} ${hidden?'':'on'}" data-ckzone="${z}" title="${hidden?'Show':'Hide'} ${esc(label)}">
+      ${icon} ${esc(label)} <i>${zoneCounts[z]}</i>
+    </button>`;
+  }).join('');
+  const groups=CK_ZONES.map(([z,icon,label])=>({z,icon,label,list:cards.filter(x=>x.zone===z)})).filter(g=>g.list.length);
+  const visible=groups.filter(g=>!hiddenZones.has(g.z));
+  box.innerHTML = !cards.length
+    ? '<p class="prep-note" style="margin:0">Nothing here yet — add attacks below, pick spells on the Spells tab, add a feat on the Build tab, or add a custom card.</p>'
+    : !visible.length
+      ? '<p class="prep-note" style="margin:0">Every category is hidden — tap one above to bring it back.</p>'
+      : visible.map(g=>`<div class="ck-zone ck-zone-${g.z}">
+          <div class="ck-zone-lbl">${g.icon} ${esc(g.label)}</div>
+          <div class="ck-cards">${g.list.map(ckCardHTML).join('')}</div>
+        </div>`).join('');
   $('#ckUndo').innerHTML = CK_UNDO
     ? `<div class="ck-undo">${esc(CK_UNDO.msg)} <button data-ckundo>Undo</button><button data-ckundox>✕</button></div>` : '';
   const anyPrep=S.spellLevels.some((lv,L)=>L>0&&lv.spells.some(s=>s.prep));
@@ -2086,6 +2119,52 @@ function renderCockpitCards(){
   st.style.display=anyPrep?'':'none';
   st.textContent=c.showAllSpells?'Showing all spells — tap for prepared only':'Prepared spells only — tap for all';
   renderCockpitPlan();
+  renderCkPopover();
+}
+// ---------- "Do Something" card detail — a popover anchored to the tapped card, not an inline
+// expand. A grid that grows one tile full-width and shoves every card after it down the page
+// reads as broken; a small panel floating next to the card you tapped doesn't touch the grid at
+// all. Exactly one can be open at a time (re-tapping the same card, tapping elsewhere, or Escape
+// closes it) — the same ckCardOpenHTML body every card has always had (cast-with-slot buttons,
+// the condition field, pin, action-type tags, feature-use pips, custom-card editing, item use),
+// just relocated, so nothing that used to live in the expanded card is lost.
+function ckPopEl(){ return $('#ckPop'); }
+function closeCkPop(){
+  CK_OPEN_KEY=null;
+  const pop=ckPopEl(); if(pop){ pop.classList.remove('open'); pop.innerHTML=''; }
+  $$('.ck-card.ck-active').forEach(el=>el.classList.remove('ck-active'));
+}
+function positionCkPop(anchorEl){
+  const pop=ckPopEl(); if(!pop||!anchorEl) return;
+  const r=anchorEl.getBoundingClientRect();
+  const popW=pop.offsetWidth||300, popH=pop.offsetHeight||120;
+  const spaceBelow=window.innerHeight-r.bottom;
+  let top,caret;
+  if(spaceBelow>=popH+14 || spaceBelow>=r.top){ top=r.bottom+10; caret='ck-pop-up'; }
+  else{ top=Math.max(10,r.top-popH-10); caret='ck-pop-down'; }
+  const left=Math.min(Math.max(10,r.left),window.innerWidth-popW-10);
+  pop.style.top=top+'px'; pop.style.left=left+'px';
+  pop.classList.remove('ck-pop-up','ck-pop-down'); pop.classList.add(caret);
+  const caretX=Math.min(Math.max(18,r.left+r.width/2-left),popW-18);
+  pop.style.setProperty('--ckpopx',caretX+'px');
+}
+function openCkPop(key,anchorEl){
+  const card=cockpitCards().find(x=>x.key===key); if(!card) return;
+  CK_OPEN_KEY=key;
+  const pop=ckPopEl();
+  pop.innerHTML=`<button class="ck-pop-close" data-ckpopclose title="Close">✕</button><div class="ck-pop-name">${card.conc?'◉ ':''}${esc(card.name)}</div>${ckCardOpenHTML(card)}`;
+  pop.classList.add('open');
+  $$('.ck-card').forEach(el=>el.classList.toggle('ck-active',el.dataset.ckopen===key));
+  positionCkPop(anchorEl);
+}
+// Called at the end of every cockpit re-render so a control used inside the open popover (cast
+// with slot, a pip, the condition field) sees its own effect immediately, same as the rest of
+// the sheet — and so the popover closes cleanly if its source card just got deleted.
+function renderCkPopover(){
+  if(!CK_OPEN_KEY) return;
+  const anchorEl=document.querySelector(`[data-ckopen="${CSS.escape(CK_OPEN_KEY)}"]`);
+  if(!anchorEl){ closeCkPop(); return; }
+  openCkPop(CK_OPEN_KEY,anchorEl);
 }
 // The turn-plan timeline — the cockpit's main stage. Each step is a full-information row:
 // name, action-type pill, the same live sub-line as its grid card (hit/damage, slot pips, use
@@ -2141,6 +2220,10 @@ function renderCockpitPlan(){
   if(clr) clr.style.display=cur.steps.length?'':'none';
   const wiz=$('#ckPlanWizard');
   if(wiz) wiz.style.display=cur.steps.some(p=>p.key.startsWith('atk:'))?'':'none';
+  const cc=$('#ckPlanCollapsedCount');
+  if(cc) cc.textContent=cur.steps.length?String(cur.steps.length):'';
+  const duo=$('#ckDuo');
+  if(duo) duo.classList.toggle('ck-plan-collapsed',!!ck().planCollapsed);
 }
 // Concentration banner, state chips, ★ reminders feed, rules drawer. Concentration/top-states/
 // full-states-list each render into every instance found (Combat's HUD + reference zone, and
@@ -2277,10 +2360,14 @@ function wireCombatFeatures(){
     const del=t.closest('[data-ccdel]');
     if(del){ uiConfirm('Delete this custom card?',{title:'Delete card',ok:'Delete',danger:true}).then(ok=>{
         if(!ok) return;
-        S.customCards.splice(+del.dataset.ccdel,1); CK_OPEN.clear(); refresh();
+        S.customCards.splice(+del.dataset.ccdel,1); closeCkPop(); refresh();
       }); return; }
     const filt=t.closest('[data-ckfilter]');
     if(filt){ CK_FILTER=filt.dataset.ckfilter; renderCockpitCards(); return; }
+    const zone=t.closest('[data-ckzone]');
+    if(zone){ const cc=ck(), z=zone.dataset.ckzone;
+      cc.hiddenZones=cc.hiddenZones.includes(z)?cc.hiddenZones.filter(x=>x!==z):[...cc.hiddenZones,z];
+      renderCockpitCards(); save(); return; }
     const rsec=t.closest('[data-ckrsec]');
     if(rsec){ const si=+rsec.dataset.ckrsec;
       CK_RULES_OPEN.has(si)?CK_RULES_OPEN.delete(si):CK_RULES_OPEN.add(si);
@@ -2288,21 +2375,26 @@ function wireCombatFeatures(){
     if(t.closest('[data-ckconcdrop]')){ S.concentration=null; renderCockpitExtras(); save(); return; }
     const sdel=t.closest('[data-stdel]');
     if(sdel){ S.states.splice(+sdel.dataset.stdel,1); renderCockpitExtras(); save(); return; }
-    // Card/step head tap toggles open — but not when the tap landed on a control or inside the
-    // opened body (accidental scroll-taps on a tablet shouldn't slam the card shut). This has to
-    // run after every specific data-ck* handler above, not before: it matches any click inside a
-    // [data-planstep], so checking it first was swallowing clicks meant for the pin/type-tag/
-    // condition controls that live inside an open step (they're buttons/inputs too).
+    if(t.closest('[data-ckpopclose]')){ closeCkPop(); return; }
+    // Card tap opens its detail popover — but not when the tap landed on a control already
+    // handled above, or inside the popover itself (accidental scroll-taps on a tablet shouldn't
+    // slam it shut). This has to run after every specific data-ck* handler, not before: it matches
+    // any click inside a [data-planstep] too, so checking it first swallowed clicks meant for the
+    // pin/type-tag/condition controls that live inside an open turn-plan step.
     if(t.closest('input,select,textarea,button,a,.pips,.ck-body')) return;
     const cardEl=t.closest('[data-ckopen]');
     if(cardEl){ const key=cardEl.dataset.ckopen;
-      CK_OPEN.has(key)?CK_OPEN.delete(key):CK_OPEN.add(key);
-      renderCockpitCards(); return; }
+      CK_OPEN_KEY===key ? closeCkPop() : openCkPop(key,cardEl);
+      return; }
     const pstep=t.closest('[data-planstep]');
     if(pstep){ const i=+pstep.dataset.planstep;
       CK_PLAN_OPEN.has(i)?CK_PLAN_OPEN.delete(i):CK_PLAN_OPEN.add(i);
       renderCockpitPlan(); return; }
+    // Anything else — clicked elsewhere on the page — dismisses an open popover, same as tapping
+    // outside any other floating panel in the app.
+    if(CK_OPEN_KEY && !t.closest('.ck-pop')) closeCkPop();
   });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && CK_OPEN_KEY) closeCkPop(); });
   // Typing fields save without re-rendering (keeps focus); selects re-render (they re-sort).
   $('#page-combat').addEventListener('input',e=>{
     const t=e.target;
@@ -2318,9 +2410,18 @@ function wireCombatFeatures(){
   });
   $('#ckAddCustom').addEventListener('click',()=>{
     ck(); S.customCards.push({title:'',body:'',actionTypes:['action'],cond:'',usesMax:0,usesUsed:0});
-    CK_OPEN.add('cc:'+(S.customCards.length-1));
+    const key='cc:'+(S.customCards.length-1);
     renderCockpitCards(); save();
+    const anchorEl=document.querySelector(`[data-ckopen="${CSS.escape(key)}"]`);
+    if(anchorEl) openCkPop(key,anchorEl);
   });
+  // Collapsing Turn Plan to a slim tab hands its width back to "Do Something" — a wide screen
+  // has room for a card grid many columns deep, and Turn Plan doesn't need to compete with it
+  // once a turn is scripted. Dragging a card in still needs the panel open (it's the drop
+  // target), but the ⤵ button on every card adds to the plan regardless — collapsing never
+  // removes a way to build a turn, just the one that needs the panel visible.
+  $('#ckPlanCollapseBtn').addEventListener('click',()=>{ ck().planCollapsed=true; renderCockpitPlan(); save(); });
+  $('#ckPlanCollapsedTab').addEventListener('click',()=>{ ck().planCollapsed=false; renderCockpitPlan(); save(); });
   $('#ckPlanWizard').addEventListener('click',openTurnWizard);
   $('#ckPlanClear').addEventListener('click',()=>{
     const n=ckPlan().steps.length;

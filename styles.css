@@ -797,7 +797,7 @@ label.fld span{
    These two panels are where a turn actually gets decided, so they carry the stage — a lit top
    edge and deeper shadow — while everything below (death saves, hit dice, resources, rules)
    recedes into reference material. One glance should tell you which zone to act in. */
-.ck-duo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-bottom:10px}
+.ck-duo{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:10px;margin-bottom:10px;transition:grid-template-columns .18s ease}
 .ck-duo .panel{
   margin:0;border-top:2px solid var(--gold-dim);
   box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(201,162,39,.08);
@@ -807,7 +807,27 @@ label.fld span{
    there) — both panels wrap their own content (filter chips, step list) at any width, so there's
    no reason they need more room than that to stay side by side. Only phone-width viewports stack
    now. */
-@media(max-width:680px){.ck-duo{grid-template-columns:1fr}}
+@media(max-width:680px){.ck-duo{grid-template-columns:1fr}.ck-duo.ck-plan-collapsed{grid-template-columns:1fr}}
+/* Turn Plan collapses to a slim vertical tab so a wide screen can give the card grid every
+   column it can hold instead of splitting the width down the middle whether you need the plan
+   open or not — a real turn-planning workspace, not a fixed 50/50 that a caster with a dozen
+   spells has to scroll through. */
+.ck-duo.ck-plan-collapsed{grid-template-columns:minmax(0,1fr) 42px}
+.ck-plan-panel{position:relative}
+.ck-plan-collapsed-tab{display:none}
+.ck-duo.ck-plan-collapsed .ck-plan-open{display:none}
+.ck-duo.ck-plan-collapsed .ck-plan-collapsed-tab{
+  display:flex;align-items:center;gap:10px;justify-content:flex-start;height:100%;min-height:120px;
+  writing-mode:vertical-rl;cursor:pointer;color:var(--gold-lt);font-family:'Cinzel',serif;
+  letter-spacing:1.5px;font-size:.85rem;padding:14px 0;
+}
+.ck-plan-collapsed-tab:hover{color:var(--gold)}
+.ck-plan-collapsed-count{color:var(--muted);font-family:'Crimson Pro',serif;font-size:.78rem;letter-spacing:0}
+.ck-plan-collapse-btn{
+  background:transparent;border:1px solid var(--border-lt);border-radius:6px;color:var(--muted);
+  cursor:pointer;font-size:.8rem;padding:2px 8px;line-height:1.4;
+}
+.ck-plan-collapse-btn:hover{color:var(--gold-lt);border-color:var(--gold-dim)}
 /* Reference zone below: death saves, hit dice, attacks, resources, rules — quieter chrome so
    the eye lands on the duo above first, then drops down here only when a specific number is
    needed. Same data, less visual shouting. */
@@ -846,20 +866,30 @@ label.fld span{
 }
 .ck-filter i{font-style:normal;opacity:.7;font-size:.74rem}
 .ck-filter.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-lt)}
-/* Spells is a separate facet from the action-type filters next to it (source, not timing) —
-   a violet border marks that split even before it's tapped active. */
-.ck-filter-spell{border-color:rgba(165,140,224,.5)}
-.ck-filter-spell.on{background:rgba(165,140,224,.28);border-color:#a58ce0;color:#cdbdf0}
-/* Feats get the same treatment as Spells above — a source facet, not a timing one — in a rose
-   accent so the two source facets never read as the same thing at a glance. */
-.ck-filter-feat{border-color:rgba(224,107,176,.5)}
-.ck-filter-feat.on{background:rgba(224,107,176,.28);border-color:#e06bb0;color:#f0bede}
-/* "All" (or any category with a lot of cards) used to push Turn Plan, and everything below it
-   on the page, further down with every card added — capped height + its own scroll keeps the
-   rest of the cockpit in place no matter how many cards are in the filtered view. */
+/* ---- zone chips + zones: source (Spells/Weapons/Features/Items) is a separate axis from the
+   action-economy filters above — a card lives in exactly one zone but can match several economy
+   filters at once. A horizontal chip row (not a side rail — a wide screen's width belongs to the
+   card grid, not a permanent sidebar) toggles a whole zone's visibility, and only shows a chip
+   for a category the character actually has something in: an empty "Weapons" chip for a caster
+   with no melee options is a control with nothing to control. "All" (or any filter with a lot of
+   cards) used to push Turn Plan, and everything below it, further down the page as cards were
+   added — the zones area scrolls on its own now, capped height, so the rest of the cockpit stays
+   put regardless of how many cards are showing. */
+.ck-zone-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.ck-zone-chip{
+  background:var(--panel3);border:1px solid var(--border-lt);border-radius:999px;
+  color:var(--muted);padding:4px 11px;font-size:.78rem;cursor:pointer;min-height:30px;
+}
+.ck-zone-chip i{font-style:normal;opacity:.7;font-size:.74rem}
+.ck-zone-chip:not(.on){opacity:.5}
+.ck-zc-weap.on{background:rgba(201,162,39,.18);border-color:var(--gold-dim);color:var(--gold-lt)}
+.ck-zc-spell.on{background:rgba(165,140,224,.18);border-color:#a58ce0;color:#cdbdf0}
+.ck-zc-feat.on{background:rgba(224,107,176,.18);border-color:#e06bb0;color:#f0bede}
+.ck-zc-item.on{background:rgba(111,208,196,.18);border-color:#6fd0c4;color:#bdeee7}
+.ck-zones{display:flex;flex-direction:column;gap:14px;max-height:64vh;overflow-y:auto;padding-right:4px}
+.ck-zone-lbl{color:var(--muted);font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px}
 .ck-cards{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;
-  max-height:52vh;overflow-y:auto;padding-right:4px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:6px;
 }
 /* Every card carries a lit left spine in its action-type color — the same color language as
    the filter pills and turn-plan steps, so the grid is scannable by color alone: green =
@@ -883,14 +913,9 @@ label.fld span{
    visibly reads as a feat, distinct from the violet spell wash. */
 .ck-card.ck-card-feat{background:linear-gradient(165deg,rgba(224,107,176,.16),var(--panel3) 75%)}
 .ck-card:hover{border-color:var(--border-strong,var(--muted));transform:translateY(-1px)}
-.ck-card.open{grid-column:1/-1;background:var(--panel2);border-color:var(--gold-dim);transform:none}
-.ck-card.open.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.12),var(--panel2) 75%)}
-.ck-card.open.ck-card-feat{background:linear-gradient(165deg,rgba(224,107,176,.12),var(--panel2) 75%)}
-.ck-card.open.ck-card-action{border-left-color:#7fd6a4}
-.ck-card.open.ck-card-bonus{border-left-color:#e8c25b}
-.ck-card.open.ck-card-reaction{border-left-color:#e0876f}
-.ck-card.open.ck-card-item{border-left-color:#6fd0c4}
-.ck-card.open.ck-card-other{border-left-color:#7db8e8}
+/* The tapped card gets a lit ring instead of growing full-width in place — its detail opens in
+   a floating popover (.ck-pop below) anchored beside it, so the grid never reflows around it. */
+.ck-card.ck-active{border-color:var(--gold-dim);box-shadow:0 0 0 1px rgba(201,162,39,.35),0 0 14px rgba(201,162,39,.15)}
 .ck-card.ck-cond{background:rgba(232,194,91,.05)}
 .ck-card.ck-cond.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.16),rgba(232,194,91,.05) 75%)}
 .ck-card.ck-cond.ck-card-feat{background:linear-gradient(165deg,rgba(224,107,176,.16),rgba(232,194,91,.05) 75%)}
@@ -914,7 +939,28 @@ label.fld span{
 /* Unfolding a card breathes instead of snapping */
 @keyframes ckUnfold{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .ck-body{margin-top:8px;border-top:1px solid var(--border);padding-top:8px;cursor:default;animation:ckUnfold .18s ease-out}
-.ck-card.open{animation:ckUnfold .18s ease-out}
+/* A card's detail floats beside it instead of expanding the grid in place — same .ck-body
+   content every card has always had (cast-with-slot buttons, condition field, pin, feature-use
+   pips, custom-card editing), just relocated into a small anchored panel. Re-tapping the card,
+   tapping elsewhere, or Escape closes it; positionCkPop() flips the caret and clamps it on
+   screen so it never runs off a narrow viewport. */
+.ck-pop{
+  position:fixed;z-index:70;width:min(360px,calc(100vw - 20px));max-height:70vh;overflow-y:auto;
+  background:var(--panel2);border:1px solid var(--gold-dim);border-radius:12px;
+  padding:14px 16px;box-shadow:0 16px 40px rgba(0,0,0,.55),0 0 0 1px rgba(201,162,39,.15);
+  display:none;
+}
+.ck-pop.open{display:block;animation:ckUnfold .15s ease-out}
+.ck-pop::before{
+  content:'';position:absolute;width:12px;height:12px;left:var(--ckpopx,20px);
+  background:var(--panel2);border-left:1px solid var(--gold-dim);border-top:1px solid var(--gold-dim);
+}
+.ck-pop.ck-pop-up::before{top:-6px;transform:rotate(45deg)}
+.ck-pop.ck-pop-down::before{bottom:-6px;transform:rotate(225deg)}
+.ck-pop-close{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--faint);font-size:1.15rem;cursor:pointer;line-height:1}
+.ck-pop-close:hover{color:var(--text)}
+.ck-pop-name{font-family:'Cinzel',serif;font-size:1.05rem;color:var(--gold-lt);padding-right:22px;margin-bottom:2px}
+.ck-pop .ck-body{margin-top:6px}
 /* One-tap use for consumables, right on the card face */
 .ck-quickuse{
   background:var(--gold-dim);border:1px solid var(--gold);border-radius:7px;
@@ -993,14 +1039,14 @@ label.fld span{
 .ck-plan-step{
   display:flex;align-items:flex-start;gap:7px;position:relative;
   background:var(--panel3);border:1px solid var(--border-lt);border-left-width:3px;border-radius:8px;
-  padding:5px 9px 5px 6px;color:var(--text);transition:box-shadow .15s ease,opacity .15s ease;
+  padding:8px 9px 8px 6px;color:var(--text);transition:box-shadow .15s ease,opacity .15s ease;
 }
 /* The connecting spine — a single lit thread running behind every numbered node, so the list
    reads as one continuous turn instead of a stack of unrelated rows (the signature touch that
    makes this feel like a scripted timeline, not a to-do list). */
 .ck-plan{position:relative}
 .ck-plan-step:not(:last-child)::after{
-  content:'';position:absolute;left:49px;top:28px;bottom:-5px;width:1px;
+  content:'';position:absolute;left:49px;top:31px;bottom:-5px;width:1px;
   background:linear-gradient(var(--gold-dim),var(--border-lt));
 }
 .ck-plan-step i{
@@ -1020,8 +1066,8 @@ label.fld span{
 .ck-ps-note::placeholder{color:var(--faint);font-style:italic}
 .ck-ps-note:hover{border-bottom-color:var(--border-lt)}
 .ck-ps-note:focus{border-bottom-color:var(--gold);outline:none;background:var(--ink);border-radius:4px}
-.ck-ps-name{flex:0 1 auto;min-width:80px;font-weight:600;font-size:.92rem;overflow-wrap:break-word}
-.ck-ps-sub{color:var(--muted);font-size:.78rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.ck-ps-name{flex:0 1 auto;min-width:80px;font-weight:600;font-size:.98rem;overflow-wrap:break-word}
+.ck-ps-sub{color:var(--muted);font-size:.83rem;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
 .ck-ps-sub b{color:var(--text)}
 .ck-roll{display:inline-flex;align-items:center;gap:4px;color:var(--muted)}
 .ck-roll input{
