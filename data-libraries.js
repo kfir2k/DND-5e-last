@@ -430,3 +430,73 @@ const LANGUAGES=[
  {n:'Druidic',g:'Secret'},{n:"Thieves' Cant",g:'Secret'}
 ];
 
+// ---------- Other Proficiencies: armor, weapon & tool categories from the PHB, same {n,g,d} shape
+// as LANGUAGES above. Specific weapon entries are generated off the WEAPONS table (data-equipment.js,
+// loaded before this file) so their blurbs never drift from the stats used on the Combat tab.
+function weaponBlurb(key){
+  const w=WEAPONS[key]; if(!w) return '';
+  const bits=[`${w.d} ${w.ty}`];
+  if(w.fin) bits.push('finesse');
+  if(w.ver) bits.push(`versatile (${w.ver})`);
+  if(w.reach) bits.push('reach');
+  if(w.h2) bits.push('two-handed'); else if(w.light) bits.push('light');
+  if(w.thrown) bits.push(`thrown ${w.thrown} ft.`);
+  if(w.rng) bits.push(`range ${w.rng} ft.`);
+  return bits.join(', ');
+}
+const SIMPLE_MELEE_W=['club','dagger','greatclub','handaxe','javelin','lighthammer','mace','quarterstaff','sickle','spear'];
+const SIMPLE_RANGED_W=['lightcrossbow','dart','shortbow','sling'];
+const MARTIAL_MELEE_W=['battleaxe','flail','glaive','greataxe','greatsword','halberd','lance','longsword','maul','morningstar','pike','rapier','scimitar','shortsword','trident','warpick','warhammer','whip'];
+const MARTIAL_RANGED_W=['handcrossbow','heavycrossbow','longbow'];
+const PROFICIENCIES=[
+ {n:'Light Armor',g:'Armor',d:'Padded, leather, studded leather. Add your full Dex modifier to AC; no Strength requirement.'},
+ {n:'Medium Armor',g:'Armor',d:'Hide, chain shirt, scale mail, breastplate, half plate. Add your Dex modifier to AC, max +2.'},
+ {n:'Heavy Armor',g:'Armor',d:'Ring mail, chain mail, splint, plate. Flat AC, no Dex bonus; some need a Strength minimum or impose stealth disadvantage.'},
+ {n:'Shields',g:'Armor',d:"+2 AC while strapped to one arm; can't also wield a two-handed weapon."},
+ {n:'Simple Weapons',g:'Weapons',d:'Every simple melee & ranged weapon — clubs, daggers, spears, slings, light crossbows and the rest. What most classes start with.'},
+ {n:'Martial Weapons',g:'Weapons',d:'Every martial melee & ranged weapon — swords, axes, polearms, longbows, heavy crossbows and the rest. Includes Simple Weapons too.'},
+ ...SIMPLE_MELEE_W.map(k=>({n:WEAPONS[k].n,g:'Simple Melee Weapons',d:weaponBlurb(k)})),
+ ...SIMPLE_RANGED_W.map(k=>({n:WEAPONS[k].n,g:'Simple Ranged Weapons',d:weaponBlurb(k)})),
+ ...MARTIAL_MELEE_W.map(k=>({n:WEAPONS[k].n,g:'Martial Melee Weapons',d:weaponBlurb(k)})),
+ ...MARTIAL_RANGED_W.map(k=>({n:WEAPONS[k].n,g:'Martial Ranged Weapons',d:weaponBlurb(k)})),
+ {n:"Alchemist's Supplies",g:"Artisan's Tools",d:'Identify and mix potions, acids, and other alchemical substances.'},
+ {n:"Brewer's Supplies",g:"Artisan's Tools",d:"Brew ale, beer and spirits; judge or improve a drink's quality."},
+ {n:"Calligrapher's Supplies",g:"Artisan's Tools",d:'Produce ornate lettering and imitate handwriting.'},
+ {n:"Carpenter's Tools",g:"Artisan's Tools",d:'Build and repair wooden structures and objects.'},
+ {n:"Cartographer's Tools",g:"Artisan's Tools",d:'Draw and read maps accurately.'},
+ {n:"Cobbler's Tools",g:"Artisan's Tools",d:'Make and repair shoes and boots.'},
+ {n:"Cook's Utensils",g:"Artisan's Tools",d:"Prepare and season food; judge by taste whether it's spoiled or poisoned."},
+ {n:"Glassblower's Tools",g:"Artisan's Tools",d:'Shape molten glass into vessels and objects.'},
+ {n:"Jeweler's Tools",g:"Artisan's Tools",d:'Cut and set gemstones; appraise their value.'},
+ {n:"Leatherworker's Tools",g:"Artisan's Tools",d:'Craft and repair leather goods and armor.'},
+ {n:"Mason's Tools",g:"Artisan's Tools",d:'Cut, shape and set stone.'},
+ {n:"Painter's Supplies",g:"Artisan's Tools",d:'Create paintings and other visual art.'},
+ {n:"Potter's Tools",g:"Artisan's Tools",d:'Shape and fire clay into pottery.'},
+ {n:"Smith's Tools",g:"Artisan's Tools",d:'Forge and repair metal weapons, armor and objects.'},
+ {n:"Tinker's Tools",g:"Artisan's Tools",d:'Build and repair small mechanisms — locks, clockwork, simple devices.'},
+ {n:"Weaver's Tools",g:"Artisan's Tools",d:'Spin thread and weave cloth.'},
+ {n:"Woodcarver's Tools",g:"Artisan's Tools",d:'Carve wooden objects and figures.'},
+ {n:'Dice Set',g:'Gaming Sets',d:'Play (and cheat at) dice games; read the room while gambling.'},
+ {n:'Dragonchess Set',g:'Gaming Sets',d:'Play the three-tiered strategy game popular among nobles and sages.'},
+ {n:'Playing Card Set',g:'Gaming Sets',d:'Play (and cheat at) card games.'},
+ {n:'Three-Dragon Ante Set',g:'Gaming Sets',d:'Play the fast, high-stakes card game favored in taverns.'},
+ {n:'Bagpipes',g:'Musical Instruments',d:'Perform on the bagpipes.'},
+ {n:'Drum',g:'Musical Instruments',d:'Perform on hand or frame drums.'},
+ {n:'Dulcimer',g:'Musical Instruments',d:'Perform on the hammered dulcimer.'},
+ {n:'Flute',g:'Musical Instruments',d:'Perform on the flute.'},
+ {n:'Horn',g:'Musical Instruments',d:'Perform on a horn.'},
+ {n:'Lute',g:'Musical Instruments',d:'Perform on the lute.'},
+ {n:'Lyre',g:'Musical Instruments',d:'Perform on the lyre.'},
+ {n:'Pan Flute',g:'Musical Instruments',d:'Perform on the pan flute.'},
+ {n:'Shawm',g:'Musical Instruments',d:'Perform on the shawm, an oboe-like reed instrument.'},
+ {n:'Viol',g:'Musical Instruments',d:'Perform on the viol.'},
+ {n:'Disguise Kit',g:'Other Tools',d:'Create convincing physical disguises with makeup, hair and props.'},
+ {n:'Forgery Kit',g:'Other Tools',d:'Copy handwriting, seals and the look of official documents.'},
+ {n:'Herbalism Kit',g:'Other Tools',d:'Identify plants and brew remedies, including the base ingredient for potions of healing.'},
+ {n:"Navigator's Tools",g:'Other Tools',d:'Chart a course and avoid getting lost at sea or on the road.'},
+ {n:"Poisoner's Kit",g:'Other Tools',d:'Safely handle and apply poisons; identify poisoned food or drink.'},
+ {n:"Thieves' Tools",g:'Other Tools',d:'Pick locks and disarm traps.'},
+ {n:'Vehicles (Land)',g:'Vehicles',d:'Drive and control carts, wagons and other land vehicles.'},
+ {n:'Vehicles (Water)',g:'Vehicles',d:'Pilot and navigate ships and other waterborne vehicles.'}
+];
+

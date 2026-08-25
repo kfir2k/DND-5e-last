@@ -28,7 +28,7 @@ function defaultState(){
     money:{cp:0,sp:0,ep:0,gp:0,pp:0},
     equipment:[], treasure:'',
     // Features
-    features:[{title:'',desc:'',fx:[]}], profLang:'', languages:[], featuresLocked:false,
+    features:[{title:'',desc:'',fx:[]}], profLang:'', languages:[], otherProfs:[], featuresLocked:false,
     // Spells (page 3): level 0 = cantrips
     spellClass:'', spellAbility:'', spellsLocked:false,
     spellLevels:Array.from({length:10},()=>({total:0,used:0,spells:[]})),
@@ -737,7 +737,12 @@ features:`
   </div>
   <div class="grid g2">
     <div class="panel"><h2>Other Proficiencies</h2>
-      <textarea data-bind="profLang" placeholder="Armor, weapons, tools..."></textarea>
+      <div class="fx-addrow" style="margin:0 0 10px;position:relative">
+        <input type="text" id="profSearch" style="flex:1 1 auto" placeholder="+ Search armor, weapon &amp; tool proficiencies…" autocomplete="off">
+        <div id="profResults" class="lib-results"></div>
+      </div>
+      <div id="profChips"></div>
+      <textarea data-bind="profLang" placeholder="Anything else — homebrew tools, specific weapon models, notes…" style="margin-top:10px"></textarea>
     </div>
     <div class="panel"><h2>Languages</h2>
       <div class="fx-addrow" style="margin:0 0 10px;position:relative">
@@ -1805,6 +1810,7 @@ function wireFeaturesLock(){
     btn.classList.toggle('locked',locked);
     $('#featuresEditBar').style.display=locked?'none':'';
     $('#addFeatureBtn').style.display=locked?'none':'';
+    $('#addFeatBtn').style.display=locked?'none':'';
   };
   $('#featuresLockBtn').addEventListener('click',()=>{
     S.featuresLocked=!S.featuresLocked;
@@ -2756,6 +2762,58 @@ function wireLanguages(){
   });
   document.addEventListener('click',e=>{
     if(!e.target.closest('#langSearch') && !e.target.closest('#langResults')) close();
+  });
+}
+// ----- Other Proficiencies: same searchable pick-list + chips pattern as Languages, sourced from
+// the PHB armor/weapon/tool categories in PROFICIENCIES so picks come with a rules explanation
+// instead of being freehand text. The old profLang textarea stays underneath for anything that
+// doesn't fit the list (homebrew tools, a specific weapon model) so no previously typed text is lost.
+function renderProficiencies(){
+  const box=$('#profChips'); if(!box) return;
+  if(!S.otherProfs.length){ box.innerHTML='<p class="prep-note" style="margin:0">No proficiencies picked yet — search above to add one.</p>'; return; }
+  box.innerHTML = S.otherProfs.map((p,i)=>
+    `<span class="fx-chip">${esc(p)}<button data-profdel="${i}" title="Remove">✕</button></span>`).join('');
+}
+function wireProficiencies(){
+  const input=$('#profSearch'), panel=$('#profResults');
+  const groupsOrder=[...new Set(PROFICIENCIES.map(e=>e.g))];
+  function renderResults(){
+    const q=input.value.trim().toLowerCase();
+    const known=new Set(S.otherProfs.map(p=>p.toLowerCase()));
+    const items=PROFICIENCIES.filter(e=>!known.has(e.n.toLowerCase())&&(!q||e.n.toLowerCase().includes(q)));
+    let html=groupsOrder.map(g=>{
+      const inGroup=items.filter(e=>e.g===g);
+      if(!inGroup.length) return '';
+      return `<div class="grp">${esc(g)}</div>`+
+        inGroup.map(e=>`<div class="item" data-profpick="${esc(e.n)}">${esc(e.n)}<small>${esc(e.d||'')}</small></div>`).join('');
+    }).join('');
+    const typed=input.value.trim();
+    if(typed && !known.has(typed.toLowerCase()) && !PROFICIENCIES.some(e=>e.n.toLowerCase()===typed.toLowerCase())){
+      html += `<div class="grp">Custom</div><div class="item" data-profpick="${esc(typed)}">+ Add "${esc(typed)}"</div>`;
+    }
+    panel.innerHTML = html || '<div class="empty">No matches</div>';
+  }
+  const open=()=>{ renderResults(); panel.classList.add('open'); };
+  const close=()=>panel.classList.remove('open');
+  input.addEventListener('focus',open);
+  input.addEventListener('input',open);
+  input.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); const hi=panel.querySelector('.item'); if(hi) hi.click(); }
+  });
+  panel.addEventListener('click',e=>{
+    const item=e.target.closest('[data-profpick]'); if(!item) return;
+    const name=item.dataset.profpick;
+    if(name && !S.otherProfs.some(p=>p.toLowerCase()===name.toLowerCase())) S.otherProfs.push(name);
+    input.value=''; close();
+    renderProficiencies(); save();
+  });
+  $('#profChips').addEventListener('click',e=>{
+    const btn=e.target.closest('[data-profdel]'); if(!btn) return;
+    S.otherProfs.splice(+btn.dataset.profdel,1);
+    renderProficiencies(); save();
+  });
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('#profSearch') && !e.target.closest('#profResults')) close();
   });
 }
 function wireFx(){
@@ -5389,7 +5447,7 @@ function wireSettings(){
 function renderAll(){
   renderAbilityCards(); renderSaves(); renderSkills(); renderDeathSaves();
   renderAttacks(); renderEquipment(); renderFeatures(); renderNotes();
-  renderSpellLevels(); renderOverview(); renderCombatFeatures(); renderLanguages();
+  renderSpellLevels(); renderOverview(); renderCombatFeatures(); renderLanguages(); renderProficiencies();
   renderBuildSelectors(); renderAsi(); renderHudControls(); renderCharacterPortrait(); renderBackstoryEditor();
   bindAll(); syncBound(); recalc();
 }
@@ -5430,7 +5488,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireLanguages(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
