@@ -532,7 +532,6 @@ label.fld span{
 }
 .fx-chip button{background:none;border:none;color:var(--faint);cursor:pointer;font-size:.9em;padding:0}
 .fx-chip button:hover{color:var(--red)}
-.fx-note{display:block;color:var(--green);font-size:.72rem;min-height:.9em}
 /* ===== Equipped: game-style slot grid (no figure, no icons-as-emoji) ===== */
 /* Slot strip, Witcher-style: glyph box on the left, slot name over the item name.
    Two columns so the whole rack stands as tall as the defense block, not twice it. */
@@ -845,7 +844,7 @@ label.fld span{
   background:var(--panel3);border:1px solid var(--border-lt);border-radius:9px;
   padding:5px 12px 6px;min-width:92px;flex:0 1 auto;
 }
-.ckv-l{color:var(--muted);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap}
+.ckv-l{color:var(--muted);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:1.2px;text-transform:uppercase;text-align:center}
 .ckv input[type=text],
 .ckv input[type=number],
 .ckv-big{
@@ -856,8 +855,6 @@ label.fld span{
 }
 .ckv input:focus{outline:none;background:var(--ink);border-radius:4px;border:none}
 .ckv input.ckv-wide{width:76px;font-size:.88rem}
-.ckv .fx-note{text-align:center;font-size:.62rem;min-height:0;max-width:110px}
-.ckv .fx-rems{justify-content:center;margin-top:2px;max-width:130px}
 /* action cards */
 .ck-filters{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
 .ck-filter{
@@ -1168,11 +1165,6 @@ label.fld span{
 .ck-atk-panel:not(.open) h2{margin:0;padding:0;border:none;font-size:.8rem;letter-spacing:1.5px}
 .ck-atk-panel:not(.open) h2::after{content:'  ▸ edit';color:var(--faint);font-size:.7rem;letter-spacing:.5px;text-transform:none}
 .ck-atk-panel.open h2::after{content:'  ▾';color:var(--faint)}
-/* ★ Stat reminders on the Overview tiles — same tap-to-open badges as the skill rows */
-.fx-rems{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.fx-rems:empty{display:none}
-.fx-rems .sk-fx{font-size:.72rem;padding:1px 7px}
-.fx-rems .sk-fx b{font-size:.76rem;padding:0 5px}
 /* Live "= N" preview beside the effect-amount formula field */
 .fx-amt-hint{color:var(--green);font-size:.8rem;font-weight:600;white-space:nowrap}
 .fx-addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
@@ -1476,9 +1468,10 @@ label.fld.sug-wrap{display:block}
   border-radius:10px;padding:9px 16px 7px;margin-bottom:14px;
   box-shadow:0 6px 20px rgba(0,0,0,.5),inset 0 40px 34px -34px rgba(201,162,39,.1);
 }
-/* space-between (not center): HP anchors the left edge, AC/Init/states dock to the right — the
-   strip actually spans the panel now instead of clumping in the middle with dead space either side. */
-.chud-primary{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+/* AC/Init moved down into chud-senses, so this row is usually just HP (+ concentration/states
+   when active) — space-between had nothing on the right to balance against and pinned HP to the
+   left edge with dead space beside it. Centered as a group instead. */
+.chud-primary{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:center}
 /* HP lives in the HUD: damage buttons on the left of the numbers, heals on the right —
    hit the side you mean. Temp sits apart in blue; the bar underlines the whole station. */
 .chud-hp{flex:1 1 380px;min-width:300px;max-width:760px}
@@ -1506,44 +1499,57 @@ input.chud-customin{width:42px;font-size:.95rem}
 .chud-bar{margin-top:4px;height:8px}
 .chud-btns{display:inline-flex;gap:3px;flex-shrink:0}
 .chud-btns .hp-btn{padding:3px 0;font-size:.7rem;width:34px;min-width:34px}
-.chud-sep{width:1px;align-self:stretch;background:var(--border);flex-shrink:0}
-.chud-sep-conc{align-self:center;height:34px}
-/* Vitals cells inside the one sticky bar: label+value pinned to the top and never shift —
-   a ★ badge or feature note just grows the cell downward, so nothing you're already reading
-   jumps position mid-fight when a buff lands. */
+/* Vitals cells inside the one sticky bar: full label on top, the value in the middle, and — always
+   visible, nothing to tap — a small caption underneath spelling out exactly how that number was
+   built (e.g. "Leather 11 + Dex +2 + Dread Ambusher +1 (when hidden)"). A cell with nothing to
+   explain (no armor magic, no feature touching Speed) just has no caption line and stays short;
+   neighbors don't shift to match since each cell sizes to its own content. */
 .combat-hud .ckv{
-  padding:3px 8px;min-width:64px;min-height:46px;flex:0 0 auto;
+  padding:0 10px;min-width:0;max-width:165px;flex:0 0 auto;
   justify-content:flex-start;gap:0;
 }
 .combat-hud .chud-hp{flex:1 1 300px;max-width:760px}
-.chud-hp .fx-note{min-height:0;text-align:center;font-size:.62rem;margin-top:2px}
-.chud-hp .fx-rems{justify-content:center;margin-top:2px}
-/* Reminder badges shrink to fit these compact cells — full-size .sk-fx is sized for roomy
-   panels elsewhere and would balloon a stat cell that happens to have one active, next to
-   plain neighbors that don't. */
-.combat-hud .ckv .fx-rems .sk-fx{font-size:.66rem;padding:1px 6px;gap:1px 4px}
-.combat-hud .ckv .fx-rems .sk-fx b{font-size:.68rem;padding:0 4px}
-/* AC and Initiative sit right beside HP as the third and fourth numbers checked every round —
-   same lit-gold treatment as HP's current value, visibly bigger than anything in the row below. */
-.ckv-primary{background:var(--panel3);border:1px solid var(--border-lt)}
-.ckv-primary .ckv-l{font-size:.62rem}
-.ckv-primary input,.ckv-primary .ckv-big{font-size:1.35rem;color:var(--gold-lt)}
-/* Senses & Movement: a visibly quieter second shelf — smaller type, dimmer chips, its own
-   uppercase label — for the numbers a player glances at occasionally, not every turn. */
-.chud-senses{
-  display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;
-  border-top:1px solid var(--border);margin-top:7px;padding-top:6px;
+.chud-hp .ckv-formula{justify-content:center;margin-top:3px}
+.ckv-formula{
+  display:block;color:var(--faint);font-size:.58rem;font-style:italic;line-height:1.25;
+  text-align:center;max-width:100%;
 }
-.chud-senses-lbl{
-  color:var(--faint);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:1.8px;
-  text-transform:uppercase;margin-right:4px;flex:0 0 auto;
+.ckv-formula:empty{display:none}
+/* A situational reminder (Dread Ambusher's "+2 at the start of the fight") is deliberately left
+   OUT of the number above — that's what makes it a reminder and not a bonus. Its amount moved up
+   into .ckv-mod, big and beside the value itself, impossible to miss; this line is just who it's
+   from and when — plain, no icon, since the big green number already carries the "pay attention". */
+.ckv-cond{display:block;color:var(--gold-dim);margin-top:1px}
+/* The value and its situational add-on sit on one line — the number you'd actually add by hand
+   is exactly as prominent as the number above it, not buried in small print underneath. Green
+   (not gold) so it reads as its own thing at a glance — the same "active bonus" green already
+   used for granted skill/save proficiencies elsewhere on the sheet, not just a duller gold. */
+.ckv-valrow{display:flex;align-items:baseline;justify-content:center;gap:5px}
+.ckv-mod{font-family:'Cinzel',serif;font-weight:800;color:var(--green);text-shadow:0 0 10px rgba(111,158,99,.5)}
+.ckv-mod:empty{display:none}
+.ckv-primary .ckv-mod{font-size:1.15rem}
+.ckv-sec .ckv-mod{font-size:.92rem}
+/* AC and Initiative sit right beside HP as the numbers checked every round, so they read a size
+   up from the row below — but as plain text, not a bordered card: a boxed "button" look for
+   something you only ever read, never tap, reads as heavier chrome than the info needs. */
+.ckv-primary{background:transparent;border:none}
+.ckv-primary .ckv-l{font-size:.6rem}
+.ckv-primary input,.ckv-primary .ckv-big{font-size:1.15rem;color:var(--gold-lt)}
+.ckv-primary .ckv-formula{color:var(--muted)}
+/* Senses & Movement: a visibly quieter second shelf — smaller type, dimmer chips — for the numbers
+   a player glances at occasionally, not every turn. No section label anymore: spreading the four
+   cells across the full width reads better than a label eating the row's left edge. */
+.chud-senses{
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-evenly;
+  border-top:1px solid var(--border);margin-top:7px;padding-top:8px;
 }
 .ckv-sec{
-  background:transparent;border:1px solid transparent;padding:1px 8px;min-width:0;height:auto;
+  background:transparent;border:1px solid transparent;padding:2px 10px;min-width:0;height:auto;max-width:150px;
 }
 .ckv-sec .ckv-l{font-size:.58rem;color:var(--faint)}
 .ckv-sec input,.ckv-sec .ckv-big{font-size:.92rem;color:var(--muted);font-weight:600}
 .ckv-sec input.ckv-wide{width:64px;font-size:.8rem}
+.ckv-sec .ckv-formula{font-size:.58rem}
 .chud-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:54px}
 .chud-lbl{color:var(--muted);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap}
 .chud-cell b{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:1.25rem;line-height:1.15}

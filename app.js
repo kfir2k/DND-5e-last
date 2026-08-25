@@ -242,21 +242,33 @@ function combatHudHTML(){
         </span>
       </div>
       <div class="hp-bar chud-bar"><div class="hp-fill"></div><span class="hp-temp-fill"></span></div>
-      <span class="fx-note" data-fxnote="hpmax"></span><span class="fx-rems" data-fxrem="hpmax"></span>
+      <span class="ckv-formula" data-fxform="hpmax"></span>
     </div>
-    <span class="chud-sep"></span>
-    <div class="ckv ckv-primary"><span class="ckv-l">🛡 AC</span><input type="number" data-bind="ac"><span class="fx-note" data-fxnote="ac"></span><span class="fx-rems" data-fxrem="ac"></span></div>
-    <div class="ckv ckv-primary computed"><span class="ckv-l">⚡ Init</span><span class="ckv-big" data-calc="initiative">+0</span><span class="fx-rems" data-fxrem="init"></span></div>
-    <span class="chud-sep chud-sep-conc"></span>
     <span class="ck-conc"></span>
     <span class="ck-topstates"></span>
     </div>
     <div class="chud-senses">
-      <span class="chud-senses-lbl">Senses &amp; Movement</span>
-      <div class="ckv ckv-sec"><span class="ckv-l">💨 Speed</span><input type="text" class="ckv-wide" data-bind="speed"><span class="fx-note" data-fxnote="speed"></span><span class="fx-rems" data-fxrem="speed"></span></div>
-      <div class="ckv ckv-sec"><span class="ckv-l">📖 Prof</span><input type="number" data-bind="profBonus"></div>
-      <div class="ckv ckv-sec computed"><span class="ckv-l">👁 Passive</span><span class="ckv-big" data-calc="passive">10</span><span class="fx-rems" data-fxrem="passive"></span></div>
-      <div class="ckv ckv-sec"><span class="ckv-l">🌙 Vision</span><input type="text" class="ckv-wide" data-bind="vision"><span class="fx-note" data-fxnote="vision"></span><span class="fx-rems" data-fxrem="vision"></span></div>
+      <div class="ckv ckv-primary"><span class="ckv-l">Armor Class</span>
+        <span class="ckv-valrow"><input type="number" data-bind="ac"><span class="ckv-mod" data-fxmod="ac"></span></span>
+        <span class="ckv-formula" data-fxform="ac"></span>
+      </div>
+      <div class="ckv ckv-primary computed"><span class="ckv-l">Initiative</span>
+        <span class="ckv-valrow"><span class="ckv-big" data-calc="initiative">+0</span><span class="ckv-mod" data-fxmod="init"></span></span>
+        <span class="ckv-formula" data-fxform="init"></span>
+      </div>
+      <div class="ckv ckv-sec"><span class="ckv-l">Speed</span>
+        <span class="ckv-valrow"><input type="text" class="ckv-wide" data-bind="speed"><span class="ckv-mod" data-fxmod="speed"></span></span>
+        <span class="ckv-formula" data-fxform="speed"></span>
+      </div>
+      <div class="ckv ckv-sec"><span class="ckv-l">Proficiency Bonus</span><input type="number" data-bind="profBonus"><span class="ckv-formula" data-fxform="prof"></span></div>
+      <div class="ckv ckv-sec computed"><span class="ckv-l">Passive Perception</span>
+        <span class="ckv-valrow"><span class="ckv-big" data-calc="passive">10</span><span class="ckv-mod" data-fxmod="passive"></span></span>
+        <span class="ckv-formula" data-fxform="passive"></span>
+      </div>
+      <div class="ckv ckv-sec"><span class="ckv-l">Darkvision</span>
+        <span class="ckv-valrow"><input type="text" class="ckv-wide" data-bind="vision"><span class="ckv-mod" data-fxmod="vision"></span></span>
+        <span class="ckv-formula" data-fxform="vision"></span>
+      </div>
     </div>
   </div>`;
 }
@@ -3539,26 +3551,49 @@ function recalc(){
     if(a.sd) warns.push('stealth disadvantage');
     $('#hudACnote').innerHTML=bits.join(' · ')+(warns.length?` <span style="color:var(--red)">⚠ ${warns.join(' · ')}</span>`:'')+(eq.acAuto?'':' (preview — enable to apply)');
   }
-  // AC / speed / max HP annotations from feature effects
-  const acFx=fxStat('ac');
-  $$(`[data-fxnote="ac"]`).forEach(el=>el.textContent=acFx?`${fmt(acFx)} features → ${num(S.ac)+acFx}`:'');
-  const spFx=fxStat('speed');
-  $$(`[data-fxnote="speed"]`).forEach(el=>el.textContent=spFx?`${fmt(spFx)} ft. from features`:'');
-  const hmFx=fxStat('hpmax');
-  $$(`[data-fxnote="hpmax"]`).forEach(el=>el.textContent=hmFx?`${fmt(hmFx)} features → max ${num(S.hpMax)+hmFx}`:'');
-  const visFx=fxStat('vision');
-  $$(`[data-fxnote="vision"]`).forEach(el=>el.textContent=visFx?`${fmt(visFx)} ft. from features`:'');
-  // ★ Stat reminders — badge next to the stat naming the feature (and optional bonus);
-  // tap unfolds the "when" text. Same tap-to-open chrome as the skill-row badges, and the
-  // same document-level listener (wireSkillFx) already handles the toggling.
-  Object.keys(FX_STATS).forEach(k=>{
-    const rems=fxStatRems(k);
-    $$(`[data-fxrem="${k}"]`).forEach(el=>el.innerHTML=rems.map(r=>{
-      const hasAmt=r.n!=null&&String(r.n).trim()!=='';
-      const amt=hasAmt?` <b>${fmt(fxAmount(r.n))}</b>`:'';
-      const tip=r.cond?`<span class="sk-tip">${esc(r.cond)}</span>`:'';
-      return `<span class="sk-fx">★ ${esc(r.src)}${amt}${tip}</span>`;
-    }).join(''));
+  // HUD formulas — a short, always-visible breakdown under each value, no tapping required.
+  // Comma-separated, not "+"-joined: "10 + Wis +2 + trained +3" reads as one ambiguous run of
+  // plus signs; "10, Wis +2, trained +3" has an unambiguous boundary around each term.
+  //
+  // Two different kinds of feature contribution get folded in, and they are NOT the same thing:
+  // an fx of type 'stat' is unconditional and already inside the number shown, so it joins the
+  // base line like any other term. An fx of type 'statnote' is situational (e.g. Dread Ambusher's
+  // "+2 at the start of the fight") — it is deliberately left OUT of the total (that's the whole
+  // point of a reminder vs. a bonus), so it can't just join the same line as the base terms without
+  // looking counted when it isn't. Instead its amount becomes a big "+N" beside the value itself
+  // (data-fxmod — impossible to miss) and its source/condition drops to a plain line underneath.
+  const alwaysText=k=>allFx().filter(x=>x.t==='stat'&&x.stat===k).map(x=>`${x.src} ${fmt(fxAmount(x.n))}`);
+  const condList=k=>fxStatRems(k).map(r=>({
+    amt: (r.n!=null&&String(r.n).trim()!=='') ? fxAmount(r.n) : null,
+    label: r.src+(r.cond?` — ${r.cond}`:'')
+  }));
+  const acA=ARMORS[eq.armor]||ARMORS.none;
+  const acDexB=Math.min(amod('dex'),acA.dex===99?999:acA.dex);
+  const acParts=[`${acA.n.split(' (')[0]} ${acA.base}`,`Dex ${fmt(acDexB)}`];
+  if(num(eq.armorMagic)) acParts.push(`magic ${fmt(num(eq.armorMagic))}`);
+  if(eq.shield) acParts.push(`shield +${2+num(eq.shieldMagic)}`);
+  acParts.push(...alwaysText('ac'));
+  const acFormulaTotal=computedBaseAC()+fxStat('ac');
+  // AC is a manually-typed field (nothing here is enforced), so the formula's own total can
+  // legitimately differ from the number above it — spell that out instead of implying they match.
+  const acSuffix=acFormulaTotal===num(S.ac)?'':` = ${acFormulaTotal}`;
+  const HUD_BASE={
+    ac: acParts.join(', ')+acSuffix,
+    init: [`Dex ${fmt(dex)}`].concat(num(S.initiativeMisc)?[`misc ${fmt(num(S.initiativeMisc))}`]:[]).concat(alwaysText('init')).join(', '),
+    speed: alwaysText('speed').join(', '),
+    prof: `Level ${num(S.level)||1}`,
+    passive: [`10`,`Wis ${fmt(amod('wis'))}`].concat(effSkill('perception')?[`${effSkill('perception')===2?'expertise':'trained'} ${fmt(effSkill('perception')*P)}`]:[]).concat(alwaysText('passive')).join(', '),
+    vision: alwaysText('vision').join(', '),
+    hpmax: alwaysText('hpmax').join(', ')
+  };
+  const HUD_COND={ac:condList('ac'),init:condList('init'),speed:condList('speed'),passive:condList('passive'),vision:condList('vision'),hpmax:condList('hpmax')};
+  Object.keys(HUD_BASE).forEach(k=>{
+    const cond=HUD_COND[k]||[];
+    const condHtml=cond.length?`<span class="ckv-cond">${cond.map(c=>esc(c.label)).join('<br>')}</span>`:'';
+    $$(`[data-fxform="${k}"]`).forEach(el=>el.innerHTML=esc(HUD_BASE[k])+condHtml);
+    const amts=cond.map(c=>c.amt).filter(a=>a!=null);
+    const modText=amts.length?amts.map(fmt).join('/'):'';
+    $$(`[data-fxmod="${k}"]`).forEach(el=>el.textContent=modText);
   });
   // spellcasting
   const sca=spellDCAtk();
