@@ -26,6 +26,7 @@ const STORE_KEY = 'dnd5e-binder-v1';
 // cast = 'full' | 'half' | 'pact', ab = spellcasting ability
 const CLASSES = {
   barbarian:{name:'Barbarian',hd:12,saves:['str','con']},
+  bloodhunter:{name:'Blood Hunter',hd:10,saves:['dex','int']},
   bard:     {name:'Bard',     hd:8, saves:['dex','cha'],cast:'full',ab:'cha'},
   cleric:   {name:'Cleric',   hd:8, saves:['wis','cha'],cast:'full',ab:'wis'},
   druid:    {name:'Druid',    hd:8, saves:['int','wis'],cast:'full',ab:'wis'},
@@ -40,14 +41,15 @@ const CLASSES = {
 };
 // Flavor-color per class (the same elemental-accent language used everywhere else on the sheet)
 // so the Build screen feels like it's forging a character instead of filling out a form.
-const CLASS_ICON={barbarian:'🪓',bard:'🎵',cleric:'✨',druid:'🍃',fighter:'⚔',monk:'☯',
+const CLASS_ICON={barbarian:'🪓',bloodhunter:'🩸',bard:'🎵',cleric:'✨',druid:'🍃',fighter:'⚔',monk:'☯',
   paladin:'🛡',ranger:'🏹',rogue:'🗡',sorcerer:'🔥',warlock:'👁',wizard:'📖'};
-const CLASS_COLOR={barbarian:'#c0524a',bard:'#d9599b',cleric:'#e3c15c',druid:'#7dc26a',
+const CLASS_COLOR={barbarian:'#c0524a',bloodhunter:'#9c2b3c',bard:'#d9599b',cleric:'#e3c15c',druid:'#7dc26a',
   fighter:'#8b98ab',monk:'#5fbfa0',paladin:'#c9a227',ranger:'#4f9e5c',rogue:'#6b6f8a',
   sorcerer:'#e0705a',warlock:'#8b5cc9',wizard:'#5aa9e0'};
 // One-line character-select flavor text per class, shown beside the big portrait on the Build screen.
 const CLASS_FLAVOR={
   barbarian:'Fury given form — she abandons defense for raw, unstoppable rage, striking hardest the closer death creeps.',
+  bloodhunter:'A grim vigilante who trades their own blood for forbidden hemocraft magic, becoming something of a monster to hunt the monstrous.',
   bard:'A storyteller and spellsinger who turns wit, music and charm into magic that lifts allies and unravels foes.',
   cleric:'A conduit for divine power, channeling their god’s will into healing light or righteous judgment.',
   druid:'Keeper of the wild, shifting shape and bending nature itself to protect the balance of the world.',

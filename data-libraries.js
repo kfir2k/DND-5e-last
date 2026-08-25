@@ -10,6 +10,15 @@ const FEATURE_LIB=[
  {n:'Fast Movement',g:'Barbarian',l:5,d:'+10 ft. speed while not in heavy armor.',fx:[{t:'stat',stat:'speed',n:10}]},
  {n:'Feral Instinct',g:'Barbarian',l:7,d:'Advantage on initiative rolls; act normally when surprised if you rage first.',combat:true},
  {n:'Brutal Critical',g:'Barbarian',l:9,d:'Roll one extra weapon damage die on a critical hit.',combat:true},
+ // Blood Hunter
+ {n:'Hunter\'s Bane',g:'Blood Hunter',l:1,d:'Advantage on Survival checks to track, and Intelligence checks to recall lore about, fey, fiends, and undead. Your hemocraft save DC uses Intelligence.',fx:[{t:'note',skills:['survival'],kind:'adv',cond:'tracking fey, fiends, or undead'}]},
+ {n:'Blood Maledict',g:'Blood Hunter',l:1,d:'Bonus action: afflict a creature within 30 ft. with one of two blood curses you know; amplify it by taking necrotic damage equal to half your Blood Hunter level for a stronger effect. 1/rest (2 at 6th, 3 at 13th, 4 at 17th).',combat:true,usesMax:1,usesPer:'short'},
+ {n:'Crimson Rite',g:'Blood Hunter',l:2,d:'Bonus action: imbue a weapon you\'re holding with an elemental rite, adding rite damage on hit; you take necrotic damage at the start of each of your turns while it\'s active. Extra rites known at 7th & 14th.',combat:true},
+ {n:'Fighting Style (Blood Hunter)',g:'Blood Hunter',l:2,d:'Pick a style: Archery, Dueling, Great Weapon Fighting, or Two-Weapon Fighting.'},
+ {n:'Extra Attack (Blood Hunter)',g:'Blood Hunter',l:5,d:'Attack twice when you take the Attack action.',combat:true},
+ {n:'Brand of Castigation',g:'Blood Hunter',l:6,d:'On a hit with an active Crimson Rite weapon, brand the creature: you always know its direction, and it takes psychic damage equal to your hemocraft modifier whenever it damages you or a creature within 5 ft. of you.',combat:true},
+ {n:'Grim Psychometry',g:'Blood Hunter',l:9,d:'Touch an object or place to sense sinister history tied to it — advantage on the History check, with a chance of a brief vision.',fx:[{t:'note',skills:['history'],kind:'adv',cond:'about sinister history tied to something you touch'}]},
+ {n:'Dark Augmentation',g:'Blood Hunter',l:10,d:'+5 ft. speed, and advantage on Strength, Dexterity, and Constitution saving throws.',fx:[{t:'stat',stat:'speed',n:5}],combat:true},
  // Bard
  {n:'Bardic Inspiration',g:'Bard',l:1,d:'Bonus action: give a creature a d6 (grows with level) to add to one roll. CHA mod uses per long rest.',combat:true,usesPer:'long',usesScale:'cha'},
  {n:'Jack of All Trades',g:'Bard',l:2,d:'Add half proficiency (rounded down) to ability checks that don\'t already include it.'},
@@ -112,6 +121,12 @@ const FEATURE_LIB=[
  {n:'Mindless Rage',g:'Barbarian — Path of the Berserker',l:6,d:'Can\'t be charmed or frightened while raging (already charmed/frightened when you rage? no effect while raging).'},
  {n:'Intimidating Presence',g:'Barbarian — Path of the Berserker',l:10,d:'Action: frighten one creature within 30 ft. (WIS save), for as long as you attack no one else.',combat:true},
  {n:'Retaliation',g:'Barbarian — Path of the Berserker',l:14,d:'Reaction: melee attack a creature within 5 ft. that just damaged you.',combat:true},
+ // Blood Hunter: Order of the Mutant
+ {n:'Mutagencraft',g:'Blood Hunter — Order of the Mutant',l:3,d:'Learn 4 mutagen formulas (more at higher levels); bonus action to concoct one after a short/long rest, altering your mental or physical abilities at the cost of a risky side effect.'},
+ {n:'Strange Metabolism',g:'Blood Hunter — Order of the Mutant',l:7,d:'Immune to poison damage and the poisoned condition. Bonus action: ignore a mutagen\'s negative side effect for 1 minute, once per long rest.',combat:true,usesMax:1,usesPer:'long'},
+ {n:'Brand of Axiom',g:'Blood Hunter — Order of the Mutant',l:11,d:'Branding a creature with Brand of Castigation ends illusions/invisibility on it and blocks new ones; it must succeed a WIS save or revert from an altered/alternate form and be stunned.',combat:true},
+ {n:'Blood Curse of Corrosion',g:'Blood Hunter — Order of the Mutant',l:15,d:'Gain the Blood Curse of Corrosion for Blood Maledict, infusing a creature\'s body with terrible toxins; doesn\'t count against your curses known.'},
+ {n:'Exalted Mutation',g:'Blood Hunter — Order of the Mutant',l:18,d:'Bonus action: end one active mutagen and immediately concoct a different known mutagen for free. Hemocraft modifier uses per long rest.',combat:true,usesPer:'long',usesScale:'int'},
  // Bard: College of Lore
  {n:'Bonus Proficiencies (Lore)',g:'Bard — College of Lore',l:3,d:'Proficiency in three skills of your choice — add the matching skill effects.'},
  {n:'Cutting Words',g:'Bard — College of Lore',l:3,d:'Reaction: expend a Bardic Inspiration die to subtract it from an enemy\'s attack roll, ability check, or damage roll.',combat:true},
