@@ -2241,41 +2241,71 @@ input.ov-id-field:focus{border-bottom-color:var(--gold)}
    actually makes the two sit at the same size instead of Saving Throws reading as an
    afterthought under the bigger ability cards. */
 .save-list-mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
-/* A skill's chip and its ✦/★ badge(s) are grouped into one inline-flex unit (.ov-skrow) sitting
-   inside a flex-wrap container — that makes the whole group wrap together as a single piece when
-   the line breaks, instead of plain inline flow letting a badge drift onto the next line next to
-   a different skill's chip. Stays horizontal and compact rather than one skill per line.
-   The group itself now carries the pill (carved-plaque look, inset shadow like the inventory
-   slots) and the chip inside goes borderless/transparent — one solid plaque per skill instead of
-   a chip nested inside another box, which read as flat/administrative rather than in-world. */
-#ovSkillChips{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
+/* A quiet divided list, not chips-in-boxes — matches the plain rows the Wealth & Attunement
+   panel right below it already uses. Skill effects can run to a full sentence now (see
+   skillInlineFxHTML in app.js), so a per-skill pill that has to grow to fit two lines of prose
+   read as a wall of oversized boxes; a hairline divider between rows carries the same separation
+   with far less visual weight, and lets color/type do the hierarchy instead of borders/shadows. */
+/* Scoped to this one panel (.ov-skills-panel, not the shared .panel h2) so every other panel's
+   header spacing is untouched. The rows below already carry their own 9px top padding, so the
+   usual 12px h2 margin on top of that read as a double gap before the list even started. */
+.ov-skills-panel h2{margin-bottom:4px}
+#ovSkillChips{display:flex;flex-direction:column}
 .ov-skrow{
-  display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 8px;max-width:100%;
-  background:var(--panel2);border:1px solid var(--border-lt);border-radius:999px;
-  padding:4px 6px 4px 12px;
-  box-shadow:inset 0 1px 8px rgba(0,0,0,.4);
-  transition:border-color .15s ease;
+  display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:2px;
+  padding:9px 18px;margin:0 -18px;border-bottom:1px solid var(--border);
+  border-radius:8px;
 }
-.ov-skrow:has(.ov-skchip:hover){border-color:var(--gold-dim)}
-.ov-skfx-row{display:contents}
+/* Same six ability accents .skill-group uses on the Skills tab (ab-str red, ab-dex green, etc.),
+   just a much fainter wash here — a hint of which ability governs the skill, not a colored card.
+   The row's negative margin exactly cancels .panel's own 18px side padding (re-added as the
+   row's own padding) so the fade bleeds flush to the card's edge instead of stopping short in a
+   visible rectangle; the "+ Show a skill…" picker and empty-state note, siblings of .ov-skrow
+   rather than rows themselves, are untouched and keep the panel's normal inset. */
+.ov-skrow.ab-str{--accent-dim:rgba(224,112,90,.14)}
+.ov-skrow.ab-dex{--accent-dim:rgba(125,194,106,.14)}
+.ov-skrow.ab-con{--accent-dim:rgba(224,171,74,.14)}
+.ov-skrow.ab-int{--accent-dim:rgba(90,169,224,.14)}
+.ov-skrow.ab-wis{--accent-dim:rgba(165,140,224,.14)}
+.ov-skrow.ab-cha{--accent-dim:rgba(224,107,176,.14)}
+.ov-skrow[class*="ab-"]{background:linear-gradient(90deg,var(--accent-dim),transparent 75%)}
+.ov-skrow:last-of-type{border-bottom:none}
+/* .ov-skchip carries the row's identity (name, dots, bonus) as one tap target to the Skills tab.
+   It's a <button>, and this theme's global `button{font-family:Cinzel}` rule was silently
+   overriding the skill name with the all-caps display face meant for UI chrome, not prose —
+   the explicit reset here is what keeps "Investigation" reading as a word instead of shouting.
+   Pinned favorites reuse the exact same classes on a plain <span> so both read identically. */
 .ov-skchip{
-  display:inline-flex;align-items:center;gap:6px;
-  background:transparent;border:none;
-  color:var(--text);padding:1px 0;font-size:.85rem;cursor:pointer;
+  display:inline-flex;align-items:baseline;gap:7px;
+  background:transparent;border:none;font-family:'Crimson Pro',serif;
+  color:var(--text);padding:0;cursor:pointer;
 }
-.ov-skchip span{color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700}
-/* Pinned favorites (not actually proficient) are a <span> — nothing to tap for navigation, only
-   the ✕ removes the pin — so no pointer cursor and a violet dash instead of a real proficiency
-   dot, keeping it visually distinct from the auto-shown proficient/expertise chips. */
-/* Pinned favorites: the dashed violet boundary now lives on the plaque (.ov-skrow.fav) since the
-   chip itself went borderless — keeps the plaque as the one visual container per skill. */
-.ov-skrow.fav{border-style:dashed;border-color:#8b5cc9}
 .ov-skchip.fav{cursor:default}
-.ov-skchip.fav button{
+.ov-skname{font-size:.92rem;font-weight:600}
+.ov-skbonus{color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:.95rem}
+.ov-skdots{color:var(--gold-dim);font-size:.65rem;letter-spacing:1px}
+/* Pinned favorites (not actually proficient) get one small violet mark instead of the whole row
+   wearing a different border color — a lighter way to say "not really trained" that doesn't add
+   a second competing color scheme to the card. */
+.ov-skpin{color:#a58ce0;font-size:.8rem}
+/* Hide button — one shared "✕" per row (trained skills go to ovHidden, pinned favorites get
+   un-pinned), so every row on this card carries the same, single, obvious way off it. Pushed to
+   the row's far right and ordered last so it never interrupts the sentence before it. */
+.ov-skhide{
   background:transparent;border:none;color:var(--faint);cursor:pointer;
-  font-size:.85rem;line-height:1;padding:0;margin-left:2px;
+  font-size:.8rem;line-height:1;padding:0 2px;flex-shrink:0;margin-left:auto;
 }
-.ov-skchip.fav button:hover{color:var(--red)}
+.ov-skhide:hover{color:var(--red)}
+/* Feature effects read straight off the row, right after the bonus — "+3 or +6 if Natural
+   Explorer (in favored terrain)" — as plain always-visible prose (skillInlineFxHTML in app.js),
+   nothing to tap open. Kept to a single muted, unbolded voice (not a second gold/green accent
+   competing with the row's own bonus) so it reads as a quiet aside, not a second headline; only
+   the ⚠ warning keeps its own color, since that one's worth the extra attention. */
+.ov-fx-in{font-size:.8rem;font-style:italic;color:var(--muted)}
+.ov-fx-in b{color:var(--text);font-weight:700;font-style:normal}
+.ov-fx-in i{font-style:italic}
+.ov-fx-in.warn{color:#c9847a}
+.ov-fx-sep{color:var(--faint)}
 .ov-wealth-total{
   color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:1.6rem;
   text-align:center;

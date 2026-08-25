@@ -16,6 +16,7 @@ function defaultState(){
     saveProf:{str:false,dex:false,con:false,int:false,wis:false,cha:false},
     skills:Object.fromEntries(SKILLS.map(s=>[s[0],0])), // 0 none, 1 proficient, 2 expertise
     favSkills:[], // skills pinned onto Overview's Trained Skills card despite 0 proficiency
+    ovHidden:[], // trained/expertise skills the player has hidden from Overview's Trained Skills card
     // Combat
     ac:10, initiativeMisc:0, speed:'30 ft.', vision:'None',
     hpMax:10, hpCurrent:10, hpTemp:0, hdTotal:'', hd:'', hdUsed:0,
@@ -317,7 +318,7 @@ overview:`
       </div>
     </div>
     <div class="ov-col">
-      <div class="panel"><h2>Trained Skills</h2><div id="ovSkillChips"></div></div>
+      <div class="panel ov-skills-panel"><h2>Trained Skills</h2><div id="ovSkillChips"></div></div>
       <div class="panel ov-spellslots-panel" id="ovSpellPanel"><h2>🔮 Spellcasting</h2>
         <div class="stats-row" style="grid-template-columns:1fr 1fr">
           <div class="stat computed stat-dc"><span class="stat-label">🔮 Spell Save DC</span><span class="big" data-calc="spellDC">—</span></div>
@@ -1075,6 +1076,30 @@ function skillBadgesHTML(k,ab){
     badges.push(`<span class="sk-fx" data-notemath="${k}">★ ${esc(n.src)} <b>${esc(b)}</b>${tip}</span>`);
   });
   return badges.join('');
+}
+// Overview's effect summary — same underlying data as skillBadgesHTML above, but written as
+// plain always-visible text on the skill's own line ("+3 or +6 if ★ Natural Explorer (in
+// favored terrain)") instead of tap-to-open pills. The Skills tab keeps the pill/tooltip version;
+// this one is for the Trained Skills card, where the point is reading everything at a glance,
+// with nothing needing a tap to reveal.
+function skillInlineFxHTML(k,ab){
+  const man=S.skills[k], g=fxSkillGrant(k);
+  const parts=[];
+  if(g>man){
+    const srcs=allFx().filter(x=>x.t==='skill'&&xSkills(x).includes(k)).map(x=>x.src).join(', ');
+    parts.push(`<span class="ov-fx-in perm">✦ ${esc(srcs)}</span>`);
+  }
+  if(k==='stealth'){
+    const a=ARMORS[(S.equip||{}).armor]||ARMORS.none;
+    if(a.sd) parts.push(`<span class="ov-fx-in warn">⚠ Disadvantage <i>(${esc(a.n.split(' (')[0])})</i></span>`);
+  }
+  fxNotes(k).forEach(n=>{
+    const b=noteBadge(k,ab,n);
+    if(b==null) return;
+    const cond=n.cond?` <i>(${esc(n.cond)})</i>`:'';
+    parts.push(`<span class="ov-fx-in note">or <b>${esc(b)}</b> if ${esc(n.src)}${cond}</span>`);
+  });
+  return parts.join('<span class="ov-fx-sep">;</span> ');
 }
 function renderSkills(){
   // Grouped by ability score (STR, DEX, CON, INT, WIS, CHA) — matches the paper sheet's layout
@@ -3748,48 +3773,75 @@ function renderOverviewIdentity(){
 // Computes its own bonus text (rather than the data-skillbonus multi-target trick) since chips
 // are (re)created inside recalc() itself — a data-skillbonus span born after recalc()'s skill
 // loop already ran would sit at its "+0" placeholder until the next keystroke elsewhere.
+// Every chip — trained or pinned — can be hidden from this card (✕). Trained skills go into
+// ovHidden (the actual proficiency on the Skills tab is untouched, just suppressed here);
+// pinned favorites are simply un-pinned. Both come back through the one "+ Show a skill…"
+// picker, so there's a single place to manage what this card is allowed to clutter itself with.
 function renderOverviewSkillChips(){
   const box=$('#ovSkillChips'); if(!box) return;
   S.favSkills=S.favSkills||[];
+  S.ovHidden=S.ovHidden||[];
   const P=num(S.profBonus);
   const withBonus=([k,label,ab])=>({k,label,ab,eff:effSkill(k),b:amod(ab)+effSkill(k)*P});
-  const trained=SKILLS.map(withBonus).filter(r=>r.eff>0);
+  const trained=SKILLS.map(withBonus).filter(r=>r.eff>0&&!S.ovHidden.includes(r.k));
+  const hiddenTrained=SKILLS.map(withBonus).filter(r=>r.eff>0&&S.ovHidden.includes(r.k));
   // A favorite that later becomes proficient just shows through the "trained" row above instead
   // of a second copy — favSkills itself is left untouched so it re-appears here if un-trained.
   const pinned=SKILLS.filter(([k])=>S.favSkills.includes(k)).map(withBonus).filter(r=>r.eff===0);
-  // Same ✦/★ feature badges as the Skills tab, but each skill now gets its own row (chip on top,
-  // one plaque per skill) instead of every chip and badge flowing loose in one wrapping line —
-  // sharing a line let a badge drift next to the wrong skill once the row wrapped.
+  // Feature effects read straight off the chip's own line ("+3 or +6 if ★ Natural Explorer")
+  // via skillInlineFxHTML — plain text, always visible, nothing to tap open. That's the whole
+  // point of this card: everything relevant to the skill in one glance.
+  // Each row's background carries a faint fade in its own ability's color — the exact same
+  // STR/DEX/CON/INT/WIS/CHA accents the Skills tab colors its ability groups with — so a skill's
+  // governing ability reads at a glance here too, without needing a legend.
   const chipHtml=r=>{
-    const badges=skillBadgesHTML(r.k,r.ab);
-    return `<div class="ov-skrow">
-      <button class="ov-skchip" data-ovsktab>${esc(r.label)} <span>${fmt(r.b)}</span> ${r.eff===2?'●●':'●'}</button>
-      ${badges?`<div class="ov-skfx-row">${badges}</div>`:''}
+    const fx=skillInlineFxHTML(r.k,r.ab);
+    return `<div class="ov-skrow ab-${r.ab}">
+      <button class="ov-skchip" data-ovsktab>
+        <span class="ov-skname">${esc(r.label)}</span>
+        <span class="ov-skbonus">${fmt(r.b)}</span>
+        <span class="ov-skdots">${r.eff===2?'●●':'●'}</span>
+      </button>
+      ${fx?`<span class="ov-skfx">${fx}</span>`:''}
+      <button class="ov-skhide" data-ovskhide="${r.k}" title="Hide from Overview">✕</button>
     </div>`;
   };
   const pinHtml=r=>{
-    const badges=skillBadgesHTML(r.k,r.ab);
-    return `<div class="ov-skrow fav">
-      <span class="ov-skchip fav">${esc(r.label)} <span>${fmt(r.b)}</span><button data-ovskunfav="${r.k}" title="Unpin from Overview">✕</button></span>
-      ${badges?`<div class="ov-skfx-row">${badges}</div>`:''}
+    const fx=skillInlineFxHTML(r.k,r.ab);
+    return `<div class="ov-skrow fav ab-${r.ab}">
+      <span class="ov-skchip fav">
+        <span class="ov-skpin" title="Pinned — not currently trained">◈</span>
+        <span class="ov-skname">${esc(r.label)}</span>
+        <span class="ov-skbonus">${fmt(r.b)}</span>
+      </span>
+      ${fx?`<span class="ov-skfx">${fx}</span>`:''}
+      <button class="ov-skhide" data-ovskunfav="${r.k}" title="Unpin from Overview">✕</button>
     </div>`;
   };
   const rows=trained.map(chipHtml).join('')+pinned.map(pinHtml).join('');
   const pickable=SKILLS.filter(([k])=>!S.favSkills.includes(k)&&effSkill(k)===0);
-  box.innerHTML = (rows||'<p class="prep-note" style="margin:0 0 6px">No trained skills yet — pick proficiencies on the Skills tab, or pin a favorite below.</p>')
-    + (pickable.length ? `<select class="add-btn" data-ovskfav>
-        <option value="">+ Pin a favorite skill…</option>
-        ${pickable.map(([k,label])=>`<option value="${k}">${esc(label)}</option>`).join('')}
+  const addOptions=hiddenTrained.map(r=>`<option value="h:${r.k}">${esc(r.label)} (trained, hidden)</option>`).join('')
+    + pickable.map(([k,label])=>`<option value="p:${k}">${esc(label)}</option>`).join('');
+  box.innerHTML = (rows||'<p class="prep-note" style="margin:0 0 6px">No skills shown — pick proficiencies on the Skills tab, or add one below.</p>')
+    + (addOptions ? `<select class="add-btn" data-ovskadd>
+        <option value="">+ Show a skill…</option>
+        ${addOptions}
       </select>` : '');
   $$('[data-ovsktab]').forEach(b=>b.addEventListener('click',()=>showTab('skills')));
+  $$('[data-ovskhide]').forEach(b=>b.addEventListener('click',()=>{
+    if(!S.ovHidden.includes(b.dataset.ovskhide)) S.ovHidden.push(b.dataset.ovskhide);
+    renderOverviewSkillChips(); save();
+  }));
   $$('[data-ovskunfav]').forEach(b=>b.addEventListener('click',()=>{
     S.favSkills=S.favSkills.filter(k=>k!==b.dataset.ovskunfav);
     renderOverviewSkillChips(); save();
   }));
-  const picker=$('[data-ovskfav]');
+  const picker=$('[data-ovskadd]');
   if(picker) picker.addEventListener('change',()=>{
     if(!picker.value) return;
-    S.favSkills.push(picker.value);
+    const [kind,key]=picker.value.split(':');
+    if(kind==='h') S.ovHidden=S.ovHidden.filter(k=>k!==key);
+    else S.favSkills.push(key);
     renderOverviewSkillChips(); save();
   });
 }
