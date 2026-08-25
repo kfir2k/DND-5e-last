@@ -422,8 +422,11 @@ combat:`
   <div class="ck-duo" id="ckDuo">
     <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
       <div id="ckUndo"></div>
-      <div class="ck-filters" id="ckFilters"></div>
-      <div class="ck-zone-chips" id="ckZoneChips"></div>
+      <div class="ck-toolbar">
+        <div class="ck-search"><span class="ck-search-ic">🔍</span><input type="text" id="ckSearch" placeholder="Search actions…" autocomplete="off"></div>
+        <div class="ck-zone-chips" id="ckZoneChips"></div>
+        <div id="ckTypeWrap"></div>
+      </div>
       <div class="ck-zones" id="ckCards"></div>
       <div class="fx-addrow" style="margin-top:8px">
         <button class="add-btn" id="ckAddCustom">+ Custom card</button>
@@ -435,8 +438,17 @@ combat:`
         <span>🗺 Turn Plan</span><span class="ck-plan-collapsed-count" id="ckPlanCollapsedCount"></span>
       </div>
       <div class="ck-plan-open">
-        <h2>🗺 Turn Plan<button class="ck-plan-collapse-btn" id="ckPlanCollapseBtn" title="Hide Turn Plan to widen Do Something">≫</button></h2>
-        <div class="ck-plan-head"><div class="ck-plan-tabs" id="ckPlanTabs"></div><button id="ckPlanWizard" style="display:none">🧙 Roll This Turn</button><button id="ckPlanClear" style="display:none">Clear</button></div>
+        <h2>🗺 Turn Plan</h2>
+        <div class="ck-plan-toolbar" id="ckPlanToolbar">
+          <span class="ck-plan-switch" id="ckPlanSwitch"></span>
+          <button class="ck-tbtn" id="ckPlanRenameBtn" title="Rename this plan">✎</button>
+          <button class="ck-tbtn" id="ckPlanAddBtn" title="New plan">+</button>
+          <button class="del-btn" id="ckPlanDelBtn" title="Delete this plan">✕</button>
+          <div class="ck-toolbar-spacer"></div>
+          <button class="ck-tbtn ck-tbtn-accent" id="ckPlanWizard" style="display:none">🧙 Roll This Turn</button>
+          <button class="ck-tbtn" id="ckPlanClear" style="display:none">Clear</button>
+          <button class="ck-tbtn" id="ckPlanCollapseBtn" title="Hide Turn Plan to widen Do Something">≫</button>
+        </div>
         <div class="ck-plan" id="ckPlan"></div>
       </div>
     </div>
@@ -1855,7 +1867,7 @@ const CK_ZONES=[['weap','⚔','Weapons'],['spell','🔮','Spells'],['feat','🎖
 function ckTypesOf(obj,legacyVal,fallback){
   return Array.isArray(obj.actionTypes)&&obj.actionTypes.length ? obj.actionTypes : [legacyVal||fallback];
 }
-let CK_FILTER='all', CK_UNDO=null;
+let CK_FILTER='all', CK_UNDO=null, CK_SEARCH='';
 // One card's detail can be open at a time in the "Do Something" grid — it floats in a popover
 // anchored to the card (see openCkPop/closeCkPop) rather than expanding the card in place, so
 // browsing the grid never reflows. Turn-plan steps are a separate, independent open-set (below):
@@ -2099,6 +2111,10 @@ function renderCockpitCards(){
   const box=$('#ckCards'); if(!box) return;
   const c=ck();
   let cards=cockpitCards();
+  // Free-text search narrows the whole pool first — the type dropdown, the zone chips, and
+  // their counts all work off whatever it leaves, same as the type filter always has.
+  const q=CK_SEARCH.trim().toLowerCase();
+  if(q) cards=cards.filter(x=>x.name.toLowerCase().includes(q));
   const counts={all:cards.length};
   // A card tagged with more than one economy slot counts (and shows up) under every filter it's
   // tagged for, rather than being forced into one exclusive bucket.
@@ -2108,8 +2124,15 @@ function renderCockpitCards(){
   const zoneCounts=Object.fromEntries(CK_ZONES.map(([z])=>[z,cards.filter(x=>x.zone===z).length]));
   if(CK_FILTER!=='all') cards=cards.filter(x=>x.types.includes(CK_FILTER));
   cards.sort((a,b)=>(b.pin-a.pin)||(CK_TYPE_ORDER[a.type]-CK_TYPE_ORDER[b.type])||((a.cond?1:0)-(b.cond?1:0))||a.name.localeCompare(b.name));
-  $('#ckFilters').innerHTML=[['all','All'],...CK_TYPES].map(([v,l])=>
-    `<button class="ck-filter ${CK_FILTER===v?'on':''}" data-ckfilter="${v}">${l}${counts[v]?` <i>${counts[v]}</i>`:''}</button>`).join('');
+  // The action-economy filter used to be its own row of pills; now it's a themed <select> (tap
+  // opens the app's own big-rowed option sheet — see wireSelectSheets) so it never competes with
+  // the zone chips for a full row of its own.
+  const typeWrap=$('#ckTypeWrap');
+  if(typeWrap){
+    typeWrap.innerHTML=`<select class="ck-pill-sel" id="ckTypeDd" title="Filter by action type">${[['all','All types'],...CK_TYPES].map(([v,l])=>
+      `<option value="${v}" ${CK_FILTER===v?'selected':''}>${l}${counts[v]?` (${counts[v]})`:''}</option>`).join('')}</select>`;
+    $('#ckTypeDd').addEventListener('change',e=>{ CK_FILTER=e.target.value; renderCockpitCards(); });
+  }
   const hiddenZones=new Set(c.hiddenZones||[]);
   const chipsBox=$('#ckZoneChips');
   // Only a category the character actually has anything in earns a chip — an empty "Weapons"
@@ -2123,7 +2146,9 @@ function renderCockpitCards(){
   const groups=CK_ZONES.map(([z,icon,label])=>({z,icon,label,list:cards.filter(x=>x.zone===z)})).filter(g=>g.list.length);
   const visible=groups.filter(g=>!hiddenZones.has(g.z));
   box.innerHTML = !cards.length
-    ? '<p class="prep-note" style="margin:0">Nothing here yet — add attacks below, pick spells on the Spells tab, add a feat on the Build tab, or add a custom card.</p>'
+    ? (q
+      ? `<p class="prep-note" style="margin:0">No actions match “${esc(CK_SEARCH.trim())}”.</p>`
+      : '<p class="prep-note" style="margin:0">Nothing here yet — add attacks below, pick spells on the Spells tab, add a feat on the Build tab, or add a custom card.</p>')
     : !visible.length
       ? '<p class="prep-note" style="margin:0">Every category is hidden — tap one above to bring it back.</p>'
       : visible.map(g=>`<div class="ck-zone ck-zone-${g.z}">
@@ -2190,16 +2215,48 @@ function renderCkPopover(){
 // jumping back to the card grid mid-fight. Steps are snapshots {key,name}: the name survives
 // even if the source card is later deleted, like pencil on paper.
 const CK_PLAN_OPEN=new Set();
+// Toggled by the ✎ button in the plan toolbar: swaps the plan-switcher <select> for a plain
+// rename input for the active plan. Reset (back to the switcher) whenever the active plan
+// changes, since renaming a plan you've just switched away from makes no sense.
+let CK_PLAN_RENAME=false;
+// renderCockpitPlan() runs on every cockpit re-render (search, zone toggle, a pip click anywhere
+// on the page), not just when the rename box itself is touched — so the box gets rebuilt often
+// while it's open. Only steal focus into it right after ✎ is pressed, never on a rebuild caused
+// by something unrelated (typing in the search box, say), or every one of those keystrokes would
+// yank focus away from wherever the player actually is.
+let CK_PLAN_RENAME_FOCUS=false;
 function renderCockpitPlan(){
   const box=$('#ckPlan'); if(!box) return;
   const cur=ckPlan();
-  // Template tabs: one plan per situation — "Default", "Boss fight", "Defensive"... The active
-  // tab's name is directly editable; ✕ deletes it (never the last one); + starts a new one.
+  // One plan per situation — "Default", "Boss fight", "Defensive"... Used to be a row of tabs
+  // (one pill per plan, plus its own rename input and ✕) that grew without bound and wrapped
+  // the moment there were more than a couple. A <select> scales to any number of plans without
+  // taking more row space; renaming swaps it for a plain text input instead, toggled by ✎.
   const canDel=S.turnPlans.length>1;
-  $('#ckPlanTabs').innerHTML=S.turnPlans.map((p,i)=> i===num(S.turnPlanIdx)
-    ? `<span class="ck-tpl on"><input type="text" value="${esc(p.name)}" data-cktplname maxlength="24" title="Template name — e.g. Boss fight, Defensive">${canDel?`<button data-cktpldel="${i}" title="Delete this plan">✕</button>`:''}</span>`
-    : `<span class="ck-tpl"><button data-cktpl="${i}">${esc(p.name)||'Plan '+(i+1)}</button>${canDel?`<button data-cktpldel="${i}" title="Delete this plan">✕</button>`:''}</span>`
-  ).join('')+`<button class="ck-tpl ck-tpl-add" data-cktpladd title="New plan">+</button>`;
+  const switchEl=$('#ckPlanSwitch');
+  if(switchEl){
+    switchEl.innerHTML=CK_PLAN_RENAME
+      ? `<input type="text" class="ck-plan-name-in" id="ckPlanNameIn" value="${esc(cur.name)}" data-cktplname maxlength="24" placeholder="Plan name">`
+      : `<select class="ck-pill-sel" id="ckPlanSel" title="Switch turn plan">${S.turnPlans.map((p,i)=>
+          `<option value="${i}" ${i===num(S.turnPlanIdx)?'selected':''}>${esc(p.name)||'Plan '+(i+1)}</option>`).join('')}</select>`;
+    if(CK_PLAN_RENAME){
+      const nameIn=$('#ckPlanNameIn');
+      if(nameIn){
+        if(CK_PLAN_RENAME_FOCUS){ nameIn.focus(); nameIn.select(); CK_PLAN_RENAME_FOCUS=false; }
+        nameIn.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); CK_PLAN_RENAME=false; renderCockpitPlan(); } });
+      }
+    }else{
+      const sel=$('#ckPlanSel');
+      if(sel) sel.addEventListener('change',e=>{
+        S.turnPlanIdx=+e.target.value; CK_PLAN_OPEN.clear(); CK_PLAN_RENAME=false;
+        renderCockpitPlan(); save();
+      });
+    }
+  }
+  const renBtn=$('#ckPlanRenameBtn');
+  if(renBtn){ renBtn.textContent=CK_PLAN_RENAME?'✓':'✎'; renBtn.title=CK_PLAN_RENAME?'Done renaming':'Rename this plan'; }
+  const delBtn=$('#ckPlanDelBtn');
+  if(delBtn) delBtn.style.display=canDel?'':'none';
   const all=cockpitCards();
   const tl=Object.fromEntries(CK_TYPES);
   box.innerHTML = cur.steps.length
@@ -2342,22 +2399,22 @@ function wireCombatFeatures(){
       renderCockpitPlan(); save(); return; }
     const pdel=t.closest('[data-plandel]');
     if(pdel){ ckPlan().steps.splice(+pdel.dataset.plandel,1); CK_PLAN_OPEN.clear(); renderCockpitPlan(); save(); return; }
-    const tpl=t.closest('[data-cktpl]');
-    if(tpl){ S.turnPlanIdx=+tpl.dataset.cktpl; CK_PLAN_OPEN.clear(); renderCockpitPlan(); save(); return; }
-    if(t.closest('[data-cktpladd]')){
+    if(t.closest('#ckPlanRenameBtn')){
+      CK_PLAN_RENAME=!CK_PLAN_RENAME; CK_PLAN_RENAME_FOCUS=CK_PLAN_RENAME;
+      renderCockpitPlan(); return; }
+    if(t.closest('#ckPlanAddBtn')){
       ck(); S.turnPlans.push({name:'Plan '+(S.turnPlans.length+1),steps:[]});
-      S.turnPlanIdx=S.turnPlans.length-1; CK_PLAN_OPEN.clear();
+      S.turnPlanIdx=S.turnPlans.length-1; CK_PLAN_OPEN.clear(); CK_PLAN_RENAME=false;
       renderCockpitPlan(); save(); return; }
-    const tdel=t.closest('[data-cktpldel]');
-    if(tdel){
+    if(t.closest('#ckPlanDelBtn')){
       if(S.turnPlans.length>1){
-        const di=+tdel.dataset.cktpldel, p=S.turnPlans[di];
+        const di=num(S.turnPlanIdx), p=S.turnPlans[di];
         const what=`Delete plan "${p.name||'Plan '+(di+1)}"${p.steps.length?` and its ${p.steps.length} step${p.steps.length>1?'s':''}`:''}?`;
         uiConfirm(what,{title:'Delete plan',ok:'Delete',danger:true}).then(ok=>{
           if(!ok) return;
           S.turnPlans.splice(di,1);
           if(num(S.turnPlanIdx)>=di) S.turnPlanIdx=Math.max(0,num(S.turnPlanIdx)-1);
-          CK_PLAN_OPEN.clear();
+          CK_PLAN_OPEN.clear(); CK_PLAN_RENAME=false;
           renderCockpitPlan(); save();
         }); } return; }
     const pin=t.closest('[data-ckpin]');
@@ -2380,8 +2437,6 @@ function wireCombatFeatures(){
         if(!ok) return;
         S.customCards.splice(+del.dataset.ccdel,1); closeCkPop(); refresh();
       }); return; }
-    const filt=t.closest('[data-ckfilter]');
-    if(filt){ CK_FILTER=filt.dataset.ckfilter; renderCockpitCards(); return; }
     const zone=t.closest('[data-ckzone]');
     if(zone){ const cc=ck(), z=zone.dataset.ckzone;
       cc.hiddenZones=cc.hiddenZones.includes(z)?cc.hiddenZones.filter(x=>x!==z):[...cc.hiddenZones,z];
@@ -2449,6 +2504,7 @@ function wireCombatFeatures(){
       .then(ok=>{ if(ok) go(); });
   });
   initCkDrag();
+  wireCkSearch();
   $('#ckSpellsToggle').addEventListener('click',()=>{ ck().showAllSpells=!ck().showAllSpells; renderCockpitCards(); save(); });
   // Same add-a-state control lives on both Combat and Overview (#ckState*/#ovState*) — one
   // little wiring helper instead of duplicating the click+Enter logic per instance.
@@ -2474,6 +2530,13 @@ function wireCombatFeatures(){
   $('#ckAtkPanel').classList.toggle('open',!!ck().atkOpen);
 }
 
+// Free-text filter over the "Do Something" grid — same live-search pattern as the equipment
+// pack's #packSearch: a static input outside the regenerated grid, so typing never fights a
+// re-render for focus.
+function wireCkSearch(){
+  const input=$('#ckSearch'); if(!input||input._ckSearchInit) return; input._ckSearchInit=true;
+  input.addEventListener('input',()=>{ CK_SEARCH=input.value; renderCockpitCards(); });
+}
 // ----- Cockpit drag & drop (Pointer Events) -----
 // Native HTML5 drag/drop (dragstart/dragover/drop) never fires from a touch gesture on a
 // tablet — the exact device this screen is built for — so a drag-only "add to plan" or
