@@ -350,17 +350,15 @@ build:`
         <div class="bRail" id="classRail"></div>
       </div>
       <div class="bStage">
-        <img class="bLayer bBgA visible" id="bBgA" alt="">
-        <img class="bLayer bBgB" id="bBgB" alt="">
-        <div class="bPortraitWrap" id="bPortraitWrap">
-          <img class="bLayer bPortA visible" id="bPortA" alt="">
-          <img class="bLayer bPortB" id="bPortB" alt="">
+        <div class="bStageArt">
+          <img class="bLayer bBgA visible" id="bBgA" alt="">
+          <img class="bLayer bBgB" id="bBgB" alt="">
+          <div class="bScrim"></div>
+          <div class="bFlash" id="bFlash"></div>
+          <button class="bArrow bArrowL" id="classPrevBtn" type="button" aria-label="Previous class">‹</button>
+          <button class="bArrow bArrowR" id="classNextBtn" type="button" aria-label="Next class">›</button>
         </div>
-        <div class="bScrim"></div>
-        <div class="bFlash" id="bFlash"></div>
-        <button class="bArrow bArrowL" id="classPrevBtn" type="button" aria-label="Previous class">‹</button>
-        <button class="bArrow bArrowR" id="classNextBtn" type="button" aria-label="Next class">›</button>
-        <div class="bContent">
+        <div class="bContent bContentBanner">
           <div class="bEyebrow" id="bEyebrow">Choose your class</div>
           <h2 class="bName" id="bName">—</h2>
           <div class="bLevelStars" id="bLevelStars"></div>
@@ -4229,11 +4227,11 @@ function renderBuildTheme(){
   panel.style.setProperty('--accent-dim',accent+'30');
 
   if(c&&S.classId!==bLastClassId){
-    const bgSrc='class-art/'+S.classId+'-hero.jpg', portSrc='class-art/'+S.classId+'-portrait.jpg';
-    if(bLastClassId===null){ $('#bBgA').src=bgSrc; $('#bPortA').src=portSrc; } // first paint — A is already .visible
+    const bgSrc='class-art/'+S.classId+'-hero.jpg';
+    if(bLastClassId===null){ $('#bBgA').src=bgSrc; } // first paint — A is already .visible
     else{
       const to=bClassFront==='A'?'B':'A';
-      crossfadeImg('bBg',bClassFront,to,bgSrc); crossfadeImg('bPort',bClassFront,to,portSrc);
+      crossfadeImg('bBg',bClassFront,to,bgSrc);
       bClassFront=to;
       const flash=$('#bFlash');
       flash.style.setProperty('--c',accent);
