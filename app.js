@@ -2686,7 +2686,7 @@ function libEntryToFeature(ent,source){
   if(ent.n==='Tough') fx=[{t:'stat',stat:'hpmax',n:2*Math.max(1,num(S.level))}];
   const usesScale=ent.usesScale||'';
   const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
-  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source};
+  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,actionType:ent.actionType||'',usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source};
 }
 // Same job for RACE_LIB entries — shared by the race-trait search box below and the heritage
 // auto-grant (syncGrantedFeatures), so a trait added either way comes out identically wired.
