@@ -3690,7 +3690,7 @@ function recalc(){
   // AC engine: when auto mode is on, armor + DEX + shield drives the AC field
   const eq=S.equip||{};
   if(eq.acAuto){
-    S.ac=computedBaseAC();
+    S.ac=computedBaseAC()+fxStat('ac');
     $$('[data-bind="ac"]').forEach(el=>{if(el!==document.activeElement)el.value=S.ac;});
   }
   const hudAC=$('#hudAC');
@@ -5524,6 +5524,9 @@ function renderCharSelect(){
   +`<button class="cs-card cs-new" data-csnew>
       <span class="cs-icon">+</span><span class="cs-name">New Character</span><span class="cs-line">Start a blank sheet</span>
     </button>
+    <button class="cs-card cs-new wiz-entry" data-cswizard>
+      <span class="cs-icon">🧙</span><span class="cs-name">Smart Wizard</span><span class="cs-line">Guided creation, step by step</span>
+    </button>
     <button class="cs-card cs-new" data-csimportbtn>
       <span class="cs-icon">⬆</span><span class="cs-name">Import</span><span class="cs-line">From a JSON export</span>
     </button>`;
@@ -5599,6 +5602,7 @@ function wireCharSelect(){
         renderCharSelect();
       }); return; }
     if(t.closest('[data-csnew]')){ createChar(); return; }
+    if(t.closest('[data-cswizard]')){ closeCharSelect(); openWizard(); return; }
     if(t.closest('[data-csimportbtn]')){ $('#csImportFile').click(); return; }
     const play=t.closest('[data-csplay]');
     if(play){ switchChar(play.dataset.csplay); return; }

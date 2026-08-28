@@ -54,6 +54,22 @@
   </div>
 </div>
 
+<div class="wiz-shell" id="wizShell">
+  <canvas id="wizEmbers"></canvas>
+  <div class="wiz-tint-layer"></div>
+  <div class="wiz-veil" id="wizVeil"></div>
+  <div class="wiz-topbar">
+    <div class="wiz-tag"><span id="wizTopRoman">I</span> · <b id="wizTopLabel">Concept</b></div>
+    <button class="wiz-exit" id="wizExitBtn" type="button">Exit to manual Build</button>
+  </div>
+  <div class="wiz-scenewrap" id="wizSceneWrap"></div>
+  <div class="wiz-rail-fixed">
+    <button class="wiz-rail-nav" id="wizBack" type="button">‹ Back</button>
+    <div class="wiz-rail-track" id="wizRailTrack"></div>
+    <button class="wiz-rail-nav primary" id="wizNext" type="button">Continue ›</button>
+  </div>
+</div>
+
 <div class="modal-bg map-modal-bg" id="mapModal">
   <div class="map-shell">
     <div class="map-toolbar">
@@ -113,6 +129,7 @@
 <script src="data-equipment.js"></script>
 <script src="data-libraries.js"></script>
 <script src="app.js"></script>
+<script src="wizard.js"></script>
 <script src="map.js"></script>
 <script>
 if ('serviceWorker' in navigator) {

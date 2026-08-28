@@ -2626,6 +2626,11 @@ label.fld-paper input:focus{border-bottom-style:solid;border-bottom-color:var(--
 .cs-card.cs-new:hover{border-color:var(--gold-dim);color:var(--gold-lt);box-shadow:none}
 .cs-card.cs-new .cs-icon{filter:none;color:var(--gold-dim)}
 .cs-card.cs-new .cs-name{color:inherit}
+/* Smart Wizard: same dashed footprint as New/Import, but a gold border marks it as the
+   featured option rather than an empty seat. */
+.cs-card.wiz-entry{border-color:var(--gold-dim);color:var(--muted)}
+.cs-card.wiz-entry .cs-name{color:var(--gold-lt)}
+.cs-card.wiz-entry:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(201,162,39,.18)}
 .cs-back{
   margin-top:26px;background:transparent;border:1px solid var(--border-lt);border-radius:8px;
   color:var(--muted);padding:9px 18px;font-size:.85rem;cursor:pointer;
@@ -2987,4 +2992,238 @@ input.sug-sheet-search{display:block;width:calc(100% - 36px);margin:0 18px 10px}
   .map-toolbar{padding:8px 10px}
   .map-toolbar-group{gap:6px}
   #mapSelLabel{width:120px}
+}
+
+/* ---------- Character Wizard: immersive full-page guided creation ----------
+   One step = one full-viewport scene (not a panel inside a form) with a fixed bottom
+   step-rail, ember atmosphere, and a real page-transition between steps — the "forge"
+   companion to the plain Build tab, reachable from a third card on the char-select screen.
+   Sits above .char-select (z-index 60) and .map-modal-bg (z-index 70). */
+.wiz-shell{
+  position:fixed;inset:0;z-index:80;display:none;
+  background:var(--bg);color:var(--text);font-family:'Crimson Pro',Georgia,serif;
+  overflow-x:hidden;overflow-y:auto;
+}
+.wiz-shell.open{display:block}
+.wiz-shell h1,.wiz-shell h2,.wiz-shell button{font-family:'Cinzel',Georgia,serif}
+.wiz-shell button{font:inherit;cursor:pointer}
+#wizEmbers{position:fixed;inset:0;z-index:0;pointer-events:none}
+.wiz-tint-layer{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 50% 18%, color-mix(in srgb,var(--wiz-tint,var(--gold)) 30%,transparent), transparent 70%),
+             radial-gradient(ellipse at 50% -10%, #241c12 0%, var(--bg) 60%);
+}
+.wiz-veil{position:fixed;inset:0;z-index:40;pointer-events:none;opacity:0}
+.wiz-veil.flash{animation:wizveilflash .62s ease}
+@keyframes wizveilflash{
+  0%{opacity:0}
+  35%{opacity:1;background:radial-gradient(ellipse at 50% 55%, color-mix(in srgb,var(--wiz-tint,var(--gold)) 55%,transparent), var(--ink) 78%)}
+  100%{opacity:0}
+}
+.wiz-topbar{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;align-items:flex-start;padding:22px 26px;pointer-events:none}
+.wiz-topbar>*{pointer-events:auto}
+.wiz-tag{
+  display:flex;align-items:baseline;gap:10px;color:var(--gold-dim);font-family:'Cinzel',serif;
+  letter-spacing:.18em;font-size:.72rem;text-transform:uppercase;
+}
+.wiz-tag b{color:var(--gold-lt);font-size:.85rem;letter-spacing:.08em}
+.wiz-exit{
+  background:transparent;border:1px solid var(--border-lt);color:var(--muted);border-radius:999px;
+  padding:7px 16px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;
+}
+.wiz-exit:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
+
+.wiz-scenewrap{position:relative;z-index:2;min-height:100svh}
+.wiz-scene{
+  min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:110px 24px 190px;text-align:center;gap:22px;
+  transition:opacity .45s ease, transform .45s cubic-bezier(.22,.7,.3,1);
+}
+.wiz-scene.out{opacity:0;transform:translateY(-26px) scale(.985)}
+.wiz-scene.pre-in{opacity:0;transform:translateY(26px) scale(1.015)}
+@media (prefers-reduced-motion:reduce){.wiz-scene{transition:opacity .25s linear;transform:none!important}}
+
+.wiz-eyebrow{font-size:.74rem;letter-spacing:.32em;text-transform:uppercase;color:var(--gold-dim)}
+.wiz-scene h1{
+  font-size:clamp(1.9rem,5vw,3.2rem);color:var(--gold-lt);letter-spacing:1px;line-height:1.05;
+  text-shadow:0 0 30px color-mix(in srgb,var(--wiz-tint,var(--gold)) 35%,transparent);text-wrap:balance;
+}
+.wiz-lede{color:var(--muted);font-style:italic;max-width:56ch;font-size:1.02rem;line-height:1.5}
+.wiz-subhead{
+  font-family:'Cinzel',serif;color:var(--gold-lt);font-size:.95rem;letter-spacing:.5px;
+  margin-top:8px;text-transform:uppercase;
+}
+
+/* sigil grid — concept step */
+.wiz-sigil-grid{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;max-width:900px}
+.wiz-sigil{
+  width:150px;height:150px;border-radius:50%;background:var(--panel2);border:1px solid var(--border-lt);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  color:var(--muted);transition:transform .18s,border-color .18s,box-shadow .18s,color .18s;
+}
+.wiz-sigil .ico{font-size:2.1rem}
+.wiz-sigil .lbl{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.05em;max-width:110px;line-height:1.25}
+.wiz-sigil:hover{transform:translateY(-4px);border-color:var(--gold-dim);color:var(--text)}
+.wiz-sigil.sel{border-color:var(--gold);color:var(--gold-lt);box-shadow:0 0 0 1px var(--gold),0 0 26px color-mix(in srgb,var(--sc,var(--gold)) 55%,transparent)}
+
+/* filmstrip — race / class steps */
+.wiz-filmwrap{display:flex;align-items:center;gap:14px;width:100%;max-width:1040px}
+.wiz-filmarrow{
+  flex:0 0 auto;width:44px;height:44px;border-radius:50%;background:var(--panel2);border:1px solid var(--border-lt);
+  color:var(--gold-lt);font-size:1.2rem;display:flex;align-items:center;justify-content:center;
+}
+.wiz-filmarrow:hover{border-color:var(--gold);background:var(--panel3)}
+.wiz-filmstrip{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x proximity;padding:14px 4px 20px;scrollbar-width:none}
+.wiz-filmstrip::-webkit-scrollbar{display:none}
+.wiz-filmcard{
+  scroll-snap-align:center;flex:0 0 auto;width:190px;background:var(--panel2);
+  border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;
+  align-items:center;text-align:center;gap:8px;position:relative;cursor:pointer;
+  transition:transform .18s,border-color .18s,box-shadow .18s;
+}
+.wiz-filmcard:hover{transform:translateY(-5px);border-color:var(--c,var(--gold-dim))}
+.wiz-filmcard.sel{
+  border-color:var(--c,var(--gold));transform:translateY(-8px) scale(1.03);
+  box-shadow:0 0 0 1px var(--c,var(--gold)),0 18px 40px -14px rgba(0,0,0,.7),0 0 30px color-mix(in srgb,var(--c,var(--gold)) 40%,transparent);
+}
+.wiz-filmart{
+  width:100%;aspect-ratio:3/4;border-radius:10px;background-size:cover;background-position:center top;
+  background-color:color-mix(in srgb,var(--c,var(--gold-dim)) 35%,var(--ink));border:1px solid var(--border-lt);
+}
+.wiz-filmcard .nm{font-family:'Cinzel',serif;font-weight:700;font-size:1rem;color:var(--gold-lt)}
+.wiz-filmcard .sub{color:var(--muted);font-size:.76rem;line-height:1.4}
+.wiz-filmrec{
+  position:absolute;top:10px;right:10px;font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink);background:linear-gradient(180deg,var(--gold-lt),var(--gold));padding:2px 7px;
+  border-radius:999px;font-weight:700;z-index:1;
+}
+
+/* subrace / flex-bonus pills — race step */
+.wiz-pillrow{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;max-width:640px}
+.wiz-pill{
+  background:transparent;border:1px solid var(--border-lt);color:var(--muted);border-radius:999px;
+  padding:8px 16px;font-size:.82rem;font-family:'Crimson Pro',serif;
+}
+.wiz-pill:hover{border-color:var(--gold-dim);color:var(--text)}
+.wiz-pill.sel{background:var(--gold-dim);border-color:var(--gold);color:var(--gold-lt);font-weight:600}
+.wiz-pill:disabled{opacity:.3;cursor:default}
+
+/* ability dials — abilities step */
+.wiz-anvil{font-size:2.4rem;filter:drop-shadow(0 0 20px rgba(255,138,61,.5))}
+.wiz-dialgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:520px}
+.wiz-dial{background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center}
+.wiz-dial .an{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.wiz-dial .av{font-family:'Cinzel',serif;font-size:2rem;color:var(--gold-lt);margin:8px 0 4px;position:relative}
+.wiz-dial .av .wiz-racial{font-size:.6rem;color:var(--green);font-style:normal;vertical-align:super;margin-left:2px}
+.wiz-dial .amod{font-size:.78rem;color:var(--faint)}
+.wiz-dial-steppers{display:flex;justify-content:center;gap:8px;margin-top:8px}
+.wiz-dial-steppers button{
+  width:30px;height:30px;border-radius:7px;border:1px solid var(--border-lt);background:var(--panel3);
+  color:var(--gold-lt);font-size:1rem;
+}
+.wiz-dial-steppers button:hover{border-color:var(--gold)}
+.wiz-dial-steppers button:disabled{opacity:.35;cursor:default}
+.wiz-poolnote{font-size:.88rem;color:var(--muted)}
+.wiz-poolnote b{color:var(--gold-lt)}
+.wiz-autobtn{
+  background:transparent;border:1px dashed var(--gold-dim);color:var(--gold-lt);border-radius:999px;
+  padding:10px 22px;font-size:.8rem;letter-spacing:.6px;font-family:'Cinzel',serif;
+}
+.wiz-autobtn:hover{background:var(--panel2);border-style:solid}
+
+/* skill chips — skills step & rogue expertise picker */
+.wiz-skillgrid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:700px}
+.wiz-skillchip{
+  background:var(--panel2);border:1px solid var(--border-lt);border-radius:10px;padding:10px 16px;
+  display:flex;flex-direction:column;gap:2px;min-width:120px;
+}
+.wiz-skillchip .nm{font-family:'Cinzel',serif;font-size:.82rem;color:var(--gold-lt)}
+.wiz-skillchip .ab{font-size:.62rem;letter-spacing:.1em;color:var(--faint)}
+.wiz-skillchip:hover{border-color:var(--gold-dim)}
+.wiz-skillchip.sel{background:var(--gold-dim);border-color:var(--gold)}
+.wiz-skillchip.sel .nm{color:var(--ink);font-weight:700}
+.wiz-skillchip.sel .ab{color:var(--ink)}
+.wiz-skillchip.off{opacity:.35;cursor:default}
+
+/* feature cards (read-only) + option pickers (fighting style / domain / equipment) */
+.wiz-featgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;max-width:820px;width:100%}
+.wiz-featcard{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-align:left}
+.wiz-featcard .nm{font-family:'Cinzel',serif;color:var(--gold-lt);font-size:.9rem;margin-bottom:4px}
+.wiz-featcard .sub{color:var(--muted);font-size:.8rem;line-height:1.4}
+.wiz-optgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;max-width:820px;width:100%}
+.wiz-optcard{
+  background:var(--panel2);border:1px solid var(--border-lt);border-radius:12px;padding:14px 16px;
+  text-align:left;display:flex;flex-direction:column;gap:4px;
+}
+.wiz-optcard:hover{border-color:var(--gold-dim)}
+.wiz-optcard.sel{border-color:var(--gold);background:var(--panel3);box-shadow:0 0 0 1px var(--gold)}
+.wiz-optcard .nm{font-family:'Cinzel',serif;color:var(--gold-lt);font-size:.88rem}
+.wiz-optcard .sub{color:var(--muted);font-size:.78rem;line-height:1.4;display:block;margin-top:2px}
+.wiz-optcard.wide{grid-column:1/-1}
+
+/* equipment step */
+.wiz-fixedlist{color:var(--muted);font-size:.88rem;max-width:640px}
+.wiz-fixedlist b{color:var(--gold-lt);font-weight:600}
+.wiz-eqgroup{display:flex;flex-direction:column;gap:10px;align-items:center;width:100%}
+.wiz-eqgroup-label{
+  font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-dim);
+}
+
+/* name step */
+.wiz-name-input{
+  width:100%;max-width:460px;background:var(--ink);border:1px solid var(--border-lt);border-radius:10px;
+  padding:18px 20px;color:var(--gold-lt);font-family:'Cinzel',serif;font-size:1.6rem;letter-spacing:1px;text-align:center;
+}
+.wiz-name-input::placeholder{color:var(--faint)}
+.wiz-name-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 24px rgba(201,162,39,.25)}
+
+/* finale */
+.wiz-finale-seal{
+  width:110px;height:110px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,var(--gold-lt),var(--gold) 55%,var(--gold-dim) 100%);
+  display:flex;align-items:center;justify-content:center;font-size:2.8rem;color:var(--ink);
+  box-shadow:0 0 60px rgba(201,162,39,.55);animation:wizsealpop .6s cubic-bezier(.3,1.7,.5,1) both;
+}
+@keyframes wizsealpop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.wiz-finale-seal{animation:none}}
+.wiz-statline{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.wiz-statline .s{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 14px;min-width:56px}
+.wiz-statline .s b{display:block;font-family:'Cinzel',serif;color:var(--gold-lt);font-size:1.1rem}
+.wiz-statline .s i{font-style:normal;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.wiz-finale-actions{display:flex;gap:12px;margin-top:6px}
+
+/* fixed bottom step-rail */
+.wiz-rail-fixed{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;gap:16px;
+  padding:16px 22px;background:linear-gradient(0deg,rgba(14,11,7,.94),rgba(14,11,7,.78) 70%,transparent);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+}
+.wiz-rail-nav{
+  flex:0 0 auto;background:transparent;border:1px solid var(--border-lt);color:var(--muted);
+  border-radius:999px;padding:12px 22px;font-size:.8rem;letter-spacing:.5px;font-family:'Cinzel',serif;
+}
+.wiz-rail-nav:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
+.wiz-rail-nav:disabled{opacity:.35;cursor:default}
+.wiz-rail-nav.primary{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:700}
+.wiz-rail-nav.primary:hover{background:var(--gold-lt);border-color:var(--gold-lt)}
+.wiz-rail-nav.primary:disabled{background:var(--gold-dim);border-color:var(--gold-dim);color:var(--ink)}
+
+.wiz-rail-track{flex:1 1 auto;position:relative;display:flex;justify-content:space-between;align-items:center;max-width:760px;margin:0 auto}
+.wiz-rail-track::before{content:'';position:absolute;left:18px;right:18px;top:50%;height:2px;background:var(--border-lt);transform:translateY(-50%);z-index:0}
+.wiz-rail-fill{position:absolute;left:18px;top:50%;height:2px;background:linear-gradient(90deg,var(--gold-dim),var(--gold));transform:translateY(-50%);z-index:1;transition:width .45s ease;box-shadow:0 0 10px rgba(201,162,39,.6)}
+.wiz-rail-node{
+  position:relative;z-index:2;width:34px;height:34px;border-radius:50%;background:var(--panel2);
+  border:1px solid var(--border-lt);display:flex;align-items:center;justify-content:center;font-size:.9rem;
+  color:var(--faint);cursor:pointer;
+}
+.wiz-rail-node .rn-lbl{position:absolute;top:40px;left:50%;transform:translateX(-50%);font-size:.56rem;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);white-space:nowrap;font-family:'Cinzel',serif}
+.wiz-rail-node.done{background:var(--gold-dim);border-color:var(--gold-dim);color:var(--ink)}
+.wiz-rail-node.done .rn-lbl{color:var(--muted)}
+.wiz-rail-node.current{background:var(--gold);border-color:var(--gold);color:var(--ink);box-shadow:0 0 0 5px rgba(201,162,39,.18),0 0 16px rgba(201,162,39,.6)}
+.wiz-rail-node.current .rn-lbl{color:var(--gold-lt)}
+
+@media (max-width:760px){
+  .wiz-rail-track{display:none}
+  .wiz-rail-fixed{justify-content:space-between}
+  .wiz-scene{padding:100px 18px 140px}
 }
