@@ -657,7 +657,15 @@ inventory:`
       </div>
       <button class="eq-newbtn eq-packbtn" id="eqIndexBtn" type="button">📖 Gear Index</button>
       <button class="eq-newbtn eq-packbtn" id="eqPackBtn" type="button">🎒 Starting Pack</button>
+      <button class="eq-newbtn eq-packbtn" id="eqSelectBtn" type="button">☑ Select</button>
       <button class="eq-newbtn" id="eqNewItemBtn" type="button">+ New Item</button>
+    </div>
+    <div class="eq-bulkbar" id="eqBulkBar" style="display:none">
+      <span id="eqBulkCount">0 selected</span>
+      <span style="display:flex;gap:8px">
+        <button class="eq-delbtn" id="eqBulkDeleteBtn" type="button">Delete selected</button>
+        <button class="eq-packbtn eq-newbtn" id="eqBulkCancelBtn" type="button">Cancel</button>
+      </span>
     </div>
     <div id="equipList" class="eq-list"></div>
     <div id="eqTreasure" style="display:none">
@@ -738,7 +746,7 @@ inventory:`
       <div id="packModalList" class="eq-index-list"></div>
     </div>
   </div>
-  <div class="eq-toast" id="eqToast"></div>`,
+  <div class="eq-toast" id="eqToast"><span id="eqToastMsg"></span><button id="eqToastUndo" type="button" style="display:none">Undo</button></div>`,
 
 features:`
   <div class="panel"><h2>Features &amp; Traits<button class="lock-toggle" id="featuresLockBtn"></button></h2>
@@ -1395,6 +1403,9 @@ const EQ_ICONS={
   TR:'<path d="M6 9l6-6 6 6-6 12z"/><path d="M6 9h12"/><path d="M9 9l3 12 3-12"/>'
 };
 function eqIcon(ty){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${EQ_ICONS[ty]||''}</svg>`; }
+// One color per gear category — a quick-scan cue on each pack card (a left-edge fade, plus the
+// category label itself) so the eye can sort potions from scrolls from gear without reading text.
+const ITEM_TYPE_COLOR={C:'#7dc26a',A:'#c98a4b',M:'#a58ce0',S:'#5aa9e0',T:'#e0705a',G:'#8a94a3'};
 
 // Card list + a spacious add/edit drawer: the pack itself only ever shows name, qty, category
 // and flags at a glance — every other field (description, weight, combat/attune) lives in the
@@ -1421,35 +1432,56 @@ function renderEquipment(){
   $('#eqTreasure').style.display=treasure?'':'none';
   $('#eqNewItemBtn').closest('.fx-addrow').style.display=treasure?'none':'';
   list.style.display=treasure?'none':'';
-  if(treasure){ const ta=$('#eqTreasure textarea'); if(ta) autoGrow(ta); return; }
+  $('#eqSelectBtn').style.display=treasure?'none':'';
+  if(treasure){
+    if(EQ_SELECT_MODE){ EQ_SELECT_MODE=false; EQ_SELECTED.clear(); }
+    $('#eqBulkBar').style.display='none';
+    const ta=$('#eqTreasure textarea'); if(ta) autoGrow(ta); return;
+  }
 
   const base=(S.eqTab==='ALL'?present:present.filter(e=>e.type===S.eqTab));
   const q=EQ_SEARCH_Q.trim().toLowerCase();
   const filtered=q?base.filter(e=>(e.name||'').toLowerCase().includes(q)||(e.desc||'').toLowerCase().includes(q)):base;
   const rows=filtered.map(e=>({e,i:S.equipment.indexOf(e)}));
+  // Prune selections that scrolled out of existence (item deleted elsewhere)
+  if(EQ_SELECTED.size) [...EQ_SELECTED].forEach(i=>{ if(i>=S.equipment.length) EQ_SELECTED.delete(i); });
+  $('#eqSelectBtn').textContent = EQ_SELECT_MODE ? '✕ Cancel select' : '☑ Select';
+  $('#eqSelectBtn').classList.toggle('on', EQ_SELECT_MODE);
+  $('#eqBulkBar').style.display = EQ_SELECT_MODE ? 'flex' : 'none';
+  $('#eqBulkCount').textContent = `${EQ_SELECTED.size} selected`;
+  $('#eqBulkDeleteBtn').disabled = EQ_SELECTED.size===0;
   list.innerHTML = rows.length ? rows.map(({e,i})=>{
     const cat=ITEM_TYPES[e.type]||ITEM_TYPES.G;
     let flags='';
     if(e.combat) flags+='<span class="eq-flag combat">⚔ Combat</span>';
     if(e.att) flags+='<span class="eq-flag attune">✦ Attuned</span>';
-    return `<div class="eq-card" data-eqopen="${i}">
+    const picked=EQ_SELECTED.has(i);
+    const catColor=ITEM_TYPE_COLOR[e.type]||ITEM_TYPE_COLOR.G;
+    return `<div class="eq-card ${EQ_SELECT_MODE?'selectable':''} ${picked?'selected':''}" data-eqopen="${i}" style="--cat:${catColor}">
+      ${EQ_SELECT_MODE ? `<label class="eq-select-check"><input type="checkbox" ${picked?'checked':''} tabindex="-1"></label>` : `
       <div class="eq-qtystep">
         <button type="button" data-eqstep="-1" data-i="${i}">−</button>
         <div class="eq-medal">${String(e.qty||'').trim()!==''?esc(e.qty):'—'}</div>
         <button type="button" data-eqstep="1" data-i="${i}">+</button>
-      </div>
+      </div>`}
       <div class="eq-card-body">
         <div class="eq-card-name">${esc(e.name)||'<span style="color:var(--faint)">Unnamed item</span>'}</div>
         <div class="eq-card-meta"><span class="eq-card-cat">${eqIcon(e.type)}${cat[1]}</span>${flags}</div>
         ${e.desc?`<div class="eq-card-desc">${esc(e.desc)}</div>`:''}
       </div>
-      <span class="eq-chev">›</span>
+      ${EQ_SELECT_MODE?'':'<span class="eq-chev">›</span>'}
     </div>`;
   }).join('') : `<p class="prep-note" style="margin:0">${q?`No items in your pack match “${esc(EQ_SEARCH_Q.trim())}”.`:(S.eqTab==='ALL'?'Empty pack — search the gear index above or “+ New Item” for a custom one.':`No ${ITEM_TYPES[S.eqTab][1].toLowerCase()} yet — “+ New Item” creates one right in this category.`)}</p>`;
 
   $$('[data-eqopen]').forEach(card=>card.addEventListener('click',e=>{
     if(e.target.closest('[data-eqstep]')) return;
-    openEqDrawer(+card.dataset.eqopen);
+    const i=+card.dataset.eqopen;
+    if(EQ_SELECT_MODE){
+      if(EQ_SELECTED.has(i)) EQ_SELECTED.delete(i); else EQ_SELECTED.add(i);
+      renderEquipment();
+      return;
+    }
+    openEqDrawer(i);
   }));
   $$('[data-eqstep]').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation();
@@ -1465,6 +1497,8 @@ function renderEquipment(){
 let EQ_DRAWER_MODE='single';
 let EQ_EDIT_IDX=null; // null while adding a new item
 let EQ_SEARCH_Q=''; // live filter over the pack list — separate from the gear-index dropdown
+let EQ_SELECT_MODE=false; // multi-select for bulk delete
+let EQ_SELECTED=new Set(); // indices into S.equipment
 function eqCatPickerHTML(selected){
   return Object.keys(ITEM_TYPES).map(ty=>
     `<button type="button" class="eq-catopt ${ty===selected?'on':''}" data-eqcat="${ty}">${eqIcon(ty)}${ITEM_TYPES[ty][1]}</button>`
@@ -1507,10 +1541,17 @@ function eqSwitchDrawerTab(mode){
   $('#eqDelBtn').style.display = (mode==='single' && EQ_EDIT_IDX!=null) ? '' : 'none';
   $('#eqSaveBtn').textContent = mode==='bulk' ? 'Add all to pack' : (EQ_EDIT_IDX!=null ? 'Save changes' : 'Add to pack');
 }
-function eqToast(msg){
+// undoFn, when given, shows an "Undo" button that reverts the change (used for
+// multi-item actions — packs, kits, bulk paste, bulk delete — where manually
+// reversing a mistake item-by-item would be tedious).
+function eqToast(msg,undoFn){
   const t=$('#eqToast'); if(!t) return;
-  t.textContent=msg; t.classList.add('show');
-  clearTimeout(eqToast._h); eqToast._h=setTimeout(()=>t.classList.remove('show'),1800);
+  $('#eqToastMsg').textContent=msg;
+  const undoBtn=$('#eqToastUndo');
+  undoBtn.style.display = undoFn ? '' : 'none';
+  undoBtn.onclick = undoFn ? ()=>{ undoFn(); t.classList.remove('show'); } : null;
+  t.classList.add('show');
+  clearTimeout(eqToast._h); eqToast._h=setTimeout(()=>t.classList.remove('show'),undoFn?4500:1800);
 }
 // "3 Torches", "Rope, 50 ft x2" — a leading or trailing number becomes qty, everything else is
 // the name verbatim (so it still works for names that are just numbers-ish).
@@ -1522,6 +1563,8 @@ function parseBulkEqLine(line){
   if(m) return {qty:m[2],name:m[1].trim()};
   return {qty:'',name:line};
 }
+function eqSnapshot(){ return S.equipment.map(e=>({...e})); }
+function eqRestore(snap){ S.equipment=snap; renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save(); }
 function wireEquipmentDrawer(){
   // Moved to <body> so the tab-switch fade animation (which briefly gives .tab-page a
   // CSS transform, i.e. a containing block) can never hijack this fixed-position drawer's
@@ -1538,8 +1581,9 @@ function wireEquipmentDrawer(){
   $('#eqAttuneSwitch').addEventListener('click',()=>eqSwitchSet($('#eqAttuneSwitch'),!eqSwitchOn($('#eqAttuneSwitch'))));
   $('#eqDelBtn').addEventListener('click',()=>{
     if(EQ_EDIT_IDX==null) return;
+    const snap=eqSnapshot();
     S.equipment.splice(EQ_EDIT_IDX,1);
-    eqToast('Removed');
+    eqToast('Removed',()=>eqRestore(snap));
     closeEqDrawer(); renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
   });
   $('#eqSaveBtn').addEventListener('click',()=>{
@@ -1547,12 +1591,13 @@ function wireEquipmentDrawer(){
     if(EQ_DRAWER_MODE==='bulk'){
       const lines=$('#eqBulkText').value.split('\n').map(l=>l.trim()).filter(Boolean);
       if(!lines.length) return;
+      const snap=eqSnapshot();
       lines.forEach(line=>{
         const {qty,name}=parseBulkEqLine(line);
         S.equipment.push({qty,name,type:cat,desc:'',combat:false,att:false});
       });
       $('#eqBulkText').value='';
-      eqToast(`Added ${lines.length} item${lines.length>1?'s':''}`);
+      eqToast(`Added ${lines.length} item${lines.length>1?'s':''}`,()=>eqRestore(snap));
       if(S.eqTab!=='ALL'&&S.eqTab!==cat) S.eqTab=cat;
       closeEqDrawer(); renderEquipment(); save();
       return;
@@ -1608,9 +1653,10 @@ function wireItemIndexModal(){
     S.equipment.push({qty:String(it.q),name:it.n,type:it.t,desc:it.d,combat:it.cb,att:false});
     const kit=KITS[it.n];
     if(kit){
+      const snap=eqSnapshot();
       kit.forEach(([name,qty])=>addPackItem(name,qty));
       S.eqTab='ALL';
-      eqToast(`Added ${it.n} + ${kit.length} craftable items`);
+      eqToast(`Added ${it.n} + ${kit.length} craftable items`,()=>eqRestore(snap));
       renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
     } else {
       if(S.eqTab!=='ALL'&&S.eqTab!==it.t) S.eqTab=it.t; // jump to where it landed
@@ -1647,9 +1693,10 @@ function addPackItem(name,qty){
   else S.equipment.push({qty:String(qty),name:src.n,type:src.t,desc:src.d,combat:!!src.cb,att:false});
 }
 function addPack(pack){
+  const snap=eqSnapshot();
   pack.items.forEach(([name,qty])=>addPackItem(name,qty));
   S.eqTab='ALL';
-  eqToast(`Added ${pack.n} — ${pack.items.length} items`);
+  eqToast(`Added ${pack.n} — ${pack.items.length} items`,()=>eqRestore(snap));
   renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
 }
 // Same real-modal treatment as the Gear Index: opens reliably on one click, stays open so you
@@ -1679,6 +1726,30 @@ function wirePackModal(){
     addPack(PACKS[+el.dataset.packpick]);
     el.classList.add('added');
     setTimeout(()=>el.classList.remove('added'),400);
+  });
+}
+// Multi-select for bulk delete — "Select" toggles a checkbox mode on the pack list
+// (renderEquipment renders the checkboxes and toolbar count), this just wires the
+// toolbar buttons. Bulk delete reuses the Undo toast so a mis-tap is recoverable.
+function wireEqSelect(){
+  $('#eqSelectBtn').addEventListener('click',()=>{
+    EQ_SELECT_MODE=!EQ_SELECT_MODE;
+    if(!EQ_SELECT_MODE) EQ_SELECTED.clear();
+    renderEquipment();
+  });
+  $('#eqBulkCancelBtn').addEventListener('click',()=>{
+    EQ_SELECT_MODE=false; EQ_SELECTED.clear();
+    renderEquipment();
+  });
+  $('#eqBulkDeleteBtn').addEventListener('click',()=>{
+    if(!EQ_SELECTED.size) return;
+    const n=EQ_SELECTED.size;
+    const snap=eqSnapshot();
+    S.equipment=S.equipment.filter((e,i)=>!EQ_SELECTED.has(i));
+    EQ_SELECTED.clear();
+    EQ_SELECT_MODE=false;
+    eqToast(`Removed ${n} item${n>1?'s':''}`,()=>eqRestore(snap));
+    renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
   });
 }
 const FX_STATS={ac:'AC',speed:'Speed',init:'Initiative',passive:'Passive Perception',hpmax:'Max HP',vision:'Darkvision Range'};
@@ -5638,7 +5709,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
