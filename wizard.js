@@ -29,7 +29,7 @@ const WIZ_CLASS_SKILLS={
   sorcerer:{count:2,options:['arcana','deception','insight','intimidation','persuasion','religion']},
   warlock:{count:2,options:['arcana','deception','history','intimidation','investigation','nature','religion']},
   wizard:{count:2,options:['arcana','history','insight','investigation','medicine','religion']},
-  bloodhunter:{count:2,options:['arcana','athletics','insight','intimidation','investigation','nature','perception','survival']},
+  bloodhunter:{count:3,options:['acrobatics','arcana','athletics','history','insight','investigation','religion','survival']},
 };
 
 const WIZ_FIGHTING_STYLES=[
@@ -50,16 +50,16 @@ const WIZ_PROFS={
   barbarian:'Light and medium armor, shields; simple and martial weapons.',
   bard:'Light armor; simple weapons, hand crossbows, longswords, rapiers, shortswords; three instruments of your choice.',
   cleric:'Light and medium armor, shields; simple weapons.',
-  druid:"Light and medium armor (nonmetal), shields (nonmetal); clubs, daggers, darts, javelins, maces, quarterstaffs, scimitars, sickles, slings, spears.",
+  druid:"Light and medium armor (nonmetal), shields (nonmetal); clubs, daggers, darts, javelins, maces, quarterstaffs, scimitars, sickles, slings, spears; herbalism kit.",
   fighter:'All armor, shields; simple and martial weapons.',
-  monk:'Simple weapons, shortswords.',
+  monk:"Simple weapons, shortswords; one type of artisan's tools or one musical instrument (your choice).",
   paladin:'All armor, shields; simple and martial weapons.',
   ranger:'Light and medium armor, shields; simple and martial weapons.',
   rogue:"Light armor; simple weapons, hand crossbows, longswords, rapiers, shortswords; thieves' tools.",
   sorcerer:'Daggers, darts, slings, quarterstaffs, light crossbows.',
   warlock:'Light armor; simple weapons.',
   wizard:'Daggers, darts, slings, quarterstaffs, light crossbows.',
-  bloodhunter:'Light armor; simple and martial weapons.',
+  bloodhunter:"Light and medium armor, shields; simple and martial weapons; alchemist's supplies.",
 };
 
 // PHB starting-equipment tables. Each class has a fixed grant (always given) plus zero or more
@@ -189,7 +189,7 @@ const WIZ_EQUIPMENT={
       [{label:"A scholar's pack",grant:{packs:["Scholar's Pack"]}},
        {label:"A dungeoneer's pack",grant:{packs:["Dungeoneer's Pack"]}}],
     ],
-    fixed:{armor:'leather',weapons:[['dagger',2]]},
+    fixed:{armor:'leather',weapons:[['dagger',2],['sickle',1]]},
   },
   wizard:{
     groups:[
@@ -205,13 +205,13 @@ const WIZ_EQUIPMENT={
   bloodhunter:{
     groups:[
       [{label:'A martial weapon (Longsword)',grant:{weapons:[['longsword',1]]}},
-       {label:'Two simple weapons (Handaxes)',grant:{weapons:[['handaxe',2]]}}],
-      [{label:'Two handaxes',grant:{weapons:[['handaxe',2]]}},
-       {label:'A simple weapon (Dagger)',grant:{weapons:[['dagger',1]]}}],
-      [{label:"A dungeoneer's pack",grant:{packs:["Dungeoneer's Pack"]}},
-       {label:"An explorer's pack",grant:{packs:["Explorer's Pack"]}}],
+       {label:'Two simple weapons (Daggers)',grant:{weapons:[['dagger',2]]}}],
+      [{label:'A light crossbow & 20 bolts',grant:{weapons:[['lightcrossbow',1]],items:[['Crossbow Bolts (20)',1]]}},
+       {label:'A hand crossbow & 20 bolts',grant:{weapons:[['handcrossbow',1]],items:[['Crossbow Bolts (20)',1]]}}],
+      [{label:'Studded leather armor',grant:{armor:'studded'}},
+       {label:'Scale mail armor',grant:{armor:'scale'}}],
     ],
-    fixed:{armor:'leather',items:[["Alchemist's Supplies",1]],weapons:[['dagger',1]]},
+    fixed:{items:[["Alchemist's Supplies",1]],packs:["Explorer's Pack"]},
   },
 };
 
