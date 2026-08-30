@@ -6,6 +6,7 @@ function defaultState(){
     inspiration:false, profBonus:2,
     // Smart build (class/race presets)
     classId:'', level:1, subclass:'', subclassClassId:'', raceId:'', subraceId:'', flexBonus:['',''], asi:{}, asiExtra:[],
+    backgroundId:'',
     // Build-derived fields the player has taken manual control of (see BUILD_FIELDS). A key being
     // present at all means "hands off" — applyBuild still computes the rules value to show as a
     // reference, but writes yours. autoGrant mirrors class/subclass/race features into S.features;
@@ -757,7 +758,11 @@ features:`
         <input type="text" id="raceSearch" style="width:100%" placeholder="+ Search race traits…" autocomplete="off">
         <div id="raceResults" class="lib-results"></div>
       </div>
-      <button type="button" class="lib-scope" id="libScope" title="Narrow both searches to what your class, subclass, heritage and level actually give you"></button>
+      <div style="position:relative;flex:0 0 240px">
+        <input type="text" id="backgroundSearch" style="width:100%" placeholder="+ Search background traits…" autocomplete="off">
+        <div id="backgroundResults" class="lib-results"></div>
+      </div>
+      <button type="button" class="lib-scope" id="libScope" title="Narrow all three searches to what your class, subclass, heritage and background actually give you"></button>
       <span class="prep-note" style="margin:0">effects come pre-attached</span>
     </div>
     <div id="featureList"></div>
@@ -808,6 +813,17 @@ character:`
         <label class="fld-paper"><span>Hair</span><input type="text" data-bind="hair"></label>
       </div>
     </div>
+  </div>
+  <div class="panel">
+    <h2>Background</h2>
+    <label class="fld"><span>Background</span>
+      <select id="backgroundSelect">
+        <option value="">— None —</option>
+        ${BACKGROUND_ORDER.map(id=>`<option value="${id}">${esc(BACKGROUNDS[id].name)}</option>`).join('')}
+      </select>
+    </label>
+    <p class="bg-info-text" id="backgroundInfo">Pick a background to see what it grants.</p>
+    <button type="button" class="add-btn" id="bgGrantBtn" style="display:none">Grant Starting Gear &amp; Gold</button>
   </div>
   <div class="panel cp-ledger">
     <div class="ledger-row"><label>Personality Traits</label><textarea data-bind="personality" placeholder="How they walk into a room, speak, react under pressure…"></textarea></div>
@@ -1569,6 +1585,10 @@ function wireEquipmentDrawer(){
   // placement, and so it isn't yanked away if the player switches tabs while it's open.
   document.body.appendChild($('#eqBackdrop'));
   document.body.appendChild($('#eqDrawer'));
+  // eqToast lives in this same template but is now also triggered from the Build tab (the
+  // Background "Grant Starting Gear & Gold" button) — without this it sits inside Inventory's
+  // display:none .tab-page and never becomes visible when fired from anywhere else.
+  document.body.appendChild($('#eqToast'));
   $('#eqNewItemBtn').addEventListener('click',()=>openEqDrawer(null));
   $('#eqDrawerClose').addEventListener('click',closeEqDrawer);
   $('#eqBackdrop').addEventListener('click',closeEqDrawer);
@@ -1697,6 +1717,31 @@ function addPack(pack){
   eqToast(`Added ${pack.n} — ${pack.items.length} items`,()=>eqRestore(snap));
   renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
 }
+// Background gear/gold/tools are a deliberate one-click action, never applied automatically when
+// picking a background — browsing Acolyte -> Criminal -> Soldier while comparing options must
+// never silently mutate money or inventory the way S.autoGrant's pristine-diff safely does for
+// features. Clicking this twice is expected to double the grant, exactly like double-clicking the
+// "Starting Pack" button would — no "already granted" tracking is invented beyond what
+// addPackItem() already does (merging matching item stacks by name).
+function wireBackgroundGrantBtn(){
+  $('#bgGrantBtn')?.addEventListener('click',()=>{
+    const bg=BACKGROUNDS[S.backgroundId]; if(!bg) return;
+    const snap={equipment:eqSnapshot(),gold:num(S.money.gp),otherProfs:S.otherProfs.slice()};
+    (bg.equipment.items||[]).forEach(([name,qty])=>addPackItem(name,qty));
+    (bg.equipment.packs||[]).forEach(packName=>{
+      const pack=PACKS.find(p=>p.n===packName);
+      if(pack) pack.items.forEach(([name,qty])=>addPackItem(name,qty));
+    });
+    S.money.gp=num(S.money.gp)+num(bg.gold);
+    (bg.tools||[]).forEach(t=>{ if(!S.otherProfs.some(p=>p.toLowerCase()===t.toLowerCase())) S.otherProfs.push(t); });
+    S.eqTab='ALL';
+    eqToast(`Added ${bg.name}'s starting gear, ${bg.gold} gp`+(bg.tools.length?', tools':''),()=>{
+      S.equipment=snap.equipment; S.money.gp=snap.gold; S.otherProfs=snap.otherProfs;
+      renderEquipment(); renderProficiencies(); renderOverviewWealth(); save();
+    });
+    renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); renderProficiencies(); save();
+  });
+}
 // Same real-modal treatment as the Gear Index: opens reliably on one click, stays open so you
 // can drop in more than one pack (or a pack plus a couple of extra kits) before closing it.
 function wirePackModal(){
@@ -1799,6 +1844,7 @@ function featureSourceMeta(f){
     return {byline:s.className||((c?c.name+' — ':'')+(s.subclassName||'')),color:CLASS_COLOR[s.classId]||'#c9a227'};
   }
   if(s.kind==='race') return {byline:s.raceName||'',color:'#7dc26a'};
+  if(s.kind==='background') return {byline:s.backgroundName||'',color:'#c9a227'};
   if(s.kind==='feat') return {byline:'Feat',color:'#a58ce0'};
   return {byline:'',color:'#5aa9e0'};
 }
@@ -2769,6 +2815,13 @@ function raceEntryToFeature(ent,source){
   const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
   return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source};
 }
+// Same job for BACKGROUND_LIB entries — no level-scaling special case exists for any background.
+function backgroundEntryToFeature(ent,source){
+  const fx=(ent.fx||[]).map(x=>({...x}));
+  const usesScale=ent.usesScale||'';
+  const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
+  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source};
+}
 // ----- Feature library: searchable instead of one giant native <select> (a lot of options) -----
 // Both search boxes used to list the entire library — all twelve classes, every subclass, every
 // heritage — no matter who you were playing, so finding your own Channel Divinity meant scrolling
@@ -2787,6 +2840,9 @@ function raceEntryIsMine(e){
   const ri=raceInfo(); if(!ri) return false;
   return e.g===ri.r.name && raceTraitApplies(e.n,(ri.sub&&ri.sub.name)||'');
 }
+function backgroundEntryIsMine(e){
+  const bg=BACKGROUNDS[S.backgroundId]; return !!bg && e.g===bg.name;
+}
 function renderLibScope(){
   const b=$('#libScope'); if(!b) return;
   b.textContent=LIB_SCOPE_MINE?'⌾ Mine only':'◎ Whole library';
@@ -2800,6 +2856,7 @@ function wireLibScope(){
     // Repaint whichever list is open so the change is visible immediately.
     $('#libSearch')?.dispatchEvent(new Event('input',{bubbles:true}));
     $('#raceSearch')?.dispatchEvent(new Event('input',{bubbles:true}));
+    $('#backgroundSearch')?.dispatchEvent(new Event('input',{bubbles:true}));
   });
 }
 function wireLibrary(){
@@ -2881,6 +2938,41 @@ function wireRaceLibrary(){
   });
   document.addEventListener('click',e=>{
     if(!e.target.closest('#raceSearch') && !e.target.closest('#raceResults')) close();
+  });
+}
+// ----- Background traits: same search-and-pick pattern as the race trait library above -----
+function wireBackgroundLibrary(){
+  const input=$('#backgroundSearch'), panel=$('#backgroundResults'); if(!input) return;
+  const groupsOrder=[...new Set(BACKGROUND_LIB.map(e=>e.g))];
+  const matches=(e,q)=>!q || e.n.toLowerCase().includes(q) || e.g.toLowerCase().includes(q) || (e.d||'').toLowerCase().includes(q);
+  function renderResults(){
+    const q=input.value.trim().toLowerCase();
+    const items=BACKGROUND_LIB.map((e,idx)=>({...e,idx}))
+      .filter(e=>(!LIB_SCOPE_MINE||backgroundEntryIsMine(e))&&matches(e,q));
+    if(!items.length){
+      panel.innerHTML=`<div class="empty">No matches${LIB_SCOPE_MINE?' — "Mine only" is on, tap it to search every background':''}</div>`;
+      return;
+    }
+    panel.innerHTML=groupsOrder.map(g=>{
+      const inGroup=items.filter(e=>e.g===g);
+      if(!inGroup.length) return '';
+      return `<div class="grp">${esc(g)}</div>`+
+        inGroup.map(e=>`<div class="item" data-backgroundidx="${e.idx}">${esc(e.n)}<small>${esc(e.d||'')}</small></div>`).join('');
+    }).join('');
+  }
+  const open=()=>{ renderResults(); panel.classList.add('open'); };
+  const close=()=>panel.classList.remove('open');
+  input.addEventListener('focus',open);
+  input.addEventListener('input',open);
+  panel.addEventListener('click',e=>{
+    const item=e.target.closest('[data-backgroundidx]'); if(!item) return;
+    const ent=BACKGROUND_LIB[+item.dataset.backgroundidx];
+    S.features.push(backgroundEntryToFeature(ent,{kind:'background',backgroundName:ent.g}));
+    input.value=''; close();
+    fxRefresh();
+  });
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('#backgroundSearch') && !e.target.closest('#backgroundResults')) close();
   });
 }
 // ----- Languages: same searchable pick-list pattern as the feature library, plus removable chips -----
@@ -4326,6 +4418,33 @@ function liveRaceChips(){
   if(ri.r.move) chips.push(ri.r.move[0].toUpperCase()+ri.r.move.slice(1));
   return chips;
 }
+// Plain-text summary for the Character tab's Background picker — no chips/badges, just sentences,
+// per the simpler treatment requested over the Build tab's rail+hero styling used for Class/Race.
+function backgroundSummaryText(bg){
+  const parts=[];
+  parts.push('Skills: '+bg.skills.map(k=>SKILL_NAMES[k]||k).join(', ')+'.'+(bg.skillNote?' ('+bg.skillNote+')':''));
+  if(bg.tools.length) parts.push('Proficiencies: '+bg.tools.join(', ')+'.');
+  if(bg.languages) parts.push(`+${bg.languages} language${bg.languages>1?'s':''} of your choice.`);
+  parts.push(`Starting gold: ${bg.gold} gp.`);
+  const itemNames=(bg.equipment.items||[]).map(([n,q])=>q>1?`${n} ×${q}`:n);
+  if(itemNames.length) parts.push('Equipment: '+itemNames.join(', ')+'.');
+  parts.push(`Feature — ${bg.featureName}: `+(BACKGROUND_LIB.find(e=>e.g===bg.name&&e.n===bg.featureName)||{}).d);
+  return parts.join(' ');
+}
+function renderBackgroundInfo(){
+  const sel=$('#backgroundSelect'), info=$('#backgroundInfo'), btn=$('#bgGrantBtn');
+  if(!sel) return;
+  sel.value=S.backgroundId||'';
+  const bg=BACKGROUNDS[S.backgroundId];
+  info.textContent=bg?backgroundSummaryText(bg):'Pick a background to see what it grants.';
+  btn.style.display=bg?'':'none';
+}
+function wireBackgroundSelect(){
+  $('#backgroundSelect')?.addEventListener('change',e=>{
+    S.backgroundId=e.target.value;
+    applyBuild();
+  });
+}
 
 // ---------- ASI / Feat rows ----------
 // A "Feat" pick here used to be a bare label — typing a name into this table did nothing but
@@ -4556,6 +4675,10 @@ const BUILD_FIELDS=[
    avail:()=>!!raceInfo(),
    rules:raceDisplayName,
    get:()=>S.race||'', set:v=>S.race=String(v??'').trim(), show:v=>v||'—'},
+  {key:'background',label:'Background',type:'text',hint:'The name shown in the header — rename it freely.',
+   avail:()=>!!BACKGROUNDS[S.backgroundId],
+   rules:()=>BACKGROUNDS[S.backgroundId].name,
+   get:()=>S.background||'', set:v=>S.background=String(v??'').trim(), show:v=>v||'—'},
   // The only field with no home of its own on the sheet: racial bonuses are never written into
   // S.abilities (so changing heritage can't double-apply them), they're added live by
   // racialBonus(). That reads the override directly, so there is nothing for set() to write.
@@ -4609,6 +4732,7 @@ function applyBuild(){
   syncGrantedFeatures();
   renderBuildNote();
   renderBuildCustom();
+  renderBackgroundInfo();
   renderAsi(); renderSaves(); renderSpellLevels(); renderFeatures(); syncBound(); recalc(); save();
 }
 // The build summary line. Each derived value reads from the sheet (so an override shows *your*
@@ -4698,7 +4822,7 @@ function renderBuildCustom(){
     </div>`;
   }).join('')
   + `<label class="bcAuto"><input type="checkbox" id="bcAutoGrant" ${S.autoGrant?'checked':''}>
-       <span><b>Auto-add features</b> — grant the class, subclass and heritage features you qualify for, on the Features tab. They stay fully editable; the ones you've edited are kept even if you change your mind later.</span></label>`;
+       <span><b>Auto-add features</b> — grant the class, subclass, heritage and background features you qualify for, on the Features tab. They stay fully editable; the ones you've edited are kept even if you change your mind later.</span></label>`;
   wireBuildCustomRows();
 }
 function wireBuildCustomRows(){
@@ -4822,11 +4946,19 @@ function grantedPlan(){
         out.push({key:['race',g,e.n].join(GRANT_SEP),ent:e,lib:'race',source:{kind:'race',raceName:g}});
     });
   }
+  const bg=BACKGROUNDS[S.backgroundId];
+  if(bg){
+    BACKGROUND_LIB.forEach(e=>{
+      if(e.g===bg.name)
+        out.push({key:['background',bg.name,e.n].join(GRANT_SEP),ent:e,lib:'background',source:{kind:'background',backgroundName:bg.name}});
+    });
+  }
   return out;
 }
 function grantLibEntry(key){
   const parts=String(key).split(GRANT_SEP), name=parts[parts.length-1];
-  return (parts[0]==='race'?RACE_LIB:FEATURE_LIB).find(e=>e.n===name);
+  const lib = parts[0]==='race' ? RACE_LIB : parts[0]==='background' ? BACKGROUND_LIB : FEATURE_LIB;
+  return lib.find(e=>e.n===name);
 }
 // "Still exactly what the library handed you" — safe to remove without losing anyone's work.
 function featureIsPristine(f){
@@ -4852,7 +4984,9 @@ function syncGrantedFeatures(){
     // Already added by hand from the search box? Adopt that card instead of stacking a twin.
     const dup=S.features.find(f=>!(f.source&&f.source.grantKey)&&(f.title||'').trim().toLowerCase()===p.ent.n.toLowerCase());
     if(dup){ dup.source={...(dup.source||{}),...p.source,grantKey:p.key}; return; }
-    const f = p.lib==='race' ? raceEntryToFeature(p.ent,p.source) : libEntryToFeature(p.ent,p.source);
+    const f = p.lib==='race' ? raceEntryToFeature(p.ent,p.source)
+      : p.lib==='background' ? backgroundEntryToFeature(p.ent,p.source)
+      : libEntryToFeature(p.ent,p.source);
     f.source.grantKey=p.key;
     S.features.push(f); added++;
   });
@@ -5672,6 +5806,7 @@ function renderAll(){
   renderAttacks(); renderEquipment(); renderFeatures(); renderNotes();
   renderSpellLevels(); renderOverview(); renderCombatFeatures(); renderLanguages(); renderProficiencies();
   renderBuildSelectors(); renderAsi(); renderHudControls(); renderCharacterPortrait(); renderBackstoryEditor();
+  renderBackgroundInfo();
   bindAll(); syncBound(); recalc();
 }
 // Tablet-first: skill-badge "when" tooltips open on TAP, not hover. One delegated listener on
@@ -5711,7 +5846,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

@@ -29,11 +29,13 @@ before it:
 4. `data-items.js` — `ITEM_TYPES`, `ITEM_RAW` (adventuring gear index)
 5. `data-equipment.js` — `ARMORS`, `WEAPONS`/AC math (`computedBaseAC`, etc.)
 6. `data-libraries.js` — `FEATURE_LIB` (class features/feats with mechanical effects pre-attached), race trait library
-7. `app.js` — all application state, rendering, and event wiring (the bulk of the logic, ~5700 lines)
-8. `wizard.js` — guided step-by-step character creation; reuses `app.js` globals, keeps its own
+7. `data-backgrounds.js` — `BACKGROUNDS` (skills/tools/languages/gold/equipment per background) and
+   `BACKGROUND_LIB` (the searchable trait library — skill-grant + signature-feature entries)
+8. `app.js` — all application state, rendering, and event wiring (the bulk of the logic, ~5700 lines)
+9. `wizard.js` — guided step-by-step character creation; reuses `app.js` globals, keeps its own
    isolated draft (`WIZ`) and only touches real storage via `createChar()` at the end
-9. `map.js` — campaign map (upload image, pin party/waypoints/quests); own localStorage key,
-   independent of character state
+10. `map.js` — campaign map (upload image, pin party/waypoints/quests); own localStorage key,
+    independent of character state
 
 All data files are plain `const` declarations in global scope (no modules, no exports) — grepping
 for a constant name across `data-*.js` is the fastest way to find where game data lives.
@@ -58,6 +60,9 @@ page on that site before treating the change as done:**
   `https://dnd5e.wikidot.com/adventuring-gear`, `/armor`, `/weapons`, `/wondrous-items`, `/tools`.
 - Class features & feats (`data-libraries.js`, `FEATURE_LIB`) — the same class pages above list
   features by level; feats are at `https://dnd5e.wikidot.com/feat:<name>`.
+- Backgrounds (`data-backgrounds.js`, `BACKGROUNDS`/`BACKGROUND_LIB`) —
+  `https://dnd5e.wikidot.com/background:<kebab-case-name>` (e.g. `/background:acolyte`) has skill/tool/
+  language proficiencies, starting equipment and gold, and the signature feature's full text.
 
 Only verify mechanical fields this way (level, school, range/duration, hit die, ability bonuses,
 AC/damage, uses-per-rest, etc.) — the short one-line descriptions already in these files are
