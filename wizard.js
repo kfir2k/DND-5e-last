@@ -220,12 +220,11 @@ const WIZ_STEP_META=[
   {key:'concept',label:'Concept',icon:'⚔',roman:'I'},
   {key:'race',label:'Bloodline',icon:'🩸',roman:'II'},
   {key:'class',label:'Calling',icon:'🎭',roman:'III'},
-  {key:'background',label:'Upbringing',icon:'📜',roman:'IV'},
-  {key:'abilities',label:'Body & Mind',icon:'⚡',roman:'V'},
-  {key:'skills',label:'Training',icon:'🎯',roman:'VI'},
-  {key:'features',label:'Features',icon:'✦',roman:'VII'},
-  {key:'equipment',label:'Gear',icon:'🎒',roman:'VIII'},
-  {key:'name',label:'Name',icon:'✒',roman:'IX'},
+  {key:'abilities',label:'Body & Mind',icon:'⚡',roman:'IV'},
+  {key:'skills',label:'Training',icon:'🎯',roman:'V'},
+  {key:'features',label:'Features',icon:'✦',roman:'VI'},
+  {key:'equipment',label:'Gear',icon:'🎒',roman:'VII'},
+  {key:'name',label:'Name',icon:'✒',roman:'VIII'},
 ];
 const WIZ_POOL=27;
 const WIZ_POINT_COSTS={8:0,9:1,10:2,11:3,12:4,13:5,14:7,15:9};
@@ -236,7 +235,7 @@ function wizFreshState(){
   return {
     step:0, finished:false, animating:false,
     concepts:[], raceId:'', subraceId:'', flexBonus:['',''],
-    classId:'', backgroundId:'', ab:{str:8,dex:8,con:8,int:8,wis:8,cha:8},
+    classId:'', ab:{str:8,dex:8,con:8,int:8,wis:8,cha:8},
     skills:[], subclass:'', fightingStyle:'', expertise:[],
     equipPicks:{}, name:'',
   };
@@ -287,18 +286,17 @@ function wizStepReady(i){
       return true;
     }
     case 2: return !!WIZ.classId;
-    case 3: return !!WIZ.backgroundId;
-    case 4: return true;
-    case 5: { const spec=WIZ_CLASS_SKILLS[WIZ.classId]; return !spec || WIZ.skills.length===spec.count; }
-    case 6: {
+    case 3: return true;
+    case 4: { const spec=WIZ_CLASS_SKILLS[WIZ.classId]; return !spec || WIZ.skills.length===spec.count; }
+    case 5: {
       if(!cls) return false;
       if(WIZ.classId==='fighter' && !WIZ.fightingStyle) return false;
       if(WIZ.classId==='rogue' && WIZ.expertise.length!==2) return false;
       if(subclassNamesForClass(WIZ.classId).length>1 && !WIZ.subclass) return false;
       return true;
     }
-    case 7: { const spec=WIZ_EQUIPMENT[WIZ.classId]; if(!spec) return true; return (spec.groups||[]).every((g,gi)=>WIZ.equipPicks[gi]!=null); }
-    case 8: return !!WIZ.name.trim();
+    case 6: { const spec=WIZ_EQUIPMENT[WIZ.classId]; if(!spec) return true; return (spec.groups||[]).every((g,gi)=>WIZ.equipPicks[gi]!=null); }
+    case 7: return !!WIZ.name.trim();
     default: return true;
   }
 }
@@ -383,29 +381,6 @@ function sceneClass(){
     </div>`;
 }
 
-function sceneBackground(){
-  const cards=BACKGROUND_ORDER.map(id=>{
-    const bg=BACKGROUNDS[id];
-    const skillsTxt=bg.skills.map(k=>{const s=SKILLS.find(x=>x[0]===k);return s?s[1]:k;}).join(', ');
-    return `<div class="wiz-filmcard ${WIZ.backgroundId===id?'sel':''}" data-backgroundpick="${id}">
-      <div class="wiz-filmart-badge">${BACKGROUND_ICON[id]||'📜'}</div>
-      <span class="nm">${esc(bg.name)}</span>
-      <span class="sub">${esc(skillsTxt)}</span>
-    </div>`;
-  }).join('');
-  const bg=BACKGROUNDS[WIZ.backgroundId];
-  return `
-    <div class="wiz-eyebrow">Before the road</div>
-    <h1>Choose Your Background</h1>
-    <p class="wiz-lede">Who you were before you picked up a weapon still shapes what you're good at.</p>
-    <div class="wiz-filmwrap">
-      <button class="wiz-filmarrow" data-filmnav="-1" type="button">‹</button>
-      <div class="wiz-filmstrip">${cards}</div>
-      <button class="wiz-filmarrow" data-filmnav="1" type="button">›</button>
-    </div>
-    ${bg?`<p class="wiz-lede">${esc(bg.flavor||'')} ${bg.gold} gp to start${bg.languages?`, +${bg.languages} language${bg.languages>1?'s':''} of your choice`:''}.</p>`:''}`;
-}
-
 function sceneAbilities(){
   const remaining=WIZ_POOL-wizAbCost();
   return `
@@ -434,21 +409,16 @@ function sceneAbilities(){
 function sceneSkills(){
   const cls=CLASSES[WIZ.classId];
   const spec=WIZ_CLASS_SKILLS[WIZ.classId];
-  const bg=BACKGROUNDS[WIZ.backgroundId];
-  const bgSkills=bg?bg.skills:[];
-  const bgNote=bg?`<p class="wiz-lede">Already trained from ${esc(bg.name)}: ${esc(bgSkills.map(k=>{const s=SKILLS.find(x=>x[0]===k);return s?s[1]:k;}).join(', '))}.</p>`:'';
   if(!spec){
-    return `<div class="wiz-eyebrow">Training</div><h1>No Formal Training Needed</h1><p class="wiz-lede">This path grants no class skill choices — move on when you're ready.</p>${bgNote}`;
+    return `<div class="wiz-eyebrow">Training</div><h1>No Formal Training Needed</h1><p class="wiz-lede">This path grants no class skill choices — move on when you're ready.</p>`;
   }
-  const options=spec.options.filter(k=>!bgSkills.includes(k));
   const remaining=spec.count-WIZ.skills.length;
   return `
     <div class="wiz-eyebrow">What you've practiced</div>
     <h1>Choose Your Training</h1>
     <p class="wiz-lede">${cls.name}s train in ${spec.count} of the skills below. ${remaining>0?`Pick ${remaining} more.`:'All set.'}</p>
-    ${bgNote}
     <div class="wiz-skillgrid">
-      ${options.map(k=>{
+      ${spec.options.map(k=>{
         const sk=SKILLS.find(s=>s[0]===k);
         const sel=WIZ.skills.includes(k);
         const full=!sel && WIZ.skills.length>=spec.count;
@@ -579,12 +549,11 @@ function sceneFinale(){
     ...Object.entries(merged.items).map(([n,q])=>q>1?`${n} ×${q}`:n), ...merged.packs,
   ].filter(Boolean);
   const trained=WIZ.skills.map(k=>{const s=SKILLS.find(x=>x[0]===k);return s?s[1]:k;});
-  const finaleBg=BACKGROUNDS[WIZ.backgroundId];
   return `
     <div class="wiz-finale-seal">${CLASS_ICON[WIZ.classId]||'⚜'}</div>
     <div class="wiz-eyebrow">Destiny sealed</div>
     <h1>${esc(WIZ.name)}</h1>
-    <p class="wiz-lede">${esc(wizRaceDisplayName())} · ${esc(cls.name)} 1${WIZ.subclass?' · '+esc(WIZ.subclass):''}${finaleBg?' · '+esc(finaleBg.name):''}</p>
+    <p class="wiz-lede">${esc(wizRaceDisplayName())} · ${esc(cls.name)} 1${WIZ.subclass?' · '+esc(WIZ.subclass):''}</p>
     <div class="wiz-statline">
       ${ABILITIES.map(([k])=>`<div class="s"><b>${abFinal[k]}</b><i>${k}</i></div>`).join('')}
     </div>
@@ -595,14 +564,13 @@ function sceneFinale(){
     </div>
     <p class="wiz-lede">Trained: ${esc(trained.join(', ')||'—')}</p>
     <p class="wiz-lede">Carrying: ${esc(gearLines.join(', ')||'—')}</p>
-    ${finaleBg?`<p class="wiz-lede">Background: ${esc(finaleBg.name)} — ${esc(finaleBg.skills.map(k=>{const s=SKILLS.find(x=>x[0]===k);return s?s[1]:k;}).join(', '))}, ${finaleBg.gold} gp</p>`:''}
     <div class="wiz-finale-actions">
       <button class="wiz-rail-nav" id="wizFinAdjust" type="button">↺ Adjust choices</button>
       <button class="wiz-rail-nav primary" id="wizFinBegin" type="button">⚜ Begin the Adventure</button>
     </div>`;
 }
 
-const WIZ_SCENES=[sceneConcept,sceneRace,sceneClass,sceneBackground,sceneAbilities,sceneSkills,sceneFeatures,sceneEquipment,sceneName];
+const WIZ_SCENES=[sceneConcept,sceneRace,sceneClass,sceneAbilities,sceneSkills,sceneFeatures,sceneEquipment,sceneName];
 
 /* ============ finalize -> a real character, via the existing createChar() ============ */
 function wizGrantEquipmentItem(data,name,qty,fallbackDesc){
@@ -634,11 +602,6 @@ function wizBuildFeatures(){
       out.push({title:e.n,desc:e.d,fx:(e.fx||[]).slice(),combat:!!e.combat,usesMax:e.usesMax,usesPer:e.usesPer,source:e.g});
     });
   }
-  const bg=BACKGROUNDS[WIZ.backgroundId];
-  if(bg){
-    const featEnt=BACKGROUND_LIB.find(e=>e.g===bg.name && e.n===bg.featureName);
-    if(featEnt) out.push({title:featEnt.n,desc:featEnt.d,fx:(featEnt.fx||[]).slice(),combat:!!featEnt.combat,source:bg.name});
-  }
   if(!out.length) out.push({title:'',desc:'',fx:[]});
   return out;
 }
@@ -656,8 +619,6 @@ function wizFinalize(){
   data.flexBonus=WIZ.flexBonus.slice();
   data.race=wizRaceDisplayName();
   data.speed=wizRaceSpeed()+' ft.';
-  data.backgroundId=WIZ.backgroundId;
-  data.background=BACKGROUNDS[WIZ.backgroundId]?.name||'';
   const dv=wizRaceDark(); data.vision=dv>0?dv+' ft.':'None';
 
   data.abilities={...WIZ.ab};
@@ -672,8 +633,6 @@ function wizFinalize(){
   data.skills=Object.fromEntries(SKILLS.map(s=>[s[0],0]));
   WIZ.skills.forEach(k=>data.skills[k]=1);
   WIZ.expertise.forEach(k=>data.skills[k]=2);
-  const wizBg=BACKGROUNDS[WIZ.backgroundId];
-  if(wizBg) wizBg.skills.forEach(k=>{ if(!data.skills[k]) data.skills[k]=1; });
 
   if(cls.cast){
     data.spellClass=cls.name; data.spellAbility=cls.ab;
@@ -697,14 +656,6 @@ function wizFinalize(){
     const pack=PACKS.find(p=>p.n===packName);
     if(pack) pack.items.forEach(([name,qty])=>wizGrantEquipmentItem(data,name,qty));
   });
-  if(wizBg){
-    (wizBg.equipment.items||[]).forEach(([name,qty])=>wizGrantEquipmentItem(data,name,qty));
-    (wizBg.equipment.packs||[]).forEach(packName=>{
-      const pack=PACKS.find(p=>p.n===packName);
-      if(pack) pack.items.forEach(([name,qty])=>wizGrantEquipmentItem(data,name,qty));
-    });
-    data.money.gp=(data.money.gp||0)+num(wizBg.gold);
-  }
   if(WIZ.classId==='fighter'){
     if(WIZ.fightingStyle==='archery'){
       const atk=data.attacks.find(a=>WEAPONS[a.weapon]&&WEAPONS[a.weapon].rng);
@@ -717,8 +668,7 @@ function wizFinalize(){
   if(!data.attacks.length) data.attacks.push({name:'Unarmed Strike',weapon:'unarmed',die:'1',dmgStat:'auto',magic:0,miscAtk:0,miscDmg:0,rolled:'',buffs:[]});
 
   data.features=wizBuildFeatures();
-  data.otherProfs=WIZ_PROFS[WIZ.classId]?[WIZ_PROFS[WIZ.classId]]:[];
-  if(wizBg) (wizBg.tools||[]).forEach(t=>{ if(!data.otherProfs.some(p=>p.toLowerCase()===t.toLowerCase())) data.otherProfs.push(t); });
+  if(WIZ_PROFS[WIZ.classId]) data.otherProfs=[WIZ_PROFS[WIZ.classId]];
   data.languages=['Common'];
 
   return data;
@@ -748,10 +698,6 @@ function wizWireScene(){
   root.querySelectorAll('[data-classpick]').forEach(el=>el.addEventListener('click',()=>{
     if(WIZ.classId!==el.dataset.classpick){ WIZ.skills=[]; WIZ.subclass=''; WIZ.fightingStyle=''; WIZ.expertise=[]; WIZ.equipPicks={}; }
     WIZ.classId=el.dataset.classpick;
-    wizRenderSceneInner(); wizRenderRail();
-  }));
-  root.querySelectorAll('[data-backgroundpick]').forEach(el=>el.addEventListener('click',()=>{
-    WIZ.backgroundId=el.dataset.backgroundpick;
     wizRenderSceneInner(); wizRenderRail();
   }));
   root.querySelectorAll('[data-filmnav]').forEach(el=>el.addEventListener('click',()=>{
@@ -811,7 +757,7 @@ function wizWireScene(){
     nameInput.focus();
   }
   const finAdjust=root.querySelector('#wizFinAdjust');
-  if(finAdjust) finAdjust.addEventListener('click',()=>{ wizTransitionTo(WIZ_STEP_META.length-1,false); });
+  if(finAdjust) finAdjust.addEventListener('click',()=>{ wizTransitionTo(7,false); });
   const finBegin=root.querySelector('#wizFinBegin');
   if(finBegin) finBegin.addEventListener('click',()=>{
     finBegin.disabled=true; finBegin.textContent='✓ Forging…';
@@ -865,7 +811,7 @@ function wizRenderRail(){
     if(WIZ.animating) return;
     if(i<=WIZ.step || WIZ.finished) wizTransitionTo(i,false);
   }));
-  const meta=WIZ.finished?{roman:'X',label:'Forged'}:WIZ_STEP_META[WIZ.step];
+  const meta=WIZ.finished?{roman:'IX',label:'Forged'}:WIZ_STEP_META[WIZ.step];
   const rEl=document.getElementById('wizTopRoman'), lEl=document.getElementById('wizTopLabel');
   if(rEl) rEl.textContent=meta.roman;
   if(lEl) lEl.textContent=meta.label;
@@ -933,7 +879,7 @@ function wireWizard(){
   if(!backBtn||!nextBtn||!exitBtn) return;
   backBtn.addEventListener('click',()=>{
     if(!WIZ || WIZ.animating) return;
-    if(WIZ.finished){ wizTransitionTo(WIZ_STEP_META.length-1,false); return; }
+    if(WIZ.finished){ wizTransitionTo(7,false); return; }
     if(WIZ.step>0) wizTransitionTo(WIZ.step-1);
   });
   nextBtn.addEventListener('click',()=>{

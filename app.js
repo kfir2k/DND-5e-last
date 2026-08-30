@@ -400,27 +400,6 @@ build:`
         </div>
       </div>
     </section>
-
-    <div class="bHeroSeam"><span class="bHeroSeamGem">✦</span></div>
-
-    <section class="bHero bcsHero bHeroMini" id="bHeroBackground">
-      <div class="bcsCorner bcsCornerTl"></div><div class="bcsCorner bcsCornerTr"></div>
-      <div class="bcsCorner bcsCornerBl"></div><div class="bcsCorner bcsCornerBr"></div>
-      <div class="bRailCol bRailColMini">
-        <div class="bRailColLbl">Background</div>
-        <div class="bRail bRailMini" id="backgroundRail"></div>
-      </div>
-      <div class="bStage">
-        <div class="bBadgeStage" id="bBackgroundBadge">📜</div>
-        <div class="bScrim"></div>
-        <div class="bContent bContentMini">
-          <div class="bEyebrow">Background</div>
-          <h3 class="bName bNameMini" id="bBackgroundName">—</h3>
-          <div class="bChipRow" id="bBackgroundChips"></div>
-          <button type="button" class="bCustomBtn" id="bgGrantBtn" style="margin-top:10px">🎁 Grant Starting Gear &amp; Gold</button>
-        </div>
-      </div>
-    </section>
     </div>
 
     <div class="grid g3" id="subDetails">
@@ -834,6 +813,17 @@ character:`
         <label class="fld-paper"><span>Hair</span><input type="text" data-bind="hair"></label>
       </div>
     </div>
+  </div>
+  <div class="panel">
+    <h2>Background</h2>
+    <label class="fld"><span>Background</span>
+      <select id="backgroundSelect">
+        <option value="">— None —</option>
+        ${BACKGROUND_ORDER.map(id=>`<option value="${id}">${esc(BACKGROUNDS[id].name)}</option>`).join('')}
+      </select>
+    </label>
+    <p class="prep-note" id="backgroundInfo">Pick a background to see what it grants.</p>
+    <button type="button" class="add-btn" id="bgGrantBtn" style="display:none">Grant Starting Gear &amp; Gold</button>
   </div>
   <div class="panel cp-ledger">
     <div class="ledger-row"><label>Personality Traits</label><textarea data-bind="personality" placeholder="How they walk into a room, speak, react under pressure…"></textarea></div>
@@ -4257,7 +4247,6 @@ function crossfadeImg(prefix,from,to,src){
 function renderBuildSelectors(){
   renderClassRail();
   renderRaceRail();
-  renderBackgroundRail();
   $('#levelIn').value=S.level||1;
   renderSubraceAndFlex();
   renderSubclassField();
@@ -4303,23 +4292,6 @@ function renderRaceRail(){
     }));
   }
   $$('#raceRail .bRailItem').forEach(el=>el.classList.toggle('active',el.dataset.id===S.raceId));
-}
-// Flat list, no groups (unlike RACES' Common/Exotic/Monstrous) — the 13 SRD backgrounds have no
-// canonical grouping — and no art thumb, since there are no background-art assets in this repo.
-function renderBackgroundRail(){
-  const rail=$('#backgroundRail'); if(!rail) return;
-  if(!rail.children.length){
-    rail.innerHTML=BACKGROUND_ORDER.map(id=>`
-      <div class="bRailItem" data-id="${id}">
-        <span class="bRailIco">${BACKGROUND_ICON[id]||'📜'}</span>
-        <span class="bLabel bLabelSm">${BACKGROUNDS[id].name}</span>
-      </div>`).join('');
-    [...rail.children].forEach(el=>el.addEventListener('click',()=>{
-      if(el.dataset.id===S.backgroundId) return;
-      S.backgroundId=el.dataset.id; applyBuild();
-    }));
-  }
-  [...rail.children].forEach(el=>el.classList.toggle('active',el.dataset.id===S.backgroundId));
 }
 function stepClass(delta){
   if(!CLASS_ORDER.length) return;
@@ -4390,14 +4362,8 @@ function renderBuildTheme(){
   $('#bRaceName').textContent=ri?((ri.sub&&ri.sub.name)||ri.r.name):'—';
   $('#bRaceChips').innerHTML=ri?liveRaceChips().map(t=>`<span class="bChip">${esc(t)}</span>`).join(''):'';
 
-  const bg=BACKGROUNDS[S.backgroundId];
-  $('#bBackgroundBadge').textContent=BACKGROUND_ICON[S.backgroundId]||'📜';
-  $('#bBackgroundName').textContent=bg?bg.name:'—';
-  $('#bBackgroundChips').innerHTML=bg?liveBackgroundChips().map(t=>`<span class="bChip">${esc(t)}</span>`).join(''):'';
-
   renderClassRail();
   renderRaceRail();
-  renderBackgroundRail();
 }
 function renderSubraceAndFlex(){
   const r=RACES[S.raceId];
@@ -4452,15 +4418,32 @@ function liveRaceChips(){
   if(ri.r.move) chips.push(ri.r.move[0].toUpperCase()+ri.r.move.slice(1));
   return chips;
 }
-// Background chips are simpler than race's — no overrides/flex to reconcile, just the fixed
-// grants straight off the BACKGROUNDS entry.
-function liveBackgroundChips(){
-  const bg=BACKGROUNDS[S.backgroundId]; if(!bg) return [];
-  const chips=[bg.skills.map(k=>SKILL_NAMES[k]||k).join(', ')];
-  if(bg.languages) chips.push(`+${bg.languages} language${bg.languages>1?'s':''} (your choice)`);
-  chips.push(`${bg.gold} gp`);
-  chips.push(bg.featureName);
-  return chips;
+// Plain-text summary for the Character tab's Background picker — no chips/badges, just sentences,
+// per the simpler treatment requested over the Build tab's rail+hero styling used for Class/Race.
+function backgroundSummaryText(bg){
+  const parts=[];
+  parts.push('Skills: '+bg.skills.map(k=>SKILL_NAMES[k]||k).join(', ')+'.');
+  if(bg.tools.length) parts.push('Proficiencies: '+bg.tools.join(', ')+'.');
+  if(bg.languages) parts.push(`+${bg.languages} language${bg.languages>1?'s':''} of your choice.`);
+  parts.push(`Starting gold: ${bg.gold} gp.`);
+  const itemNames=(bg.equipment.items||[]).map(([n,q])=>q>1?`${n} ×${q}`:n);
+  if(itemNames.length) parts.push('Equipment: '+itemNames.join(', ')+'.');
+  parts.push(`Feature — ${bg.featureName}: `+(BACKGROUND_LIB.find(e=>e.g===bg.name&&e.n===bg.featureName)||{}).d);
+  return parts.join(' ');
+}
+function renderBackgroundInfo(){
+  const sel=$('#backgroundSelect'), info=$('#backgroundInfo'), btn=$('#bgGrantBtn');
+  if(!sel) return;
+  sel.value=S.backgroundId||'';
+  const bg=BACKGROUNDS[S.backgroundId];
+  info.textContent=bg?backgroundSummaryText(bg):'Pick a background to see what it grants.';
+  btn.style.display=bg?'':'none';
+}
+function wireBackgroundSelect(){
+  $('#backgroundSelect')?.addEventListener('change',e=>{
+    S.backgroundId=e.target.value;
+    applyBuild();
+  });
 }
 
 // ---------- ASI / Feat rows ----------
@@ -4749,6 +4732,7 @@ function applyBuild(){
   syncGrantedFeatures();
   renderBuildNote();
   renderBuildCustom();
+  renderBackgroundInfo();
   renderAsi(); renderSaves(); renderSpellLevels(); renderFeatures(); syncBound(); recalc(); save();
 }
 // The build summary line. Each derived value reads from the sheet (so an override shows *your*
@@ -5822,6 +5806,7 @@ function renderAll(){
   renderAttacks(); renderEquipment(); renderFeatures(); renderNotes();
   renderSpellLevels(); renderOverview(); renderCombatFeatures(); renderLanguages(); renderProficiencies();
   renderBuildSelectors(); renderAsi(); renderHudControls(); renderCharacterPortrait(); renderBackstoryEditor();
+  renderBackgroundInfo();
   bindAll(); syncBound(); recalc();
 }
 // Tablet-first: skill-badge "when" tooltips open on TAP, not hover. One delegated listener on
@@ -5861,7 +5846,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
