@@ -191,7 +191,15 @@ const ITEM_RAW=[
 ['Sentimental Trinket','G','A small personal memento with no monetary value.',1,0],
 ['Belaying Pin','G','A wooden pin for securing rigging — doubles as a club in a pinch.',1,0],
 ["Artisan's Tools",'T',"One type of artisan's tools, your choice (smith's, carpenter's, brewer's, etc.) — proficiency applies.",1,0],
-['Old Letter','S','A letter from someone significant in your past.',1,0]
+['Old Letter','S','A letter from someone significant in your past.',1,0],
+['Leather-Bound Diary','G','A private journal bound in leather.',1,0],
+["Miner's Pick",'G','A pick for breaking rock and prying open old tombs.',1,0],
+['Uniform','G','Marks you as a member of your unit or company.',1,0],
+['Gemstone','G','A small cut gem, worth roughly 10 gp.',1,0],
+["Scholar's Robes",'G','Formal robes marking you as a scholar.',1,0],
+['Faction Badge','G','A badge or emblem marking you as a member of your faction.',1,0],
+['Jewelry (Small Piece)','G',"A small piece of jewelry, valuable in your homeland's style.",1,0],
+['Totemic Token','G','A carved token or tattoo set marking your tribal loyalty.',1,0]
 ];
 const ITEM_DB={};
 ITEM_RAW.forEach(([n,t,d,q,cb])=>{ ITEM_DB[n.toLowerCase()]={n,t,d,q:q||1,cb:!!cb}; });

@@ -1,9 +1,14 @@
-// ---------- Backgrounds (PHB, dnd5e.wikidot.com/background:<name>) ----------
+// ---------- Backgrounds (PHB + SCAG/XGE, dnd5e.wikidot.com/background:<name>) ----------
 // BACKGROUNDS: id -> {name, skills:[2 skill ids], tools:[proficiency strings incl. "your choice"
 // placeholders], languages:count of "your choice" languages (display/note only — never auto-added,
 // see BACKGROUND_LIB comment below), gold:flat gp, equipment:{items:[[itemName,qty],...],packs:[...]},
 // featureName: cross-ref into BACKGROUND_LIB, flavor: one-line cosmetic blurb.
-// No `group` field like RACES has — the 13 SRD backgrounds have no canonical grouping to sort by.
+// skillNote (optional): several SCAG/XGE backgrounds grant one fixed skill plus "your choice of
+// X/Y/Z" for the second (a few, like Urban Bounty Hunter, are a free choice of 2 from a list) —
+// `skills` always holds a concrete, sensible default pair so the mechanical grant stays simple
+// (same one-array shape as every PHB background), and skillNote spells out the real choice in the
+// text summary so the player knows to adjust it on the Skills tab if they want something else.
+// No `group` field like RACES has — the 27 backgrounds here have no canonical grouping to sort by.
 const BACKGROUNDS={
  acolyte:{name:'Acolyte',skills:['insight','religion'],tools:[],languages:2,gold:15,
    equipment:{items:[['Holy Symbol',1],['Prayer Book',1],['Incense (block)',5],['Vestments',1],['Common Clothes',1]],packs:[]},
@@ -43,11 +48,67 @@ const BACKGROUNDS={
    featureName:'Military Rank',flavor:'Trained and fought as part of an organized military force.'},
  urchin:{name:'Urchin',skills:['sleight','stealth'],tools:['Disguise Kit',"Thieves' Tools"],languages:0,gold:10,
    equipment:{items:[['Small Knife',1],['Map or Chart',1],['Pet Mouse',1],['Sentimental Trinket',1],['Common Clothes',1]],packs:[]},
-   featureName:'City Secrets',flavor:'Grew up on the streets, and never forgot how they work.'}
+   featureName:'City Secrets',flavor:'Grew up on the streets, and never forgot how they work.'},
+ // ---- SCAG / XGE ----
+ anthropologist:{name:'Anthropologist',skills:['insight','religion'],tools:[],languages:2,gold:10,
+   equipment:{items:[['Leather-Bound Diary',1],['Ink & Pen',1],["Traveler's Clothes",1],['Sentimental Trinket',1]],packs:[]},
+   featureName:'Adept Linguist',flavor:'Studied foreign peoples and cultures up close, and picked up their tongues along the way.'},
+ archaeologist:{name:'Archaeologist',skills:['history','survival'],tools:["Cartographer's Tools or Navigator's Tools (your choice)"],languages:1,gold:25,
+   equipment:{items:[['Map or Chart',1],['Lantern, Bullseye',1],["Miner's Pick",1],["Traveler's Clothes",1],['Shovel',1],['Tent (two-person)',1],['Sentimental Trinket',1]],packs:[]},
+   featureName:'Historical Knowledge',flavor:'Dug up relics and ruins for a living, one collapsing tomb at a time.'},
+ citywatch:{name:'City Watch',skills:['athletics','insight'],tools:[],languages:2,gold:10,
+   equipment:{items:[['Uniform',1],['Signal Whistle',1],['Manacles',1]],packs:[]},
+   featureName:"Watcher's Eye",flavor:"Kept the peace on a city's streets, on the right side of the law — mostly."},
+ clancrafter:{name:'Clan Crafter',skills:['history','insight'],tools:["One type of artisan's tools (your choice)"],languages:1,gold:5,
+   equipment:{items:[["Artisan's Tools",1],['Chisel',1],["Traveler's Clothes",1],['Gemstone',1]],packs:[]},
+   featureName:'Respect of the Stout Folk',flavor:'Trained under dwarven masters and earned a maker\'s mark of your own.'},
+ cloisteredscholar:{name:'Cloistered Scholar',skills:['history','religion'],
+   skillNote:'second skill is your choice of Arcana, Nature, or Religion — Religion picked here by default',
+   tools:[],languages:2,gold:10,
+   equipment:{items:[["Scholar's Robes",1],['Ink & Pen',1],['Parchment (sheet)',5],['Book',1]],packs:[]},
+   featureName:'Library Access',flavor:"Spent years buried in a cloister's library, chasing one narrow field of study."},
+ courtier:{name:'Courtier',skills:['insight','persuasion'],tools:[],languages:2,gold:5,
+   equipment:{items:[['Fine Clothes',1]],packs:[]},
+   featureName:'Court Functionary',flavor:"Learned to navigate a noble court's favors, rivalries, and unspoken rules."},
+ factionagent:{name:'Faction Agent',skills:['insight','persuasion'],
+   skillNote:'second skill should be an Intelligence, Wisdom, or Charisma skill matching your faction — Persuasion picked here by default',
+   tools:[],languages:2,gold:15,
+   equipment:{items:[['Faction Badge',1],['Book',1],['Common Clothes',1]],packs:[]},
+   featureName:'Safe Haven',flavor:'An operative for a larger organization, with a network of contacts to show for it.'},
+ fartraveler:{name:'Far Traveler',skills:['insight','perception'],tools:['One musical instrument or gaming set (your choice)'],languages:1,gold:5,
+   equipment:{items:[["Traveler's Clothes",1],['Musical Instrument',1],['Map or Chart',1],['Jewelry (Small Piece)',1]],packs:[]},
+   featureName:'All Eyes on You',flavor:'Came from a distant land few in Faerûn have ever seen.'},
+ inheritor:{name:'Inheritor',skills:['survival','history'],
+   skillNote:'second skill is your choice of Arcana, History, or Religion — History picked here by default',
+   tools:['One gaming set or musical instrument (your choice)'],languages:1,gold:15,
+   equipment:{items:[['Sentimental Trinket',1],["Traveler's Clothes",1],['Musical Instrument',1]],packs:[]},
+   featureName:'Inheritance',flavor:'Carries an inheritance whose true nature is still unfolding.'},
+ knightoftheorder:{name:'Knight of the Order',skills:['persuasion','religion'],
+   skillNote:"second skill matches your order's focus: Arcana, History, Nature, or Religion — Religion picked here by default",
+   tools:['One gaming set or musical instrument (your choice)'],languages:1,gold:10,
+   equipment:{items:[["Traveler's Clothes",1],['Signet Ring',1]],packs:[]},
+   featureName:'Knightly Regard',flavor:'Sworn to a knightly order bound by a shared cause.'},
+ mercenaryveteran:{name:'Mercenary Veteran',skills:['athletics','persuasion'],tools:['One gaming set (your choice)','Vehicles (land)'],languages:0,gold:10,
+   equipment:{items:[['Uniform',1],['Insignia of Rank',1],['Dice Set',1]],packs:[]},
+   featureName:'Mercenary Life',flavor:'Fought for coin in a mercenary company before adventuring on your own terms.'},
+ urbanbountyhunter:{name:'Urban Bounty Hunter',skills:['insight','stealth'],
+   skillNote:'both skills are your choice from Deception, Insight, Persuasion, and Stealth — Insight & Stealth picked here by default',
+   tools:["Thieves' Tools",'One gaming set or musical instrument (your choice)'],languages:0,gold:20,
+   equipment:{items:[['Common Clothes',1]],packs:[]},
+   featureName:'Ear to the Ground',flavor:"Made a living tracking people down through a city's underworld or high society."},
+ uthgardttribemember:{name:'Uthgardt Tribe Member',skills:['athletics','survival'],tools:["One musical instrument or artisan's tools (your choice)"],languages:1,gold:10,
+   equipment:{items:[['Hunting Trap',1],['Totemic Token',1],["Traveler's Clothes",1]],packs:[]},
+   featureName:'Uthgardt Heritage',flavor:'Raised by an Uthgardt tribe, steeped in the lore of the North.'},
+ waterdhaviannoble:{name:'Waterdhavian Noble',skills:['history','persuasion'],tools:['One gaming set or musical instrument (your choice)'],languages:1,gold:20,
+   equipment:{items:[['Fine Clothes',1],['Signet Ring',1],['Scroll of Pedigree',1],['Flask of Common Wine',1]],packs:[]},
+   featureName:'Kept in Style',flavor:'Born into one of Waterdeep\'s noble houses, credit line included.'}
 };
 const BACKGROUND_ORDER=Object.keys(BACKGROUNDS);
 const BACKGROUND_ICON={acolyte:'🙏',charlatan:'🎭',criminal:'🥷',entertainer:'🎻',folkhero:'🔨',
- guildartisan:'⚒',hermit:'🕯',noble:'👑',outlander:'🏕',sage:'📜',sailor:'⚓',soldier:'🎖',urchin:'🐭'};
+ guildartisan:'⚒',hermit:'🕯',noble:'👑',outlander:'🏕',sage:'📜',sailor:'⚓',soldier:'🎖',urchin:'🐭',
+ anthropologist:'🧭',archaeologist:'⛏',citywatch:'🔔',clancrafter:'🛠',cloisteredscholar:'📗',
+ courtier:'🎩',factionagent:'🕵',fartraveler:'🧳',inheritor:'🗝',knightoftheorder:'⚜',
+ mercenaryveteran:'🗡',urbanbountyhunter:'🎯',uthgardttribemember:'🪶',waterdhaviannoble:'🏛'};
 
 // ---------- Background trait library (searchable, same pick pattern as RACE_LIB) ----------
 // Exactly 2 entries per background: one carries the skill-grant `fx` (so it can be auto-synced or
@@ -92,5 +153,47 @@ const BACKGROUND_LIB=[
  {n:'Military Rank',g:'Soldier',d:'Soldiers loyal to your former military organization recognize your authority and defer to you if lower-ranked; you can also invoke your rank to access friendly military installations.'},
 
  {n:'Skill Proficiencies (Urchin)',g:'Urchin',d:'Sleight of Hand, Stealth.',fx:[{t:'skill',skills:['sleight','stealth'],grant:'prof'}]},
- {n:'City Secrets',g:'Urchin',d:'You know the shortcuts, sewers, and hidden passages of cities. Outside combat, you and companions you lead can travel between two points in a city at double speed.'}
+ {n:'City Secrets',g:'Urchin',d:'You know the shortcuts, sewers, and hidden passages of cities. Outside combat, you and companions you lead can travel between two points in a city at double speed.'},
+
+ {n:'Skill Proficiencies (Anthropologist)',g:'Anthropologist',d:'Insight, Religion.',fx:[{t:'skill',skills:['insight','religion'],grant:'prof'}]},
+ {n:'Adept Linguist',g:'Anthropologist',d:'After observing a group speak a language you don\'t know for at least a day, you learn enough words, expressions, and gestures to communicate on a rudimentary level.'},
+
+ {n:'Skill Proficiencies (Archaeologist)',g:'Archaeologist',d:'History, Survival.',fx:[{t:'skill',skills:['history','survival'],grant:'prof'}]},
+ {n:'Historical Knowledge',g:'Archaeologist',d:'On entering ruins or dungeons, you can identify who built them and their original purpose, and you can appraise the monetary value of antiquities over a century old.'},
+
+ {n:'Skill Proficiencies (City Watch)',g:'City Watch',d:'Athletics, Insight.',fx:[{t:'skill',skills:['athletics','insight'],grant:'prof'}]},
+ {n:"Watcher's Eye",g:'City Watch',d:'You can readily find the local watch outpost or other law enforcement, and identify the local criminal dens — though the watch will greet you more warmly than the criminals will.'},
+
+ {n:'Skill Proficiencies (Clan Crafter)',g:'Clan Crafter',d:'History, Insight.',fx:[{t:'skill',skills:['history','insight'],grant:'prof'}]},
+ {n:'Respect of the Stout Folk',g:'Clan Crafter',d:'You have free room and board in any place where shield dwarves or gold dwarves dwell, and locals vie to offer you and your companions their finest hospitality.'},
+
+ {n:'Skill Proficiencies (Cloistered Scholar)',g:'Cloistered Scholar',d:'History, plus Arcana, Nature, or Religion (your choice).',fx:[{t:'skill',skills:['history','religion'],grant:'prof'}]},
+ {n:'Library Access',g:'Cloistered Scholar',d:"You have free and easy access to your cloister's library, and other libraries across the Realms extend you the same professional courtesy as a fellow scholar."},
+
+ {n:'Skill Proficiencies (Courtier)',g:'Courtier',d:'Insight, Persuasion.',fx:[{t:'skill',skills:['insight','persuasion'],grant:'prof'}]},
+ {n:'Court Functionary',g:'Courtier',d:'You have access to the records and operations of any noble court or government you encounter, and understand who holds influence, how to request favors, and the current political conflicts at play.'},
+
+ {n:'Skill Proficiencies (Faction Agent)',g:'Faction Agent',d:'Insight, plus an Intelligence, Wisdom, or Charisma skill matching your faction (your choice).',fx:[{t:'skill',skills:['insight','persuasion'],grant:'prof'}]},
+ {n:'Safe Haven',g:'Faction Agent',d:'You have access to a secret network of supporters and operatives — secret signs identify them, and they can offer hidden safe houses, free lodging, or information, though they won\'t risk their lives or identities for you.'},
+
+ {n:'Skill Proficiencies (Far Traveler)',g:'Far Traveler',d:'Insight, Perception.',fx:[{t:'skill',skills:['insight','perception'],grant:'prof'}]},
+ {n:'All Eyes on You',g:'Far Traveler',d:'Your foreign accent, mannerisms, and appearance mark you as an object of fascination, giving you access to people and places normally restricted to outsiders.'},
+
+ {n:'Skill Proficiencies (Inheritor)',g:'Inheritor',d:'Survival, plus Arcana, History, or Religion (your choice).',fx:[{t:'skill',skills:['survival','history'],grant:'prof'}]},
+ {n:'Inheritance',g:'Inheritor',d:'You carry an inheritance of real significance — work with your DM on its story, its true nature, and how it might hook into the campaign as it unfolds.'},
+
+ {n:'Skill Proficiencies (Knight of the Order)',g:'Knight of the Order',d:'Persuasion, plus Arcana, History, Nature, or Religion matching your order\'s focus (your choice).',fx:[{t:'skill',skills:['persuasion','religion'],grant:'prof'}]},
+ {n:'Knightly Regard',g:'Knight of the Order',d:'Your order and sympathetic communities provide you shelter, meals, and healing when appropriate, and may occasionally offer riskier help, like rallying to your aid in a fight.'},
+
+ {n:'Skill Proficiencies (Mercenary Veteran)',g:'Mercenary Veteran',d:'Athletics, Persuasion.',fx:[{t:'skill',skills:['athletics','persuasion'],grant:'prof'}]},
+ {n:'Mercenary Life',g:'Mercenary Veteran',d:'You know mercenary companies by their emblems and leadership, can find where mercenaries gather in any region you speak the language, and can find paid work between adventures to maintain a comfortable lifestyle.'},
+
+ {n:'Skill Proficiencies (Urban Bounty Hunter)',g:'Urban Bounty Hunter',d:'Two of your choice from Deception, Insight, Persuasion, and Stealth.',fx:[{t:'skill',skills:['insight','stealth'],grant:'prof'}]},
+ {n:'Ear to the Ground',g:'Urban Bounty Hunter',d:'You have frequent contact with the segment of society your quarries move through, and can develop a reliable local contact in any city who supplies intelligence on the people and places there.'},
+
+ {n:'Skill Proficiencies (Uthgardt Tribe Member)',g:'Uthgardt Tribe Member',d:'Athletics, Survival.',fx:[{t:'skill',skills:['athletics','survival'],grant:'prof'}]},
+ {n:'Uthgardt Heritage',g:'Uthgardt Tribe Member',d:'You forage twice as effectively in the wild, and can call on the hospitality of your tribe and its allies — druid circles, nomadic elf tribes, the Harpers, and priesthoods of the First Circle among them.'},
+
+ {n:'Skill Proficiencies (Waterdhavian Noble)',g:'Waterdhavian Noble',d:'History, Persuasion.',fx:[{t:'skill',skills:['history','persuasion'],grant:'prof'}]},
+ {n:'Kept in Style',g:'Waterdhavian Noble',d:'Your name and signet cover most of your expenses in Waterdeep and the North on credit — the innkeepers bill your family estate — covering a comfortable lifestyle, or offsetting a costlier one.'}
 ];

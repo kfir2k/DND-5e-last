@@ -822,7 +822,7 @@ character:`
         ${BACKGROUND_ORDER.map(id=>`<option value="${id}">${esc(BACKGROUNDS[id].name)}</option>`).join('')}
       </select>
     </label>
-    <p class="prep-note" id="backgroundInfo">Pick a background to see what it grants.</p>
+    <p class="bg-info-text" id="backgroundInfo">Pick a background to see what it grants.</p>
     <button type="button" class="add-btn" id="bgGrantBtn" style="display:none">Grant Starting Gear &amp; Gold</button>
   </div>
   <div class="panel cp-ledger">
@@ -4422,7 +4422,7 @@ function liveRaceChips(){
 // per the simpler treatment requested over the Build tab's rail+hero styling used for Class/Race.
 function backgroundSummaryText(bg){
   const parts=[];
-  parts.push('Skills: '+bg.skills.map(k=>SKILL_NAMES[k]||k).join(', ')+'.');
+  parts.push('Skills: '+bg.skills.map(k=>SKILL_NAMES[k]||k).join(', ')+'.'+(bg.skillNote?' ('+bg.skillNote+')':''));
   if(bg.tools.length) parts.push('Proficiencies: '+bg.tools.join(', ')+'.');
   if(bg.languages) parts.push(`+${bg.languages} language${bg.languages>1?'s':''} of your choice.`);
   parts.push(`Starting gold: ${bg.gold} gp.`);
