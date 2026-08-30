@@ -223,6 +223,15 @@ body.wide-mode main{max-width:min(1700px,96vw)}
   transition:border-color .2s ease,filter .2s ease,box-shadow .2s ease;
 }
 .bThumbSm{width:40px;height:40px;border-radius:7px}
+/* Background rail items have no art assets (unlike class/race), so a centered emoji glyph
+   stands in for .bThumb's photo — same footprint, same active-state treatment via .bThumb rules
+   would need a background-image, so this is its own small rule instead. */
+.bRailIco{
+  flex:0 0 auto;width:40px;height:40px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.14);
+  transition:border-color .2s ease;
+}
+.bRailItem.active .bRailIco{border-color:var(--gold-dim)}
 .bLabel{
   font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.03em;font-size:.82rem;
   color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -246,6 +255,14 @@ body.wide-mode main{max-width:min(1700px,96vw)}
 .bMbgA,.bMbgB{filter:blur(26px) brightness(.4) saturate(1.2)}
 
 .bMiniPortraitWrap{position:absolute;left:50%;top:3%;transform:translateX(-50%);width:min(38%,340px);height:80%;pointer-events:none}
+/* Background's stage has no portrait/hero-art pair (no art assets exist for backgrounds) — a
+   simple centered sigil badge fills the same visual role instead. */
+.bBadgeStage{
+  position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);
+  width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle,rgba(255,255,255,.08),transparent 70%);
+  border:1px solid var(--border-lt);font-size:3.2rem;pointer-events:none;
+}
 .bMportA,.bMportB{
   -webkit-mask-image:radial-gradient(ellipse 60% 64% at 50% 36%,#000 52%,transparent 94%);
   mask-image:radial-gradient(ellipse 60% 64% at 50% 36%,#000 52%,transparent 94%);
@@ -3089,6 +3106,13 @@ input.sug-sheet-search{display:block;width:calc(100% - 36px);margin:0 18px 10px}
 .wiz-filmart{
   width:100%;aspect-ratio:3/4;border-radius:10px;background-size:cover;background-position:center top;
   background-color:color-mix(in srgb,var(--c,var(--gold-dim)) 35%,var(--ink));border:1px solid var(--border-lt);
+}
+/* Background filmcards have no art assets — a centered emoji glyph fills the same box instead
+   of a background-image, so the card still reads as "one of this filmstrip" not a broken image. */
+.wiz-filmart-badge{
+  width:100%;aspect-ratio:3/4;border-radius:10px;
+  background-color:color-mix(in srgb,var(--c,var(--gold-dim)) 35%,var(--ink));border:1px solid var(--border-lt);
+  display:flex;align-items:center;justify-content:center;font-size:2.6rem;
 }
 .wiz-filmcard .nm{font-family:'Cinzel',serif;font-weight:700;font-size:1rem;color:var(--gold-lt)}
 .wiz-filmcard .sub{color:var(--muted);font-size:.76rem;line-height:1.4}

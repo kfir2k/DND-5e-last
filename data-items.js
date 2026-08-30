@@ -174,7 +174,24 @@ const ITEM_RAW=[
 ["Jeweler's Loupe",'G','A folding lens for appraising and setting fine gems.',1,0],
 ['Canvas (small)','G','A primed canvas ready for paint.',2,0],
 ['Clay Pot','G','A fired clay vessel — waterproof and easily replaced.',2,0],
-['Sturdy Boots','G','Well-fitted footwear built to last.',1,0]
+['Sturdy Boots','G','Well-fitted footwear built to last.',1,0],
+// Common gear referenced by Background starting equipment (data-backgrounds.js) — generic
+// adventuring-gear items the PHB assumes every kit has but this index was missing.
+['Common Clothes','G','A plain, everyday outfit.',1,0],
+["Traveler's Clothes",'G','Sturdy clothing suited for the road.',1,0],
+['Prayer Book','G','Prayers and rites of your faith, bound for reference.',1,0],
+['Signet Ring','G','A ring bearing a personal or house crest — seals letters, proves identity.',1,0],
+['Letter of Introduction','S','A signed document vouching for you to someone of standing.',1,0],
+['Scroll of Pedigree','S','A document proving your noble lineage.',1,0],
+['Trophy','G','A memento kept from a notable kill or victory.',1,0],
+["Lucky Charm",'G',"A small keepsake carried for luck — a rabbit's foot, a smooth stone, or similar.",1,0],
+['Insignia of Rank','G','A badge or emblem marking your former military rank.',1,0],
+['Pet Mouse','G','A small, loyal rodent companion.',1,0],
+["Admirer's Favor",'G','A memento from a fan — a love letter, a lock of hair, or a keepsake.',1,0],
+['Sentimental Trinket','G','A small personal memento with no monetary value.',1,0],
+['Belaying Pin','G','A wooden pin for securing rigging — doubles as a club in a pinch.',1,0],
+["Artisan's Tools",'T',"One type of artisan's tools, your choice (smith's, carpenter's, brewer's, etc.) — proficiency applies.",1,0],
+['Old Letter','S','A letter from someone significant in your past.',1,0]
 ];
 const ITEM_DB={};
 ITEM_RAW.forEach(([n,t,d,q,cb])=>{ ITEM_DB[n.toLowerCase()]={n,t,d,q:q||1,cb:!!cb}; });
