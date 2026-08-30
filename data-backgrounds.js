@@ -1,14 +1,16 @@
-// ---------- Backgrounds (PHB + SCAG/XGE, dnd5e.wikidot.com/background:<name>) ----------
+// ---------- Backgrounds (PHB + SCAG/XGE + Curse of Strahd, dnd5e.wikidot.com/background:<name>) ----------
 // BACKGROUNDS: id -> {name, skills:[2 skill ids], tools:[proficiency strings incl. "your choice"
 // placeholders], languages:count of "your choice" languages (display/note only — never auto-added,
-// see BACKGROUND_LIB comment below), gold:flat gp, equipment:{items:[[itemName,qty],...],packs:[...]},
+// see BACKGROUND_LIB comment below), gold:flat gp, silver (optional):flat sp for the rare background
+// that starts with pocket change instead of gold, equipment:{items:[[itemName,qty],...],packs:[...]},
 // featureName: cross-ref into BACKGROUND_LIB, flavor: one-line cosmetic blurb.
-// skillNote (optional): several SCAG/XGE backgrounds grant one fixed skill plus "your choice of
-// X/Y/Z" for the second (a few, like Urban Bounty Hunter, are a free choice of 2 from a list) —
-// `skills` always holds a concrete, sensible default pair so the mechanical grant stays simple
-// (same one-array shape as every PHB background), and skillNote spells out the real choice in the
-// text summary so the player knows to adjust it on the Skills tab if they want something else.
-// No `group` field like RACES has — the 27 backgrounds here have no canonical grouping to sort by.
+// skillNote (optional): several SCAG/XGE/Ravenloft backgrounds grant one fixed skill plus "your
+// choice of X/Y/Z" for the second (a few, like Urban Bounty Hunter or Haunted One, are a free
+// choice of 2 from a list) — `skills` always holds a concrete, sensible default pair so the
+// mechanical grant stays simple (same one-array shape as every PHB background), and skillNote
+// spells out the real choice in the text summary so the player knows to adjust it on the Skills
+// tab if they want something else.
+// No `group` field like RACES has — the 28 backgrounds here have no canonical grouping to sort by.
 const BACKGROUNDS={
  acolyte:{name:'Acolyte',skills:['insight','religion'],tools:[],languages:2,gold:15,
    equipment:{items:[['Holy Symbol',1],['Prayer Book',1],['Incense (block)',5],['Vestments',1],['Common Clothes',1]],packs:[]},
@@ -101,14 +103,22 @@ const BACKGROUNDS={
    featureName:'Uthgardt Heritage',flavor:'Raised by an Uthgardt tribe, steeped in the lore of the North.'},
  waterdhaviannoble:{name:'Waterdhavian Noble',skills:['history','persuasion'],tools:['One gaming set or musical instrument (your choice)'],languages:1,gold:20,
    equipment:{items:[['Fine Clothes',1],['Signet Ring',1],['Scroll of Pedigree',1],['Flask of Common Wine',1]],packs:[]},
-   featureName:'Kept in Style',flavor:'Born into one of Waterdeep\'s noble houses, credit line included.'}
+   featureName:'Kept in Style',flavor:'Born into one of Waterdeep\'s noble houses, credit line included.'},
+ // ---- Curse of Strahd / Van Richten's Guide to Ravenloft ----
+ hauntedone:{name:'Haunted One',skills:['investigation','survival'],
+   skillNote:'both skills are your choice from Arcana, Investigation, Religion, and Survival — Investigation & Survival picked here by default',
+   tools:[],languages:2,gold:0,silver:1,
+   equipment:{items:[['Chest',1],['Crowbar',1],['Hammer',1],['Wooden Stake',3],['Holy Symbol',1],['Holy Water (flask)',1],
+     ['Manacles',1],['Mirror, Steel',1],['Oil (flask)',1],['Tinderbox',1],['Torch',3],['Sentimental Trinket',1],['Common Clothes',1]],packs:[]},
+   featureName:'Heart of Darkness',flavor:'Faced something unimaginable, and came back marked by it.'}
 };
 const BACKGROUND_ORDER=Object.keys(BACKGROUNDS);
 const BACKGROUND_ICON={acolyte:'🙏',charlatan:'🎭',criminal:'🥷',entertainer:'🎻',folkhero:'🔨',
  guildartisan:'⚒',hermit:'🕯',noble:'👑',outlander:'🏕',sage:'📜',sailor:'⚓',soldier:'🎖',urchin:'🐭',
  anthropologist:'🧭',archaeologist:'⛏',citywatch:'🔔',clancrafter:'🛠',cloisteredscholar:'📗',
  courtier:'🎩',factionagent:'🕵',fartraveler:'🧳',inheritor:'🗝',knightoftheorder:'⚜',
- mercenaryveteran:'🗡',urbanbountyhunter:'🎯',uthgardttribemember:'🪶',waterdhaviannoble:'🏛'};
+ mercenaryveteran:'🗡',urbanbountyhunter:'🎯',uthgardttribemember:'🪶',waterdhaviannoble:'🏛',
+ hauntedone:'🧛'};
 
 // ---------- Background trait library (searchable, same pick pattern as RACE_LIB) ----------
 // Exactly 2 entries per background: one carries the skill-grant `fx` (so it can be auto-synced or
@@ -195,5 +205,8 @@ const BACKGROUND_LIB=[
  {n:'Uthgardt Heritage',g:'Uthgardt Tribe Member',d:'You forage twice as effectively in the wild, and can call on the hospitality of your tribe and its allies — druid circles, nomadic elf tribes, the Harpers, and priesthoods of the First Circle among them.'},
 
  {n:'Skill Proficiencies (Waterdhavian Noble)',g:'Waterdhavian Noble',d:'History, Persuasion.',fx:[{t:'skill',skills:['history','persuasion'],grant:'prof'}]},
- {n:'Kept in Style',g:'Waterdhavian Noble',d:'Your name and signet cover most of your expenses in Waterdeep and the North on credit — the innkeepers bill your family estate — covering a comfortable lifestyle, or offsetting a costlier one.'}
+ {n:'Kept in Style',g:'Waterdhavian Noble',d:'Your name and signet cover most of your expenses in Waterdeep and the North on credit — the innkeepers bill your family estate — covering a comfortable lifestyle, or offsetting a costlier one.'},
+
+ {n:'Skill Proficiencies (Haunted One)',g:'Haunted One',d:'Two of your choice from Arcana, Investigation, Religion, and Survival.',fx:[{t:'skill',skills:['investigation','survival'],grant:'prof'}]},
+ {n:'Heart of Darkness',g:'Haunted One',d:"Those who look into your eyes can see you've faced unimaginable horror. Commoners treat you with deference and offer aid, and unless you've proven dangerous, they'll fight alongside you against your enemies."}
 ];

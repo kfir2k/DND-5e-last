@@ -822,6 +822,7 @@ character:`
         ${BACKGROUND_ORDER.map(id=>`<option value="${id}">${esc(BACKGROUNDS[id].name)}</option>`).join('')}
       </select>
     </label>
+    <div class="bg-skill-grant" id="backgroundSkillGrant" style="display:none"></div>
     <p class="bg-info-text" id="backgroundInfo">Pick a background to see what it grants.</p>
     <button type="button" class="add-btn" id="bgGrantBtn" style="display:none">Grant Starting Gear &amp; Gold</button>
   </div>
@@ -1726,17 +1727,19 @@ function addPack(pack){
 function wireBackgroundGrantBtn(){
   $('#bgGrantBtn')?.addEventListener('click',()=>{
     const bg=BACKGROUNDS[S.backgroundId]; if(!bg) return;
-    const snap={equipment:eqSnapshot(),gold:num(S.money.gp),otherProfs:S.otherProfs.slice()};
+    const snap={equipment:eqSnapshot(),money:{...S.money},otherProfs:S.otherProfs.slice()};
     (bg.equipment.items||[]).forEach(([name,qty])=>addPackItem(name,qty));
     (bg.equipment.packs||[]).forEach(packName=>{
       const pack=PACKS.find(p=>p.n===packName);
       if(pack) pack.items.forEach(([name,qty])=>addPackItem(name,qty));
     });
     S.money.gp=num(S.money.gp)+num(bg.gold);
+    if(bg.silver) S.money.sp=num(S.money.sp)+num(bg.silver);
     (bg.tools||[]).forEach(t=>{ if(!S.otherProfs.some(p=>p.toLowerCase()===t.toLowerCase())) S.otherProfs.push(t); });
     S.eqTab='ALL';
-    eqToast(`Added ${bg.name}'s starting gear, ${bg.gold} gp`+(bg.tools.length?', tools':''),()=>{
-      S.equipment=snap.equipment; S.money.gp=snap.gold; S.otherProfs=snap.otherProfs;
+    const coinTxt=[bg.gold?bg.gold+' gp':'',bg.silver?bg.silver+' sp':''].filter(Boolean).join(', ')||'no coin';
+    eqToast(`Added ${bg.name}'s starting gear, ${coinTxt}`+(bg.tools.length?', tools':''),()=>{
+      S.equipment=snap.equipment; S.money=snap.money; S.otherProfs=snap.otherProfs;
       renderEquipment(); renderProficiencies(); renderOverviewWealth(); save();
     });
     renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); renderProficiencies(); save();
@@ -4420,22 +4423,33 @@ function liveRaceChips(){
 }
 // Plain-text summary for the Character tab's Background picker — no chips/badges, just sentences,
 // per the simpler treatment requested over the Build tab's rail+hero styling used for Class/Race.
+// Skill proficiencies are surfaced separately (see renderBackgroundInfo's #backgroundSkillGrant) —
+// this covers everything else a background grants, in plain sentences.
 function backgroundSummaryText(bg){
   const parts=[];
-  parts.push('Skills: '+bg.skills.map(k=>SKILL_NAMES[k]||k).join(', ')+'.'+(bg.skillNote?' ('+bg.skillNote+')':''));
   if(bg.tools.length) parts.push('Proficiencies: '+bg.tools.join(', ')+'.');
   if(bg.languages) parts.push(`+${bg.languages} language${bg.languages>1?'s':''} of your choice.`);
-  parts.push(`Starting gold: ${bg.gold} gp.`);
+  const coinParts=[];
+  if(bg.gold) coinParts.push(bg.gold+' gp');
+  if(bg.silver) coinParts.push(bg.silver+' sp');
+  parts.push('Starting funds: '+(coinParts.join(', ')||'none')+'.');
   const itemNames=(bg.equipment.items||[]).map(([n,q])=>q>1?`${n} ×${q}`:n);
   if(itemNames.length) parts.push('Equipment: '+itemNames.join(', ')+'.');
   parts.push(`Feature — ${bg.featureName}: `+(BACKGROUND_LIB.find(e=>e.g===bg.name&&e.n===bg.featureName)||{}).d);
   return parts.join(' ');
 }
 function renderBackgroundInfo(){
-  const sel=$('#backgroundSelect'), info=$('#backgroundInfo'), btn=$('#bgGrantBtn');
+  const sel=$('#backgroundSelect'), grant=$('#backgroundSkillGrant'), info=$('#backgroundInfo'), btn=$('#bgGrantBtn');
   if(!sel) return;
   sel.value=S.backgroundId||'';
   const bg=BACKGROUNDS[S.backgroundId];
+  if(bg){
+    grant.innerHTML='✓ Grants proficiency: <b>'+bg.skills.map(k=>esc(SKILL_NAMES[k]||k)).join('</b>, <b>')+'</b>'+
+      (bg.skillNote?` <span class="bg-skill-note">(${esc(bg.skillNote)})</span>`:'');
+    grant.style.display='';
+  }else{
+    grant.innerHTML=''; grant.style.display='none';
+  }
   info.textContent=bg?backgroundSummaryText(bg):'Pick a background to see what it grants.';
   btn.style.display=bg?'':'none';
 }

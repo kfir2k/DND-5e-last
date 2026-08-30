@@ -2122,6 +2122,16 @@ select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
   background:var(--panel2);border:1px solid var(--border-lt);border-left:3px solid var(--gold);
   border-radius:8px;padding:10px 14px;margin:6px 0 10px;
 }
+/* The mechanical "this actually grants a skill" fact gets its own line, visually separate from
+   the descriptive text above — a distinct green tone reads as "proficiency granted" at a glance
+   instead of blending into the rest of the background's flavor/equipment prose. */
+.bg-skill-grant{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  background:rgba(125,194,106,.14);border:1px solid #7dc26a;color:var(--gold-lt);
+  font-size:.9rem;font-weight:700;border-radius:8px;padding:8px 14px;margin:8px 0;
+}
+.bg-skill-grant b{color:#7dc26a}
+.bg-skill-note{font-weight:400;font-style:italic;color:var(--muted);font-size:.82rem}
 
 /* ---------- Tome Grid: locked/reading mode's spell cards ---------- */
 /* A responsive multi-column grid instead of one full-width row per spell — the old row always

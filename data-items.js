@@ -199,7 +199,8 @@ const ITEM_RAW=[
 ["Scholar's Robes",'G','Formal robes marking you as a scholar.',1,0],
 ['Faction Badge','G','A badge or emblem marking you as a member of your faction.',1,0],
 ['Jewelry (Small Piece)','G',"A small piece of jewelry, valuable in your homeland's style.",1,0],
-['Totemic Token','G','A carved token or tattoo set marking your tribal loyalty.',1,0]
+['Totemic Token','G','A carved token or tattoo set marking your tribal loyalty.',1,0],
+['Wooden Stake','G','A sharpened stake for driving through the heart of a vampire.',3,0]
 ];
 const ITEM_DB={};
 ITEM_RAW.forEach(([n,t,d,q,cb])=>{ ITEM_DB[n.toLowerCase()]={n,t,d,q:q||1,cb:!!cb}; });
