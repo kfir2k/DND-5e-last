@@ -2079,9 +2079,10 @@ function renderFeatures(){
     let stage='';
     if(d.t==='stat') stage=`
       <select data-fxa="${i}">${Object.entries(FX_STATS).map(([v,l])=>`<option value="${v}" ${d.stat===v?'selected':''}>${l}</option>`).join('')}</select>
-      <input type="text" style="width:150px" value="${esc(d.n??1)}" data-fxn="${i}" placeholder="2 / PROF / DEX+1" title="A number, or an auto-calc formula: PROF, LVL, STR, DEX, CON, INT, WIS, CHA (ability modifiers) — e.g. PROF, DEX+1, 2*PROF. Updates itself on level-up.">
+      <input type="text" style="width:150px" value="${esc(d.n??1)}" data-fxn="${i}" placeholder="2 / PROF / LVL / DEX+1" title="A number, or an auto-calc formula: PROF, LVL, STR, DEX, CON, INT, WIS, CHA (ability modifiers) — e.g. PROF, LVL, 2*LVL, DEX+1. Updates itself on level-up.">
       <span class="fx-amt-hint">= ${fmt(fxAmount(d.n??1))}</span>
-      <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}`;
+      <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}
+      <span class="prep-note" style="flex-basis:100%;margin:0">Formulas work here too: PROF, LVL, STR…CHA (e.g. LVL for "+1 per level", 2*LVL, DEX+1) — recalculates automatically as you level up.</span>`;
     else if(d.t==='skill') stage=`
       ${skillPickHTML(i,draftSkills)}
       <select data-fxg="${i}"><option value="prof" ${d.grant!=='exp'?'selected':''}>Proficiency</option><option value="exp" ${d.grant==='exp'?'selected':''}>Expertise</option></select>

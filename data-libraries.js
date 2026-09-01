@@ -189,7 +189,11 @@ const FEATURE_LIB=[
  {n:'Thief\'s Reflexes',g:'Rogue — Thief',l:17,d:'Take two turns during the first round of combat: one at your normal initiative, one at initiative −10.',combat:true},
  // Sorcerer: Draconic Bloodline
  {n:'Dragon Ancestor',g:'Sorcerer — Draconic Bloodline',l:1,d:'Choose a dragon type; speak/read/write Draconic; double proficiency on CHA checks interacting with dragons.'},
- {n:'Draconic Resilience',g:'Sorcerer — Draconic Bloodline',l:1,d:'+1 HP per sorcerer level; AC = 13 + DEX mod when not wearing armor.'},
+ // The HP half is a flat +1/level, wired live via the LVL formula so it keeps up with level-ups
+ // automatically. The AC half ("13 + DEX when unarmored") isn't expressible as an fx — 'stat'
+ // effects only ever add to the computed base AC, they can't replace its formula — so it's left
+ // as text, same as Barbarian/Monk Unarmored Defense: use the AC override in Inventory for that.
+ {n:'Draconic Resilience',g:'Sorcerer — Draconic Bloodline',l:1,d:'+1 HP per sorcerer level; AC = 13 + DEX mod when not wearing armor. Use the AC override in Inventory for the AC half.',fx:[{t:'stat',stat:'hpmax',n:'LVL'}]},
  {n:'Elemental Affinity',g:'Sorcerer — Draconic Bloodline',l:6,d:'Add your CHA mod to the damage of one spell matching your dragon\'s damage type; spend 1 sorcery point for 1 hour of resistance to that type.',combat:true},
  {n:'Dragon Wings',g:'Sorcerer — Draconic Bloodline',l:14,d:'Bonus action: sprout wings, fly speed equal to your speed (no heavy armor).',combat:true},
  {n:'Draconic Presence',g:'Sorcerer — Draconic Bloodline',l:18,d:'Action: spend 5 sorcery points to exude awe or fear in a 60 ft. aura, charming or frightening creatures (WIS save).',combat:true},
