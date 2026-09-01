@@ -16,6 +16,10 @@ function defaultState(){
     abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},
     saveProf:{str:false,dex:false,con:false,int:false,wis:false,cha:false},
     skills:Object.fromEntries(SKILLS.map(s=>[s[0],0])), // 0 none, 1 proficient, 2 expertise
+    classSkillPicks:[], // which skills came from the class's "choose N" budget (see CLASS_SKILL_CHOICES)
+    classSkillsMigrated:false, // true once the one-time backfill in migrateClassSkillPicks() has run
+    raceSkillPicks:{}, // per race-trait "choose N" budget, keyed by RACE_LIB entry name (see RACE_SKILL_CHOICES)
+    raceSkillsMigrated:false, // true once the one-time backfill in migrateRaceSkillPicks() has run
     favSkills:[], // skills pinned onto Overview's Trained Skills card despite 0 proficiency
     ovHidden:[], // trained/expertise skills the player has hidden from Overview's Trained Skills card
     // Combat
@@ -518,7 +522,12 @@ skills:`
       <span class="prep-note sense-note">Tap a save tile or skill circle: proficiency → expertise → none · <span style="color:var(--green)">green</span> = granted by a feature (already counted) · <span style="color:var(--gold)">★</span> = situational reminder, apply it yourself.</span>
     </div>
   </div>
-  <div class="panel"><h2>Skills</h2><div id="skillList"></div></div>`,
+  <div class="panel"><h2>Skills<button class="cls-train-trigger" id="classTrainBtn" type="button" style="display:none"></button></h2>
+    <div id="skillList"></div>
+  </div>
+  <div class="modal-bg" id="clsModalBg">
+    <div class="modal prof-modal" id="clsModalPanel"></div>
+  </div>`,
 
 spells:`
   <div class="grimoire">
@@ -911,6 +920,8 @@ function load(){
   migrateAttacks();
   migrateNotes();
   migrateBuild();
+  migrateClassSkillPicks();
+  migrateRaceSkillPicks();
 }
 // Build overrides and feature auto-granting arrived after these characters were already written.
 // A subclass typed before subclassClassId existed is adopted by the current class every load,
@@ -943,6 +954,47 @@ function migrateBuild(){
     const cur=f.get();
     if(bovBlank(cur)) return;
     if(JSON.stringify(cur)!==JSON.stringify(f.rules())) S.buildOverride[f.key]=cur;
+  });
+}
+// Class skill *picks* (which proficient skills came from the class's "choose N" budget) is new
+// bookkeeping — older saves have the proficiencies (S.skills) but no record of which ones were the
+// class's choice vs. anything else. Backfilled once, best-effort: skills in the class's option list
+// that are plain proficient (not expertise) and not already covered by a race/background/feat grant
+// (so a grant elsewhere never gets miscredited as a class pick). Gated by classSkillsMigrated so it
+// never re-fires and re-adds skills a player has since deliberately unpicked down to fewer than the max.
+function migrateClassSkillPicks(){
+  if(S.classSkillsMigrated) return;
+  S.classSkillsMigrated=true;
+  if(!Array.isArray(S.classSkillPicks)) S.classSkillPicks=[];
+  if(S.classSkillPicks.length) return; // already has picks (e.g. from the wizard) — nothing to backfill
+  const spec=CLASS_SKILL_CHOICES[S.classId];
+  if(!spec) return;
+  SKILLS.forEach(([k])=>{
+    if(S.classSkillPicks.length>=spec.count) return;
+    if(spec.options.includes(k) && S.skills[k]===1 && fxSkillGrant(k)===0) S.classSkillPicks.push(k);
+  });
+}
+// Same story one level down: a race trait's own "N skills of your choice" grant (RACE_SKILL_CHOICES)
+// is new bookkeeping too. Backfilled once per matching trait, same heuristic as
+// migrateClassSkillPicks() — and explicitly skips anything already claimed by a class pick, so a
+// skill shared by both budgets (plausible given how much overlap class/race skill lists have)
+// isn't double-credited as "chosen" in two places for one single proficiency.
+function migrateRaceSkillPicks(){
+  if(S.raceSkillsMigrated) return;
+  S.raceSkillsMigrated=true;
+  if(!S.raceSkillPicks||typeof S.raceSkillPicks!=='object') S.raceSkillPicks={};
+  const ri=raceInfo(); if(!ri) return;
+  const raceEntries=RACE_LIB.filter(e=>e.g===ri.r.name && RACE_SKILL_CHOICES[e.n] && raceTraitApplies(e.n,(ri.sub&&ri.sub.name)||''));
+  raceEntries.forEach(e=>{
+    if(Array.isArray(S.raceSkillPicks[e.n]) && S.raceSkillPicks[e.n].length) return; // already has picks
+    const rspec=RACE_SKILL_CHOICES[e.n], picks=[];
+    SKILLS.forEach(([k])=>{
+      if(picks.length>=rspec.count) return;
+      if(!rspec.options.includes(k)) return;
+      if((S.classSkillPicks||[]).includes(k)) return;
+      if(S.skills[k]===1 && fxSkillGrant(k)===0) picks.push(k);
+    });
+    S.raceSkillPicks[e.n]=picks;
   });
 }
 // Notes predate tags/session (the Session Timeline layout) — backfill both on any older save
@@ -1124,7 +1176,135 @@ function skillInlineFxHTML(k,ab){
   });
   return parts.join('<span class="ov-fx-sep">;</span> ');
 }
+// One "choose N skills" section inside the Proficiencies drawer — shared shape for the class's own
+// budget and any race trait that grants "N skills of your choice" (RACE_SKILL_CHOICES). `picks` is
+// the live array this section reads/mutates; `src` tags each chip so the shared click handler in
+// renderClassSkillPicker() knows which picks array and budget it belongs to.
+function skillChoiceSectionHTML(label,count,options,picks,src){
+  const pips=Array.from({length:count},(_,i)=>`<span class="prof-pip ${i<picks.length?'filled':''}"></span>`).join('');
+  const chips=options.map(k=>{
+    const sk=SKILLS.find(s=>s[0]===k);
+    const sel=picks.includes(k);
+    const full=!sel && picks.length>=count;
+    return `<button class="wiz-skillchip ${sel?'sel':''} ${full?'off':''}" data-skillpick="${k}" data-picksrc="${esc(src)}" ${full?'disabled':''} type="button">
+      <span class="nm">${sk[1]}</span><span class="ab">${sk[2].toUpperCase()}</span>
+    </button>`;
+  }).join('');
+  return `<div class="prof-section">
+    <div class="prof-section-head"><b>${esc(label)}</b><i>${picks.length}/${count} chosen</i></div>
+    <div class="prof-pips">${pips}</div>
+    <div class="wiz-skillgrid">${chips}</div>
+  </div>`;
+}
+// Every "choose N skills" budget open to the current build: the class's own (CLASS_SKILL_CHOICES)
+// plus any race/subrace trait that grants one (RACE_SKILL_CHOICES) — Half-Elf's Skill Versatility,
+// Variant Human's Skill Versatility, Changeling Instincts, Kenku Training, Hunter's Lore, etc.
+// Revisitable any time (not just once in the character-creation wizard) from a modal opened off a
+// small trigger chip in the "Skills" panel header, instead of sitting permanently on screen — same
+// .modal-bg/.modal idiom as the spell detail modal (openSpellModal/spellModalHTML), content fully
+// rebuilt into #clsModalPanel on every call so it's never stale, open or not.
+// Hidden entirely once no source applies (custom/blank class + a heritage with no such trait).
+function renderClassSkillPicker(){
+  const btn=$('#classTrainBtn'); if(!btn) return;
+  if(!Array.isArray(S.classSkillPicks)) S.classSkillPicks=[];
+  if(!S.raceSkillPicks||typeof S.raceSkillPicks!=='object') S.raceSkillPicks={};
+
+  const spec=CLASS_SKILL_CHOICES[S.classId];
+  // Drop picks that aren't in *this* class's own options — leftovers from a class chosen earlier
+  // (Build tab lets you swap classes anytime) would otherwise silently keep eating into the new
+  // class's budget without ever showing as a checked chip, which looks like a phantom pre-pick
+  // that can't be undone. A pick that happens to also be in the new class's list is kept as-is.
+  if(spec) S.classSkillPicks=S.classSkillPicks.filter(k=>spec.options.includes(k));
+
+  const ri=raceInfo();
+  const raceEntries = ri
+    ? RACE_LIB.filter(e=>e.g===ri.r.name && RACE_SKILL_CHOICES[e.n] && raceTraitApplies(e.n,(ri.sub&&ri.sub.name)||''))
+    : [];
+
+  if(!spec && !raceEntries.length){ btn.style.display='none'; closeProficiencyModal(); return; }
+
+  const cls=CLASSES[S.classId];
+  const accent=CLASS_COLOR[S.classId]||'#c9a227';
+  // Trailing VS16 forces color-emoji presentation — a couple of CLASS_ICON entries (fighter's
+  // crossed-swords, monk's yin-yang) default to a thin monochrome text glyph without it, which
+  // would otherwise show as a bare, illegible sliver at the watermark's large size.
+  const icon=(CLASS_ICON[S.classId]||'\u{1F393}')+'️';
+
+  // src 'class' -> S.classSkillPicks; src 'race:<trait name>' -> S.raceSkillPicks[<trait name>].
+  // Built once here and read back by the click handler below, so a click always mutates the exact
+  // same array a section was rendered from — no re-deriving state from the clicked DOM node.
+  const sources=new Map();
+  let totalPicked=0, totalCount=0;
+  const sectionsHTML=[];
+  if(spec){
+    sources.set('class',{picks:S.classSkillPicks,count:spec.count});
+    totalPicked+=S.classSkillPicks.length; totalCount+=spec.count;
+    sectionsHTML.push(skillChoiceSectionHTML(cls?cls.name:'Class',spec.count,spec.options,S.classSkillPicks,'class'));
+  }
+  raceEntries.forEach(e=>{
+    const rspec=RACE_SKILL_CHOICES[e.n];
+    if(!Array.isArray(S.raceSkillPicks[e.n])) S.raceSkillPicks[e.n]=[];
+    S.raceSkillPicks[e.n]=S.raceSkillPicks[e.n].filter(k=>rspec.options.includes(k));
+    const picks=S.raceSkillPicks[e.n], src='race:'+e.n;
+    sources.set(src,{picks,count:rspec.count});
+    totalPicked+=picks.length; totalCount+=rspec.count;
+    sectionsHTML.push(skillChoiceSectionHTML(e.n,rspec.count,rspec.options,picks,src));
+  });
+
+  btn.style.display='';
+  btn.style.setProperty('--c',accent);
+  btn.innerHTML=`<span class="ctt-icon">${icon}</span><span class="ctt-text"><b>Proficiencies</b><i>${totalPicked}/${totalCount} chosen</i></span><span class="ctt-chev">›</span>`;
+
+  const sub = spec && raceEntries.length ? `Skills granted by your class and your heritage.`
+    : spec ? `Skills granted by your class.`
+    : `Skills granted by your heritage.`;
+  const panel=$('#clsModalPanel');
+  panel.style.setProperty('--c',accent);
+  panel.innerHTML=`
+    <button class="close-x" data-profmodalclose type="button">✕</button>
+    <span class="prof-modal-watermark">${icon}</span>
+    <div class="prof-modal-head">
+      <div class="prof-modal-title">Choose Proficiencies</div>
+      <div class="prof-modal-sub">${sub}</div>
+    </div>
+    <div class="prof-modal-body">${sectionsHTML.join('')}</div>`;
+  $$('[data-skillpick]').forEach(b=>b.addEventListener('click',()=>{
+    const k=b.dataset.skillpick;
+    const {picks,count}=sources.get(b.dataset.picksrc);
+    const i=picks.indexOf(k);
+    if(i>-1){
+      picks.splice(i,1);
+      if(S.skills[k]===1) S.skills[k]=0; // only clear a dot this pick was solely responsible for
+    }else{
+      if(picks.length>=count) return;
+      picks.push(k);
+      if(S.skills[k]<1) S.skills[k]=1;
+    }
+    renderSkills(); recalc(); save();
+  }));
+}
+function openProficiencyModal(){
+  if($('#classTrainBtn').style.display==='none') return;
+  $('#clsModalBg').classList.add('open');
+}
+function closeProficiencyModal(){
+  const bg=$('#clsModalBg'); if(!bg) return;
+  bg.classList.remove('open');
+}
+// Same delegated-click/backdrop/Escape wiring as wireSpellModal — the panel's content is rebuilt
+// by renderClassSkillPicker() on every render, so this only ever needs to own open/close.
+function wireProficiencyModal(){
+  $('#classTrainBtn').addEventListener('click',openProficiencyModal);
+  $('#clsModalPanel').addEventListener('click',e=>{
+    if(e.target.closest('[data-profmodalclose]')) closeProficiencyModal();
+  });
+  $('#clsModalBg').addEventListener('click',e=>{
+    if(e.target.id==='clsModalBg') closeProficiencyModal();
+  });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#clsModalBg').classList.contains('open')) closeProficiencyModal(); });
+}
 function renderSkills(){
+  renderClassSkillPicker();
   // Grouped by ability score (STR, DEX, CON, INT, WIS, CHA) — matches the paper sheet's layout
   // and reads cleaner than one long A-Z list. The ability is shown once per group header instead
   // of repeated on every row, which also frees up room.
@@ -1138,12 +1318,18 @@ function renderSkills(){
       // terse feature badges, on their own second line under the row. Hovering rises a small
       // animated tooltip with just the "when" condition (e.g. "in favored terrain") — kept short.
       const badges=skillBadgesHTML(k,abKey);
+      const classTag=(S.classSkillPicks||[]).includes(k)
+        ? `<span class="sk-classtag" style="--c:${CLASS_COLOR[S.classId]||'#c9a227'}" title="${esc(CLASSES[S.classId]?CLASSES[S.classId].name:'Class')} pick">${CLASS_ICON[S.classId]||'🎓'}</span>`
+        : '';
+      const raceTraitPick=Object.keys(S.raceSkillPicks||{}).find(name=>(S.raceSkillPicks[name]||[]).includes(k));
+      const raceTag=raceTraitPick ? `<span class="sk-classtag sk-racetag" title="${esc(raceTraitPick)} pick">◈</span>` : '';
       return `
       <div class="skill-item">
         <div class="skill-row">
           <button class="dot ${dotCls}" data-skill="${k}" title="${dotTitle}"></button>
           <span class="bonus" data-skillbonus="${k}">+0</span>
           <span class="sk-name">${label}</span>
+          ${classTag}${raceTag}
         </div>
         ${badges?`<div class="skill-fx-row">${badges}</div>`:''}
       </div>`;
@@ -4747,7 +4933,7 @@ function applyBuild(){
   renderBuildNote();
   renderBuildCustom();
   renderBackgroundInfo();
-  renderAsi(); renderSaves(); renderSpellLevels(); renderFeatures(); syncBound(); recalc(); save();
+  renderAsi(); renderSaves(); renderSpellLevels(); renderFeatures(); renderSkills(); syncBound(); recalc(); save();
 }
 // The build summary line. Each derived value reads from the sheet (so an override shows *your*
 // number, not the rules one) and is marked ✎ when you've taken it over, so the summary never
@@ -5860,7 +6046,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

@@ -426,6 +426,19 @@ const RACE_LIB=[
  {n:'Magic Resistance',g:'Yuan-Ti',d:'Advantage on saving throws against spells and other magical effects.'},
  {n:'Poison Immunity',g:'Yuan-Ti',d:'Immune to poison damage and the poisoned condition.'}
 ];
+// A handful of RACE_LIB entries above grant "N skills of your choice" rather than a fixed skill —
+// same shape as CLASS_SKILL_CHOICES (data-classes-races.js), keyed by the exact trait name so
+// app.js's proficiency picker (renderClassSkillPicker) can match it against whichever race/subrace
+// traits currently apply (raceTraitApplies). Traits that grant *specific* named skills with no
+// choice involved (Cat's Talent, Sneaky, Silent Feathers, ...) aren't listed here — there's nothing
+// to pick. "of your choice" with no list means any skill, so options is every SKILLS key.
+const RACE_SKILL_CHOICES={
+  'Skill Versatility (Variant Human)':{count:1,options:SKILLS.map(s=>s[0])},
+  'Skill Versatility':{count:2,options:SKILLS.map(s=>s[0])}, // Half-Elf
+  'Changeling Instincts':{count:2,options:['deception','insight','intimidation','performance','persuasion']},
+  'Kenku Training':{count:2,options:['acrobatics','deception','stealth','sleight']},
+  "Hunter's Lore":{count:2,options:['animal','nature','perception','stealth','survival']},
+};
 
 const FEATS=['Actor','Alert','Artificer Initiate','Athlete','Bountiful Luck','Charger','Chef',
 'Crossbow Expert','Crusher','Defensive Duelist','Dragon Fear','Dragon Hide','Drow High Magic',

@@ -39,6 +39,25 @@ const CLASSES = {
   warlock:  {name:'Warlock',  hd:8, saves:['wis','cha'],cast:'pact',ab:'cha'},
   wizard:   {name:'Wizard',   hd:6, saves:['int','wis'],cast:'full',ab:'int'}
 };
+// Which skills each class can choose its starting proficiencies from, and how many — the "choose N
+// from this list" rule from the class's PHB proficiencies entry. Used both by the character-creation
+// wizard (wizard.js) and by the Skills tab's live "Class Training" picker (app.js), so a player can
+// revisit this choice at any time, not just once during creation.
+const CLASS_SKILL_CHOICES={
+  barbarian:{count:2,options:['animal','athletics','intimidation','nature','perception','survival']},
+  bard:{count:3,options:SKILLS.map(s=>s[0])},
+  cleric:{count:2,options:['history','insight','medicine','persuasion','religion']},
+  druid:{count:2,options:['arcana','animal','insight','medicine','nature','perception','religion','survival']},
+  fighter:{count:2,options:['acrobatics','animal','athletics','history','insight','intimidation','perception','survival']},
+  monk:{count:2,options:['acrobatics','athletics','history','insight','religion','stealth']},
+  paladin:{count:2,options:['athletics','insight','intimidation','medicine','persuasion','religion']},
+  ranger:{count:3,options:['animal','athletics','insight','investigation','nature','perception','stealth','survival']},
+  rogue:{count:4,options:['acrobatics','athletics','deception','insight','intimidation','investigation','perception','performance','persuasion','sleight','stealth']},
+  sorcerer:{count:2,options:['arcana','deception','insight','intimidation','persuasion','religion']},
+  warlock:{count:2,options:['arcana','deception','history','intimidation','investigation','nature','religion']},
+  wizard:{count:2,options:['arcana','history','insight','investigation','medicine','religion']},
+  bloodhunter:{count:3,options:['acrobatics','arcana','athletics','history','insight','investigation','religion','survival']},
+};
 // Flavor-color per class (the same elemental-accent language used everywhere else on the sheet)
 // so the Build screen feels like it's forging a character instead of filling out a form.
 const CLASS_ICON={barbarian:'🪓',bloodhunter:'🩸',bard:'🎵',cleric:'✨',druid:'🍃',fighter:'⚔',monk:'☯',

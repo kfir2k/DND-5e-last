@@ -1,7 +1,8 @@
 // ---------- Character Wizard: guided, step-by-step creation ----------
 // Loaded after app.js — reuses its globals ($, $$, esc, num, defaultState, createChar,
 // openCharSelect, CLASSES, RACES, RACE_IMG, CLASS_COLOR, CLASS_ICON, CLASS_FLAVOR, SKILLS,
-// ABILITIES, WEAPONS, ARMORS, ITEM_DB, PACKS, FEATURE_LIB, subclassNamesForClass).
+// ABILITIES, WEAPONS, ARMORS, ITEM_DB, PACKS, FEATURE_LIB, subclassNamesForClass,
+// CLASS_SKILL_CHOICES).
 // The wizard keeps its own isolated draft (WIZ) and never touches the live S — the only point
 // it touches real storage is the single createChar(finalData) call when the hero is forged.
 // Backgrounds are intentionally left out — the sheet doesn't model them yet.
@@ -15,22 +16,6 @@ const WIZ_CONCEPTS=[
   {id:'face',label:'Charm & Song',ico:'🎵',classes:['bard','warlock'],c:'#d9599b'},
   {id:'grim',label:'Blood & Vengeance',ico:'🩸',classes:['bloodhunter','ranger'],c:'#9c2b3c'},
 ];
-
-const WIZ_CLASS_SKILLS={
-  barbarian:{count:2,options:['animal','athletics','intimidation','nature','perception','survival']},
-  bard:{count:3,options:SKILLS.map(s=>s[0])},
-  cleric:{count:2,options:['history','insight','medicine','persuasion','religion']},
-  druid:{count:2,options:['arcana','animal','insight','medicine','nature','perception','religion','survival']},
-  fighter:{count:2,options:['acrobatics','animal','athletics','history','insight','intimidation','perception','survival']},
-  monk:{count:2,options:['acrobatics','athletics','history','insight','religion','stealth']},
-  paladin:{count:2,options:['athletics','insight','intimidation','medicine','persuasion','religion']},
-  ranger:{count:3,options:['animal','athletics','insight','investigation','nature','perception','stealth','survival']},
-  rogue:{count:4,options:['acrobatics','athletics','deception','insight','intimidation','investigation','perception','performance','persuasion','sleight','stealth']},
-  sorcerer:{count:2,options:['arcana','deception','insight','intimidation','persuasion','religion']},
-  warlock:{count:2,options:['arcana','deception','history','intimidation','investigation','nature','religion']},
-  wizard:{count:2,options:['arcana','history','insight','investigation','medicine','religion']},
-  bloodhunter:{count:3,options:['acrobatics','arcana','athletics','history','insight','investigation','religion','survival']},
-};
 
 const WIZ_FIGHTING_STYLES=[
   {id:'archery',name:'Archery',desc:'+2 bonus to attack rolls you make with ranged weapons.'},
@@ -287,7 +272,7 @@ function wizStepReady(i){
     }
     case 2: return !!WIZ.classId;
     case 3: return true;
-    case 4: { const spec=WIZ_CLASS_SKILLS[WIZ.classId]; return !spec || WIZ.skills.length===spec.count; }
+    case 4: { const spec=CLASS_SKILL_CHOICES[WIZ.classId]; return !spec || WIZ.skills.length===spec.count; }
     case 5: {
       if(!cls) return false;
       if(WIZ.classId==='fighter' && !WIZ.fightingStyle) return false;
@@ -408,7 +393,7 @@ function sceneAbilities(){
 
 function sceneSkills(){
   const cls=CLASSES[WIZ.classId];
-  const spec=WIZ_CLASS_SKILLS[WIZ.classId];
+  const spec=CLASS_SKILL_CHOICES[WIZ.classId];
   if(!spec){
     return `<div class="wiz-eyebrow">Training</div><h1>No Formal Training Needed</h1><p class="wiz-lede">This path grants no class skill choices — move on when you're ready.</p>`;
   }
@@ -633,6 +618,7 @@ function wizFinalize(){
   data.skills=Object.fromEntries(SKILLS.map(s=>[s[0],0]));
   WIZ.skills.forEach(k=>data.skills[k]=1);
   WIZ.expertise.forEach(k=>data.skills[k]=2);
+  data.classSkillPicks=WIZ.skills.slice();
 
   if(cls.cast){
     data.spellClass=cls.name; data.spellAbility=cls.ab;
@@ -729,7 +715,7 @@ function wizWireScene(){
     wizRenderSceneInner();
   });
   root.querySelectorAll('[data-skillpick]').forEach(el=>el.addEventListener('click',()=>{
-    const k=el.dataset.skillpick, spec=WIZ_CLASS_SKILLS[WIZ.classId];
+    const k=el.dataset.skillpick, spec=CLASS_SKILL_CHOICES[WIZ.classId];
     const i=WIZ.skills.indexOf(k);
     if(i>-1) WIZ.skills.splice(i,1);
     else if(WIZ.skills.length<spec.count) WIZ.skills.push(k);
