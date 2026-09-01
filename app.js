@@ -1071,6 +1071,11 @@ function bindAll(){
       // default (see BUILD_FIELDS). Without this the value looked editable but the next tap on
       // the Build tab stamped the computed one straight back over it.
       if(buildField(el.dataset.bind)){ bovClaim(el.dataset.bind); renderBuildNote(); renderBuildCustom(); }
+      // Same trap for AC: with Auto AC on (Equipment tab), recalc() below stamps the computed
+      // total straight back over whatever was just typed, so a manual edit never visibly stuck.
+      // Typing directly into the AC field is the player taking hand control of it — flip Auto AC
+      // off so the typed value survives, same as claiming a build-derived field above.
+      if(el.dataset.bind==='ac'&&S.equip.acAuto){ S.equip.acAuto=false; renderHudControls(); }
       syncBound(el.dataset.bind,el);
       if(el.tagName==='TEXTAREA') autoGrow(el);
       recalc(); save();
