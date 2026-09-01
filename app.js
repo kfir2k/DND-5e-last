@@ -4804,6 +4804,212 @@ function renderAsi(){
   });
 }
 
+// ---------- Level Up modal ----------
+// A celebratory one-screen walkthrough for the moment "gain a level" actually happens: how much
+// HP you gained, whether this level hands you an ASI or a Feat (as two big tappable cards — the
+// actual decision, so it gets the room), and a reminder of what's new tucked behind a collapsed
+// disclosure instead of crowding the choice out. It deliberately reuses the Build tab's own ASI
+// machinery (asiEntry, asiLinkedFeat, syncAsiFeat) instead of a parallel picker — picking a Feat
+// here creates the exact same linked Features-tab entry it would from the Build tab, live, the
+// moment you name it (same as everywhere else in this app, there's no separate save/cancel for
+// that part). Only the level number and HP total are held back until "Level Up" is pressed;
+// everything above it just previews.
+let LVLUP=null;
+function levelUpNewLevel(){ return Math.min(20,num(S.level)+1); }
+function levelUpHitDieAvg(hd){ return Math.floor(hd/2)+1; }
+function levelUpHpLineHTML(){
+  const c=CLASSES[S.classId]; if(!c) return '';
+  const hd=c.hd, avg=levelUpHitDieAvg(hd), conMod=amod('con');
+  const roll=LVLUP.hpMode==='roll'?Math.max(1,Math.min(hd,num(LVLUP.hpRoll)||avg)):avg;
+  const gain=Math.max(1,roll+conMod);
+  return `d${hd} ${roll} ${fmt(conMod)} CON = <b>+${gain} HP</b> &nbsp; (max HP ${num(S.hpMax)} → ${num(S.hpMax)+gain})`;
+}
+// The ASI/Feat choice, as two big tappable cards instead of a cramped native <select> — this is
+// the actual decision the whole popup exists for, so it gets the most prominent, easiest-to-tap
+// real estate. Still reads/writes straight through asiEntry/asiLinkedFeat/syncAsiFeat, exactly
+// like the Build tab's own renderAsiRow — a Feat picked here is the same live-linked Features-tab
+// entry, just wrapped in different markup.
+function levelUpAsiCardsHTML(newLevel){
+  const ref={L:newLevel}, e=asiEntry(ref), key=asiRefKey(ref);
+  const linked=asiLinkedFeat(ref);
+  const featName=linked?(linked.title||''):(e.feat||'');
+  return `
+    <div class="lvlup-choice-cards">
+      <button type="button" class="lvlup-choice-card ${e.choice==='asi'?'on':''}" data-lvlchoicekey="${key}" data-lvlchoiceval="asi">
+        <span class="lvlup-choice-ic">⚔</span><span class="lvlup-choice-lbl">Ability Score Improvement</span>
+        <span class="lvlup-choice-sub">+2 to one, or +1/+1 to two</span>
+      </button>
+      <button type="button" class="lvlup-choice-card ${e.choice==='feat'?'on':''}" data-lvlchoicekey="${key}" data-lvlchoiceval="feat">
+        <span class="lvlup-choice-ic">✨</span><span class="lvlup-choice-lbl">Feat</span>
+        <span class="lvlup-choice-sub">A special talent instead</span>
+      </button>
+    </div>
+    ${e.choice==='asi'?`
+      <div class="lvlup-ab-pair">
+        <select class="asi-ab-sel" data-asia="${key}">${abOpts(e.a)}</select>
+        <span class="lvlup-plus">+</span>
+        <select class="asi-ab-sel" data-asib="${key}">${abOpts(e.b)}</select>
+      </div>`:''}
+    ${e.choice==='feat'?`
+      <span class="sug-wrap asi-feat-wrap"><input type="text" value="${esc(featName)}" data-asifeat="${key}" autocomplete="off" placeholder="Tap to choose a feat…" readonly></span>
+      ${asiFeatLinkHTML(ref)}`:''}`;
+}
+// Collapsed by default — this was crowding out the actual choice above it, so it's now a single
+// disclosure line the player opens on purpose instead of a wall of text they have to scroll past.
+function levelUpReminderHTML(newLevel,classFeats,raceFeats,isAsiLevel){
+  const open=!!LVLUP.reminderOpen;
+  const count=classFeats.length+raceFeats.length;
+  return `
+    <button type="button" class="lvlup-reminder-toggle" data-lvlremindertoggle>${open?'▾':'▸'} What's new &amp; heritage reminders${count?` (${count})`:''}</button>
+    ${open?`<div class="lvlup-reminder-body">
+      ${classFeats.length?`<div class="lvlup-featgrp">${classFeats.map(e=>`<div class="lvlup-feat"><b>${esc(e.n)}</b><small>${esc(e.d||'')}</small></div>`).join('')}</div>`
+        :`<p class="prep-note" style="margin:4px 0">No named class feature this level — HP${isAsiLevel?'/ASI':''} only.</p>`}
+      ${raceFeats.length?`<div class="lvlup-featgrp"><div class="lvlup-featgrp-lbl">${esc(raceDisplayName())} traits — always active, just a reminder</div>
+        ${raceFeats.map(e=>`<div class="lvlup-feat"><b>${esc(e.n)}</b><small>${esc(e.d||'')}</small></div>`).join('')}</div>`:''}
+      <p class="prep-note" style="margin:6px 0 0">Informational only — add anything you want tracked to the Features tab yourself.</p>
+    </div>`:''}`;
+}
+function levelUpBodyHTML(){
+  const c=CLASSES[S.classId];
+  if(!c) return `<p class="prep-note" style="margin:0">Choose a class on the Build tab first — Level Up needs to know your hit die and features.</p>`;
+  if(num(S.level)>=20) return `<p class="prep-note" style="margin:0">Already at level 20 — nowhere further to go.</p>`;
+  const newLevel=levelUpNewLevel();
+  const hd=c.hd, avg=levelUpHitDieAvg(hd);
+  const isAsiLevel=asiLevels(S.classId).includes(newLevel);
+  const classFeats=FEATURE_LIB.filter(e=>num(e.l)===newLevel&&(e.g===c.name||(S.subclass&&e.g===c.name+' — '+S.subclass)));
+  const ri=raceInfo();
+  const raceFeats=ri?RACE_LIB.filter(raceEntryIsMine):[];
+  const raceSlug=ri?spellSlug(ri.r.name):'';
+  return `
+    <div class="lvlup-head">
+      <div class="lvlup-h1">🎉 Level Up! 🎉</div>
+      <div class="lvlup-title">${esc(c.name)} <span class="lvlup-arrow">${num(S.level)} → ${newLevel}</span></div>
+      <div class="lvlup-links">
+        <a class="sd-link" href="https://dnd5e.wikidot.com/${spellSlug(c.name)}" target="_blank" rel="noopener">${esc(c.name)} ↗</a>
+        ${ri?`<a class="sd-link" href="https://dnd5e.wikidot.com/${raceSlug}" target="_blank" rel="noopener">${esc(ri.r.name)} ↗</a>`:''}
+      </div>
+    </div>
+    <div class="lvlup-sec">
+      <h4>Hit Points</h4>
+      <div class="lvlup-pills">
+        <button type="button" class="lvlup-pill ${LVLUP.hpMode==='avg'?'on':''}" data-hpmode="avg">Take average (${avg})</button>
+        <button type="button" class="lvlup-pill ${LVLUP.hpMode==='roll'?'on':''}" data-hpmode="roll">I rolled it</button>
+      </div>
+      ${LVLUP.hpMode==='roll'?`<label class="fld" style="margin-top:8px;max-width:160px"><span>d${hd} roll</span><input type="number" id="lvlupRoll" min="1" max="${hd}" value="${num(LVLUP.hpRoll)||avg}"></label>`:''}
+      <p class="lvlup-hpline" id="lvlupHpLine">${levelUpHpLineHTML()}</p>
+    </div>
+    <div class="lvlup-sec lvlup-sec-asi">
+      ${isAsiLevel?`
+        <h4>Choose your reward</h4>
+        <div id="lvlupAsiRow">${levelUpAsiCardsHTML(newLevel)}</div>`
+        :`<p class="prep-note" style="margin:0">No Ability Score Improvement or Feat at level ${newLevel} — HP only this time.${levelUpNextAsiNote(newLevel)}</p>`}
+    </div>
+    <div class="lvlup-sec lvlup-sec-reminder">${levelUpReminderHTML(newLevel,classFeats,raceFeats,isAsiLevel)}</div>`;
+}
+function levelUpNextAsiNote(newLevel){
+  const next=asiLevels(S.classId).find(L=>L>=newLevel);
+  return next?` Next one's at level ${next}.`:'';
+}
+function paintLevelUpModal(){
+  const canApply=!!CLASSES[S.classId]&&num(S.level)<20;
+  // levelUpBodyHTML() used to be able to throw and leave #lvlupBody's innerHTML assignment never
+  // completing — the modal shell (close button, disclaimer, Apply button) still rendered fine, so
+  // the whole thing looked like "just the disclaimer text, nothing else" instead of an obvious
+  // error. Never let that happen silently again.
+  let html;
+  try{ html=levelUpBodyHTML(); }
+  catch(err){ html=`<p class="prep-note" style="margin:0;color:var(--red)">Something went wrong building this screen: ${esc(err.message)}. Try closing and reopening — if it keeps happening, your save data may need a look.</p>`; }
+  LVLUP.wrap.querySelector('#lvlupBody').innerHTML=html;
+  const applyBtn=LVLUP.wrap.querySelector('#lvlupApply');
+  applyBtn.style.display=canApply?'':'none';
+  if(canApply) applyBtn.textContent=`Level Up to ${levelUpNewLevel()} →`;
+}
+function openLevelUpModal(){
+  const wrap=document.createElement('div');
+  wrap.className='ui-dlg-bg lvlup-bg open';
+  wrap.innerHTML=`<div class="ui-dlg lvlup-modal" role="dialog" aria-modal="true">
+    <span class="lvlup-sparkle s1">✦</span><span class="lvlup-sparkle s2">✧</span><span class="lvlup-sparkle s3">✦</span>
+    <button type="button" class="tw-close" data-lvlupclose title="Close">✕</button>
+    <div class="lvlup-body" id="lvlupBody"></div>
+    <p class="prep-note lvlup-note">ASI/Feat picks above save as you make them, same as the Build tab. Level and HP only apply when you press the button below.</p>
+    <div class="ui-dlg-btns"><button type="button" class="ui-dlg-ok" id="lvlupApply">Level Up →</button></div>
+  </div>`;
+  const onKey=e=>{ if(e.key==='Escape'){ if(SUG_MODAL) return; closeLevelUpModal(); } };
+  LVLUP={wrap,hpMode:'avg',hpRoll:null,reminderOpen:false,onKey};
+  wrap.addEventListener('click',e=>{
+    if(e.target===wrap) return closeLevelUpModal();
+    if(e.target.closest('[data-lvlupclose]')) return closeLevelUpModal();
+    const hpBtn=e.target.closest('[data-hpmode]');
+    if(hpBtn){ LVLUP.hpMode=hpBtn.dataset.hpmode; if(LVLUP.hpMode==='roll'&&LVLUP.hpRoll==null) LVLUP.hpRoll=levelUpHitDieAvg((CLASSES[S.classId]||{}).hd||8); paintLevelUpModal(); return; }
+    if(e.target.closest('#lvlupApply')) return applyLevelUp();
+    if(e.target.closest('[data-lvlremindertoggle]')){ LVLUP.reminderOpen=!LVLUP.reminderOpen; paintLevelUpModal(); return; }
+    const choiceBtn=e.target.closest('[data-lvlchoicekey]');
+    if(choiceBtn){
+      asiEntry(parseAsiRef(choiceBtn.dataset.lvlchoicekey)).choice=choiceBtn.dataset.lvlchoiceval;
+      recalc(); save(); paintLevelUpModal(); return;
+    }
+    if(e.target.closest('[data-asifeatjump]')){
+      const key=e.target.closest('[data-asifeatjump]').dataset.asifeatjump;
+      const idx=S.features.findIndex(f=>f===asiLinkedFeat(parseAsiRef(key)));
+      closeLevelUpModal(); showTab('features');
+      if(idx<0) return;
+      const card=$$('#featureList .feature-card')[idx];
+      if(card){ card.scrollIntoView({behavior:'smooth',block:'center'}); card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),900); }
+    }
+  });
+  wrap.addEventListener('input',e=>{
+    if(e.target.id==='lvlupRoll'){
+      const hd=(CLASSES[S.classId]||{}).hd||8;
+      LVLUP.hpRoll=Math.max(1,Math.min(hd,num(e.target.value)));
+      const line=wrap.querySelector('#lvlupHpLine'); if(line) line.innerHTML=levelUpHpLineHTML();
+      return;
+    }
+    if(e.target.dataset.asifeat!=null){ // typed while renaming an already-linked feat
+      const ref=parseAsiRef(e.target.dataset.asifeat), linked=asiLinkedFeat(ref);
+      if(linked) linked.title=e.target.value; else asiEntry(ref).feat=e.target.value;
+      save();
+    }
+  });
+  wrap.addEventListener('change',e=>{
+    if(e.target.dataset.asia!=null){ asiEntry(parseAsiRef(e.target.dataset.asia)).a=e.target.value; recalc(); save(); return; }
+    if(e.target.dataset.asib!=null){ asiEntry(parseAsiRef(e.target.dataset.asib)).b=e.target.value; recalc(); save(); return; }
+    if(e.target.dataset.asifeat!=null){
+      const ref=parseAsiRef(e.target.dataset.asifeat), linked=asiLinkedFeat(ref);
+      if(linked&&!e.target.value.trim()){ delete linked.source.asiLevel; delete linked.source.asiExtraId; save(); }
+      else syncAsiFeat(ref);
+      paintLevelUpModal();
+    }
+  });
+  document.addEventListener('keydown',onKey);
+  document.body.appendChild(wrap);
+  paintLevelUpModal();
+}
+function closeLevelUpModal(){
+  if(!LVLUP) return;
+  document.removeEventListener('keydown',LVLUP.onKey);
+  LVLUP.wrap.remove(); LVLUP=null;
+}
+function applyLevelUp(){
+  const c=CLASSES[S.classId]; if(!c||num(S.level)>=20) return;
+  const avg=levelUpHitDieAvg(c.hd);
+  const roll=LVLUP.hpMode==='roll'?Math.max(1,Math.min(c.hd,num(LVLUP.hpRoll)||avg)):avg;
+  const gain=Math.max(1,roll+amod('con'));
+  S.level=levelUpNewLevel();
+  S.hpMax=num(S.hpMax)+gain;
+  S.hpCurrent=num(S.hpCurrent)+gain;
+  closeLevelUpModal();
+  applyBuild();
+  // applyBuild() doesn't touch #levelIn — that field is plain (not data-bind), only synced by
+  // renderBuildSelectors() on class/race changes — so a level bumped from here would otherwise
+  // leave the Build tab's own Level box showing the pre-level-up number until something else
+  // happened to repaint it.
+  const li=$('#levelIn'); if(li) li.value=S.level;
+  showTab('overview');
+}
+function wireLevelUp(){
+  $('#levelUpBtn')?.addEventListener('click',openLevelUpModal);
+}
+
 // ---------- Build overrides ----------
 // applyBuild() used to stamp its computed values straight over proficiency bonus, hit dice, save
 // proficiencies, spell slots, speed and darkvision every single time you touched the Build tab.
@@ -6051,7 +6257,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

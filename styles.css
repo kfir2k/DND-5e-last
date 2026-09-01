@@ -2755,6 +2755,99 @@ label.fld-paper input:focus{border-bottom-style:solid;border-bottom-color:var(--
 .ui-dlg-ok.danger{background:rgba(192,80,70,.18);border-color:var(--red);color:#e08a80}
 .ui-dlg-ok.danger:hover{background:var(--red);color:var(--text)}
 
+/* ---------- Level Up modal ----------
+   A reward screen, not a form: a bouncy pop-in, a glowing "Level Up!" banner, a couple of
+   twinkling sparkles, and the HP/ASI choices given the room a video-game level-up screen would
+   give them. The class/race feature reminder — the thing that used to crowd the actual choice
+   off-screen — is now a single collapsed disclosure line the player opens on purpose. */
+@keyframes lvlupPop{
+  0%{opacity:0;transform:scale(.82) translateY(10px)}
+  60%{opacity:1;transform:scale(1.035) translateY(0)}
+  100%{opacity:1;transform:scale(1) translateY(0)}
+}
+@keyframes lvlupGlow{
+  0%,100%{text-shadow:0 0 10px rgba(201,162,39,.35),0 0 2px rgba(201,162,39,.6)}
+  50%{text-shadow:0 0 22px rgba(201,162,39,.65),0 0 6px rgba(201,162,39,.85)}
+}
+@keyframes lvlupTwinkle{
+  0%,100%{opacity:.2;transform:scale(.8)}
+  50%{opacity:1;transform:scale(1.2)}
+}
+.icon-btn.lvlup-btn{border-color:var(--gold-dim);color:var(--gold-lt);background:rgba(201,162,39,.1)}
+.icon-btn.lvlup-btn:hover{background:var(--gold-dim);color:var(--ink)}
+.lvlup-modal{
+  max-width:600px;max-height:86vh;overflow-y:auto;position:relative;padding-top:34px;
+  background:radial-gradient(ellipse at 50% 0%,rgba(201,162,39,.16),transparent 62%),var(--panel);
+  border-top:2px solid var(--gold);animation:lvlupPop .38s cubic-bezier(.26,1.4,.44,1);
+}
+.lvlup-sparkle{position:absolute;color:var(--gold);pointer-events:none;animation:lvlupTwinkle 2.4s ease-in-out infinite}
+.lvlup-sparkle.s1{top:38px;left:30px;font-size:.85rem;animation-delay:.1s}
+.lvlup-sparkle.s2{top:50px;right:52px;font-size:1.15rem;animation-delay:.6s}
+.lvlup-sparkle.s3{top:104px;right:112px;font-size:.65rem;animation-delay:1.1s}
+.lvlup-head{margin-bottom:4px;text-align:center}
+.lvlup-h1{
+  font-family:'Cinzel',serif;font-size:1.4rem;letter-spacing:1px;color:var(--gold-lt);
+  animation:lvlupGlow 2.6s ease-in-out infinite;margin-bottom:2px;
+}
+.lvlup-title{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:8px}
+.lvlup-arrow{color:var(--gold)}
+.lvlup-links{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.lvlup-sec{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.lvlup-sec:first-of-type{border-top:none;padding-top:0;margin-top:14px}
+.lvlup-sec h4{
+  margin:0 0 8px;font-family:'Cinzel',serif;color:var(--gold);font-size:.82rem;
+  letter-spacing:1px;text-transform:uppercase;
+}
+.lvlup-pills{display:flex;gap:8px;flex-wrap:wrap}
+.lvlup-pill{
+  background:transparent;border:1px solid var(--border-lt);color:var(--muted);
+  border-radius:8px;padding:8px 14px;cursor:pointer;font-size:.85rem;min-height:40px;
+}
+.lvlup-pill.on{border-color:var(--gold);background:var(--gold-dim);color:var(--gold-lt)}
+.lvlup-hpline{margin:10px 2px 0;font-size:.9rem;color:var(--text)}
+.lvlup-hpline b{color:var(--gold-lt)}
+/* The main event: two big tappable cards instead of a cramped <select>. */
+.lvlup-choice-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lvlup-choice-card{
+  display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;
+  background:var(--panel2);border:2px solid var(--border-lt);border-radius:12px;
+  padding:16px 10px;cursor:pointer;min-height:96px;justify-content:center;
+  transition:border-color .15s,background .15s,transform .1s;
+}
+.lvlup-choice-card:hover{border-color:var(--gold-dim);transform:translateY(-1px)}
+.lvlup-choice-card.on{border-color:var(--gold);background:rgba(201,162,39,.16);box-shadow:0 0 0 1px var(--gold-dim) inset}
+.lvlup-choice-ic{font-size:1.6rem}
+.lvlup-choice-lbl{font-family:'Cinzel',serif;font-size:.85rem;color:var(--text);letter-spacing:.3px}
+.lvlup-choice-sub{font-size:.68rem;color:var(--faint)}
+.lvlup-ab-pair{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px}
+.lvlup-plus{color:var(--gold);font-weight:700}
+.lvlup-sec-asi .asi-feat-wrap{display:block;margin-top:12px}
+.lvlup-sec-asi .asi-feat-wrap input{width:100%}
+.lvlup-sec-asi .asi-feat-link-row{margin-top:8px}
+/* Reminder: one quiet toggle line, closed by default. */
+.lvlup-sec-reminder{padding-top:10px}
+.lvlup-reminder-toggle{
+  display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--muted);
+  font-size:.76rem;letter-spacing:.06em;text-transform:uppercase;font-family:'Cinzel',serif;
+  cursor:pointer;padding:4px 2px;
+}
+.lvlup-reminder-toggle:hover{color:var(--gold-lt)}
+.lvlup-reminder-body{margin-top:8px;max-height:240px;overflow-y:auto;padding-right:2px}
+.lvlup-featgrp{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.lvlup-featgrp-lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin:6px 0 2px}
+.lvlup-feat{
+  background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--gold-dim);
+  border-radius:8px;padding:8px 12px;
+}
+.lvlup-feat b{display:block;color:var(--text);font-size:.88rem;margin-bottom:2px}
+.lvlup-feat small{color:var(--muted);font-size:.78rem;line-height:1.4}
+.lvlup-note{margin:14px 2px 0}
+#lvlupApply{
+  background:linear-gradient(180deg,var(--gold),var(--gold-dim));color:var(--ink);border-color:var(--gold);
+  font-weight:700;box-shadow:0 0 18px rgba(201,162,39,.35);
+}
+#lvlupApply:hover{background:var(--gold);box-shadow:0 0 26px rgba(201,162,39,.55)}
+
 /* ---------- Turn Wizard: "The Reckoning Table" — a candlelit, wax-sealed guided
    roll-through of a whole planned turn. Deckle-edged card in place of a plain modal,
    a rune-stone die input that settles and glows, ember bursts + a card shake on a
