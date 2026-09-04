@@ -950,7 +950,7 @@ label.fld span{
 .ck-zones{display:flex;flex-direction:column;gap:14px;max-height:64vh;overflow-y:auto;padding-right:4px}
 .ck-zone-lbl{color:var(--muted);font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px}
 .ck-cards{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:6px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px;
 }
 /* Every card carries a lit left spine in its action-type color — the same color language as
    the filter pills and turn-plan steps, so the grid is scannable by color alone: green =
@@ -958,7 +958,7 @@ label.fld span{
    "what can I still do this turn." */
 .ck-card{
   background:var(--panel3);border:1px solid var(--border-lt);border-left-width:3px;border-radius:9px;
-  padding:6px 9px;cursor:pointer;min-width:0;transition:border-color .15s ease,transform .1s ease,background .15s ease;
+  padding:9px 11px;cursor:pointer;min-width:0;transition:border-color .15s ease,transform .1s ease,background .15s ease;
 }
 .ck-card-action{border-left-color:#7fd6a4}
 .ck-card-bonus{border-left-color:#e8c25b}
@@ -984,10 +984,13 @@ label.fld span{
    ("BONUS ACTION") next to a two-word name used to leave the name almost no room, which then
    broke mid-word ("Shortswor" / "d left"). Now the name keeps a real floor and the pill/⤵
    button simply drop below it if there isn't room on one line. */
-.ck-card-head{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;justify-content:space-between}
+.ck-card-head{display:flex;align-items:center;flex-wrap:wrap;gap:5px 8px;justify-content:space-between}
 .ck-card-head .ck-drag-handle{margin-right:-2px}
-.ck-card-name{flex:1 1 90px;min-width:80px;color:var(--text);font-weight:600;font-size:.92rem;overflow-wrap:break-word}
-.ck-card-sub{color:var(--muted);font-size:.78rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.ck-card-name{flex:1 1 90px;min-width:80px;color:var(--text);font-weight:600;font-size:.94rem;overflow-wrap:break-word}
+/* Scoped bump, not the shared .sp-pill rule — that class also renders at .62-.8rem in half a
+   dozen other contexts (spell modal, turn-plan steps), each already tuned to its own spot. */
+.ck-pillgroup .sp-pill{font-size:.72rem}
+.ck-card-sub{color:var(--muted);font-size:.8rem;margin-top:5px;display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center}
 .ck-card-sub b{color:var(--text)}
 /* Hit and Damage are the numbers you actually need mid-swing — give them the same bold
    treatment as the Attacks tab (gold = will it land, red = how much it hurts) so they don't
@@ -1080,7 +1083,7 @@ label.fld span{
    were more than a couple of plans; a <select> scales to any number of plans without costing any
    more row width than one. */
 .ck-plan-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.ck-plan-switch{flex:1 1 90px;min-width:90px;display:flex}
+.ck-plan-switch{flex:1 1 100%;min-width:100%;display:flex}
 .ck-plan-switch .ck-pill-sel{width:100%;max-width:none}
 .ck-plan-name-in{
   width:100%;background:var(--panel3);border:1px solid var(--gold-dim);border-radius:999px;
@@ -1125,11 +1128,10 @@ label.fld span{
 .ck-ps-head{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
 .ck-ps-head .sp-pill{margin-left:auto}
 .ck-ps-note{
-  flex:1 1 90px;min-width:70px;background:transparent;border:none;border-bottom:1px dashed transparent;
-  color:#e8c25b;font-size:.76rem;font-style:italic;padding:1px 4px;
+  display:block;width:100%;margin-top:4px;background:transparent;border:none;border-bottom:1px dashed var(--border-lt);
+  color:#e8c25b;font-size:.8rem;font-style:italic;padding:3px 4px;
 }
 .ck-ps-note::placeholder{color:var(--faint);font-style:italic}
-.ck-ps-note:hover{border-bottom-color:var(--border-lt)}
 .ck-ps-note:focus{border-bottom-color:var(--gold);outline:none;background:var(--ink);border-radius:4px}
 .ck-ps-name{flex:0 1 auto;min-width:80px;font-weight:600;font-size:.98rem;overflow-wrap:break-word}
 .ck-ps-sub{color:var(--muted);font-size:.83rem;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}

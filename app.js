@@ -442,7 +442,7 @@ combat:`
         <span>🗺 Turn Plan</span><span class="ck-plan-collapsed-count" id="ckPlanCollapsedCount"></span>
       </div>
       <div class="ck-plan-open">
-        <h2>🗺 Turn Plan</h2>
+        <h2>🗺 Turn Plan<button class="ck-tbtn" id="ckPlanCollapseBtn" title="Hide Turn Plan to widen Do Something">≫</button></h2>
         <div class="ck-plan-toolbar" id="ckPlanToolbar">
           <span class="ck-plan-switch" id="ckPlanSwitch"></span>
           <button class="ck-tbtn" id="ckPlanRenameBtn" title="Rename this plan">✎</button>
@@ -451,7 +451,6 @@ combat:`
           <div class="ck-toolbar-spacer"></div>
           <button class="ck-tbtn ck-tbtn-accent" id="ckPlanWizard" style="display:none">🧙 Roll This Turn</button>
           <button class="ck-tbtn" id="ckPlanClear" style="display:none">Clear</button>
-          <button class="ck-tbtn" id="ckPlanCollapseBtn" title="Hide Turn Plan to widen Do Something">≫</button>
         </div>
         <div class="ck-plan" id="ckPlan"></div>
       </div>
@@ -2312,7 +2311,7 @@ function ckGearRow(card,stepIdx){
   let typePicker,label;
   if(stepIdx!=null){
     const step=ckPlan().steps[stepIdx], stepType=step.type||card.type;
-    label='This step:';
+    label='';
     typePicker=CK_TYPES.map(([v,l])=>
       `<button type="button" class="ck-typechip ${CK_PILL[v]} ${stepType===v?'on':''}" data-ckstept="${stepIdx}::${v}" title="Mark this one step as ${l}">${l}</button>`
     ).join('');
@@ -2323,7 +2322,7 @@ function ckGearRow(card,stepIdx){
     ).join('');
   }
   return `<div class="ck-gear">
-    <div class="ck-typepick"><span class="ck-gear-label">${label}</span>${typePicker}</div>
+    <div class="ck-typepick">${label?`<span class="ck-gear-label">${label}</span>`:''}${typePicker}</div>
     <input type="text" value="${esc(obj.cond||'')}" data-ckcond="${card.key}" placeholder="Condition — e.g. first turn of combat, once per turn">
     <button data-ckpin="${card.key}">${card.pin?'📌 Unpin':'📌 Pin'}</button>
   </div>`;
@@ -2615,9 +2614,9 @@ function renderCockpitPlan(){
           <div class="ck-ps-main">
             <div class="ck-ps-head">
               <span class="ck-ps-name">${card.conc?'◉ ':''}${esc(card.name)}</span>
-              ${noteIn}
               <span class="sp-pill ${CK_PILL[stepType]||'pill-cast'}">${tl[stepType]||'Other'}</span>
             </div>
+            ${noteIn}
             <div class="ck-ps-sub">${ckSubHTML(card,true)}</div>
             ${card.cond?`<div class="ck-card-cond">⏱ ${esc(card.cond)}</div>`:''}
             ${open?ckCardOpenHTML(card,i):''}
