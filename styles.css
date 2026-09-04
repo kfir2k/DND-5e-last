@@ -7,11 +7,11 @@
   --border-lt:#54462f;
   --gold:#c9a227;
   --gold-lt:#e3c15c;
-  --gold-dim:#7d6b35;
+  --gold-dim:#947f3d;
   --text:#e9ddc7;
   --muted:#a3906f;
-  --faint:#6f6149;
-  --red:#c05046;
+  --faint:#93835f;
+  --red:#e07566;
   --green:#6f9e63;
   --ink:#0e0b07;
   --ember:#ff8a3d;
@@ -957,22 +957,25 @@ label.fld span{
    action, gold = bonus, teal = item, blue = other. No need to read every label to find
    "what can I still do this turn." */
 .ck-card{
-  background:var(--panel3);border:1px solid var(--border-lt);border-left-width:3px;border-radius:9px;
+  background:var(--panel3);border:1px solid var(--border-lt);border-left-width:5px;border-radius:9px;
   padding:9px 11px;cursor:pointer;min-width:0;transition:border-color .15s ease,transform .1s ease,background .15s ease;
 }
-.ck-card-action{border-left-color:#7fd6a4}
-.ck-card-bonus{border-left-color:#e8c25b}
-.ck-card-reaction{border-left-color:#e0876f}
-.ck-card-item{border-left-color:#6fd0c4}
-.ck-card-other{border-left-color:#7db8e8}
-/* Spells carry a second, independent signal — a faint violet wash on top of whichever
-   action-type spine color they already have — so Fireball (green spine, it's an Action) still
-   visibly reads as a spell at a glance instead of looking identical to a weapon attack. */
-.ck-card.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.16),var(--panel3) 75%)}
+/* Each type gets both a solid spine (full-strength color, costs nothing for text since no text
+   sits on it) and a low-alpha wash across the card body — enough to color-code the card at a
+   glance without dragging the sub-line text (Hit/Damage, hints) below comfortable contrast. */
+.ck-card-action{border-left-color:#7fd6a4;background:linear-gradient(165deg,rgba(127,214,164,.13),var(--panel3) 70%)}
+.ck-card-bonus{border-left-color:#e8c25b;background:linear-gradient(165deg,rgba(232,194,91,.13),var(--panel3) 70%)}
+.ck-card-reaction{border-left-color:#e0876f;background:linear-gradient(165deg,rgba(224,135,111,.13),var(--panel3) 70%)}
+.ck-card-item{border-left-color:#6fd0c4;background:linear-gradient(165deg,rgba(111,208,196,.13),var(--panel3) 70%)}
+.ck-card-other{border-left-color:#7db8e8;background:linear-gradient(165deg,rgba(125,184,232,.13),var(--panel3) 70%)}
+/* Spells carry a second, independent signal — a violet wash on top of whichever action-type
+   spine color they already have — so Fireball (green spine, it's an Action) still visibly reads
+   as a spell at a glance instead of looking identical to a weapon attack. */
+.ck-card.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.22),var(--panel3) 70%)}
 /* Feats carry the same kind of second signal as spells above — a rose wash over whatever
    action-type spine color they already have — so a feat with an Action tag (green spine) still
    visibly reads as a feat, distinct from the violet spell wash. */
-.ck-card.ck-card-feat{background:linear-gradient(165deg,rgba(224,107,176,.16),var(--panel3) 75%)}
+.ck-card.ck-card-feat{background:linear-gradient(165deg,rgba(224,107,176,.22),var(--panel3) 70%)}
 .ck-card:hover{border-color:var(--border-strong,var(--muted));transform:translateY(-1px)}
 /* The tapped card gets a lit ring instead of growing full-width in place — its detail opens in
    a floating popover (.ck-pop below) anchored beside it, so the grid never reflows around it. */
@@ -1106,7 +1109,7 @@ label.fld span{
 .ck-plan-empty{color:var(--faint);font-size:.8rem;font-style:italic;line-height:1.45}
 .ck-plan-step{
   display:flex;align-items:flex-start;gap:7px;position:relative;
-  background:var(--panel3);border:1px solid var(--border-lt);border-left-width:3px;border-radius:8px;
+  background:var(--panel3);border:1px solid var(--border-lt);border-left-width:5px;border-radius:8px;
   padding:8px 9px 8px 6px;color:var(--text);transition:box-shadow .15s ease,opacity .15s ease;
 }
 /* The connecting spine — a single lit thread running behind every numbered node, so the list
@@ -1143,13 +1146,13 @@ label.fld span{
 }
 .ck-roll input:focus{border-color:var(--gold);outline:none}
 .ck-roll b[data-atkfinal]{color:var(--red);font-family:'Cinzel',serif;font-weight:700;font-size:.95rem}
-.ck-plan-step.ck-ps-action{border-left-color:#7fd6a4}
-.ck-plan-step.ck-ps-bonus{border-left-color:#e8c25b}
-.ck-plan-step.ck-ps-reaction{border-left-color:#e0876f}
-.ck-plan-step.ck-ps-item{border-left-color:#6fd0c4}
-.ck-plan-step.ck-ps-other{border-left-color:#7db8e8}
+.ck-plan-step.ck-ps-action{border-left-color:#7fd6a4;background:linear-gradient(165deg,rgba(127,214,164,.13),var(--panel3) 70%)}
+.ck-plan-step.ck-ps-bonus{border-left-color:#e8c25b;background:linear-gradient(165deg,rgba(232,194,91,.13),var(--panel3) 70%)}
+.ck-plan-step.ck-ps-reaction{border-left-color:#e0876f;background:linear-gradient(165deg,rgba(224,135,111,.13),var(--panel3) 70%)}
+.ck-plan-step.ck-ps-item{border-left-color:#6fd0c4;background:linear-gradient(165deg,rgba(111,208,196,.13),var(--panel3) 70%)}
+.ck-plan-step.ck-ps-other{border-left-color:#7db8e8;background:linear-gradient(165deg,rgba(125,184,232,.13),var(--panel3) 70%)}
 .ck-plan-step.ck-ps-gone{opacity:.6;border-left-color:var(--border-lt)}
-.ck-plan-step.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.16),var(--panel3) 75%)}
+.ck-plan-step.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.22),var(--panel3) 70%)}
 .ck-plan-step.open{background:var(--panel2);border-color:var(--gold-dim);cursor:default}
 .ck-plan-step.open.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.12),var(--panel2) 75%)}
 .ck-plan-step>[data-plandel]{background:transparent;border:none;color:var(--faint);cursor:pointer;font-size:.85rem;padding:2px 4px;flex-shrink:0}
