@@ -4894,18 +4894,72 @@ function levelUpAsiCardsHTML(newLevel){
       <span class="sug-wrap asi-feat-wrap"><input type="text" value="${esc(featName)}" data-asifeat="${key}" autocomplete="off" placeholder="Tap to choose a feat…" readonly></span>
       ${asiFeatLinkHTML(ref)}`:''}`;
 }
-// Collapsed by default — this was crowding out the actual choice above it, so it's now a single
-// disclosure line the player opens on purpose instead of a wall of text they have to scroll past.
-function levelUpReminderHTML(newLevel,classFeats,raceFeats,isAsiLevel){
-  const open=!!LVLUP.reminderOpen;
-  const count=classFeats.length+raceFeats.length;
+// Subclass-choice step — shown only when this level is the class's actual pick-a-subclass level
+// (subclassLevel(), app.js) and nothing's picked yet. Cleric/Sorcerer/Warlock pick at level 1
+// (character creation, not a level-up event) so this naturally never fires for them here.
+function levelUpSubclassPickHTML(c){
+  const names=subclassNamesForClass(S.classId);
+  const typeLabel=SUBCLASS_TYPE_LABEL[S.classId]||'Subclass';
+  if(!names.length) return `<h4>Choose Your ${esc(typeLabel)}</h4><p class="prep-note" style="margin:0">Nothing in the library for ${esc(c.name)} yet — type your ${esc(typeLabel)} on the Build tab instead.</p>`;
   return `
-    <button type="button" class="lvlup-reminder-toggle" data-lvlremindertoggle>${open?'▾':'▸'} What's new &amp; heritage reminders${count?` (${count})`:''}</button>
+    <h4>Choose Your ${esc(typeLabel)}</h4>
+    <div class="lvlup-subclass-grid">
+      ${names.map(n=>`<button type="button" class="lvlup-subclass-card" data-lvlsubclasspick="${esc(n)}">${esc(n)}</button>`).join('')}
+    </div>
+    <p class="prep-note" style="margin:8px 2px 0">Tap one to see what it grants below — you can change it later on the Build tab.</p>`;
+}
+// A single gained feature: name, description, a Channel Divinity badge when it's one of those
+// (name ends "(Channel Divinity)" — the convention every domain in FEATURE_LIB already follows),
+// a one-tap Add/Added button wired to the same grantKey the auto-grant system uses (so an add
+// made here is recognized instead of duplicated if S.autoGrant is later switched on), and — for
+// an umbrella feature like Combat Superiority — the pool picker beneath it.
+function levelUpFeatCardHTML(p,newLevel){
+  const ent=p.ent,key=p.key;
+  const added=!!S.features.find(f=>(f.source||{}).grantKey===key);
+  const isCD=/\(Channel Divinity\)$/.test(ent.n);
+  return `<div class="lvlup-feat">
+    <div class="lvlup-feat-row">
+      <div class="lvlup-feat-body">
+        <b>${esc(ent.n)}</b>${isCD?'<span class="lvlup-cd-tag">⚡ New Channel Divinity option</span>':''}
+        <small>${esc(ent.d||'')}</small>
+      </div>
+      <button type="button" class="lvlup-addbtn ${added?'added':''}" data-lvladdkey="${esc(key)}" ${added?'disabled':''}>${added?'✓ Added':'＋ Add'}</button>
+    </div>
+    ${ent.pickCap?levelUpPoolPickerHTML(ent,newLevel):''}
+  </div>`;
+}
+// "Choose N from a pool" — Battle Master maneuvers today (see the `pool`/`pickCap` tags on
+// Combat Superiority and its 16 maneuvers in data-libraries.js); any future subclass tagged the
+// same way gets this picker for free. Advisory only, per this app's existing "annotate, don't
+// block" philosophy (see subclassLevel's comment) — the count is a live readout of what's already
+// on the Features tab, not an enforced/persisted limit, so tapping past it is allowed.
+function levelUpPoolPickerHTML(ent,newLevel){
+  const cap=poolCapAt(ent,newLevel); if(!cap) return '';
+  const opts=poolOptions(ent.pool), chosen=poolChosenCount(ent.pool), label=ent.poolLabel||'Options';
+  const chips=opts.map(o=>{
+    const key=['sub',S.classId,S.subclass,o.n].join(GRANT_SEP);
+    const on=!!S.features.find(f=>(f.source||{}).grantKey===key);
+    return `<button type="button" class="lvlup-pool-chip ${on?'on':''}" data-lvlpoolkey="${esc(key)}" title="${esc(o.d||'')}">${esc(o.n)}</button>`;
+  }).join('');
+  return `<div class="lvlup-pool">
+    <div class="lvlup-pool-count">${esc(label)} known: <b>${chosen} of ${cap}</b> chosen</div>
+    <div class="lvlup-pool-chips">${chips}</div>
+  </div>`;
+}
+// "New this level" (always open — the collapsed toggle here was the #1 reported way a fresh
+// feature went unnoticed) plus a small, still-collapsed disclosure for heritage/race traits,
+// which are static and were never the part players said they missed.
+function levelUpGainHTML(newLevel,plan,raceFeats){
+  const open=!!LVLUP.reminderOpen;
+  const cards=plan.map(p=>levelUpFeatCardHTML(p,newLevel)).join('');
+  return `
+    <h4>What You Gain at Level ${newLevel}</h4>
+    ${plan.length?`<div class="lvlup-featgrp">${cards}</div>`
+      :`<p class="prep-note" style="margin:4px 0 10px">No named class or subclass feature this level — HP only.</p>`}
+    <button type="button" class="lvlup-reminder-toggle" data-lvlremindertoggle>${open?'▾':'▸'} ${esc(raceDisplayName()||'Heritage')} traits — always active${raceFeats.length?` (${raceFeats.length})`:''}</button>
     ${open?`<div class="lvlup-reminder-body">
-      ${classFeats.length?`<div class="lvlup-featgrp">${classFeats.map(e=>`<div class="lvlup-feat"><b>${esc(e.n)}</b><small>${esc(e.d||'')}</small></div>`).join('')}</div>`
-        :`<p class="prep-note" style="margin:4px 0">No named class feature this level — HP${isAsiLevel?'/ASI':''} only.</p>`}
-      ${raceFeats.length?`<div class="lvlup-featgrp"><div class="lvlup-featgrp-lbl">${esc(raceDisplayName())} traits — always active, just a reminder</div>
-        ${raceFeats.map(e=>`<div class="lvlup-feat"><b>${esc(e.n)}</b><small>${esc(e.d||'')}</small></div>`).join('')}</div>`:''}
+      ${raceFeats.length?raceFeats.map(e=>`<div class="lvlup-feat"><b>${esc(e.n)}</b><small>${esc(e.d||'')}</small></div>`).join('')
+        :`<p class="prep-note" style="margin:4px 0">No traits found for your race/subrace.</p>`}
       <p class="prep-note" style="margin:6px 0 0">Informational only — add anything you want tracked to the Features tab yourself.</p>
     </div>`:''}`;
 }
@@ -4916,7 +4970,8 @@ function levelUpBodyHTML(){
   const newLevel=levelUpNewLevel();
   const hd=c.hd, avg=levelUpHitDieAvg(hd);
   const isAsiLevel=asiLevels(S.classId).includes(newLevel);
-  const classFeats=FEATURE_LIB.filter(e=>num(e.l)===newLevel&&(e.g===c.name||(S.subclass&&e.g===c.name+' — '+S.subclass)));
+  const needSubclass=subclassLevel(S.classId)===newLevel && !S.subclass;
+  const plan=grantedPlan(newLevel).filter(p=>p.lib==='feature'&&num(p.ent.l)===newLevel);
   const ri=raceInfo();
   const raceFeats=ri?RACE_LIB.filter(raceEntryIsMine):[];
   const raceSlug=ri?spellSlug(ri.r.name):'';
@@ -4944,7 +4999,8 @@ function levelUpBodyHTML(){
         <div id="lvlupAsiRow">${levelUpAsiCardsHTML(newLevel)}</div>`
         :`<p class="prep-note" style="margin:0">No Ability Score Improvement or Feat at level ${newLevel} — HP only this time.${levelUpNextAsiNote(newLevel)}</p>`}
     </div>
-    <div class="lvlup-sec lvlup-sec-reminder">${levelUpReminderHTML(newLevel,classFeats,raceFeats,isAsiLevel)}</div>`;
+    ${needSubclass?`<div class="lvlup-sec lvlup-sec-subclass">${levelUpSubclassPickHTML(c)}</div>`:''}
+    <div class="lvlup-sec lvlup-sec-reminder">${levelUpGainHTML(newLevel,plan,raceFeats)}</div>`;
 }
 function levelUpNextAsiNote(newLevel){
   const next=asiLevels(S.classId).find(L=>L>=newLevel);
@@ -4983,6 +5039,32 @@ function openLevelUpModal(){
     if(hpBtn){ LVLUP.hpMode=hpBtn.dataset.hpmode; if(LVLUP.hpMode==='roll'&&LVLUP.hpRoll==null) LVLUP.hpRoll=levelUpHitDieAvg((CLASSES[S.classId]||{}).hd||8); paintLevelUpModal(); return; }
     if(e.target.closest('#lvlupApply')) return applyLevelUp();
     if(e.target.closest('[data-lvlremindertoggle]')){ LVLUP.reminderOpen=!LVLUP.reminderOpen; paintLevelUpModal(); return; }
+    const subBtn=e.target.closest('[data-lvlsubclasspick]');
+    if(subBtn){
+      S.subclass=subBtn.dataset.lvlsubclasspick;
+      S.subclassClassId=S.classId;
+      applyBuild(); paintLevelUpModal(); return;
+    }
+    const addBtn=e.target.closest('[data-lvladdkey]');
+    if(addBtn){
+      const key=addBtn.dataset.lvladdkey, ent=grantLibEntry(key);
+      if(ent){
+        const plan=grantedPlan(levelUpNewLevel()).find(p=>p.key===key);
+        quickAddFeature(ent,plan?plan.source:{kind:'class',classId:S.classId,className:(CLASSES[S.classId]||{}).name},key);
+        fxRefresh(); paintLevelUpModal();
+      }
+      return;
+    }
+    const poolChip=e.target.closest('[data-lvlpoolkey]');
+    if(poolChip){
+      const key=poolChip.dataset.lvlpoolkey;
+      if(poolChip.classList.contains('on')) quickRemoveFeature(key);
+      else{
+        const ent=grantLibEntry(key);
+        if(ent) quickAddFeature(ent,{kind:'subclass',classId:S.classId,className:(CLASSES[S.classId]||{}).name+' — '+S.subclass,subclassName:S.subclass},key);
+      }
+      fxRefresh(); paintLevelUpModal(); return;
+    }
     const choiceBtn=e.target.closest('[data-lvlchoicekey]');
     if(choiceBtn){
       asiEntry(parseAsiRef(choiceBtn.dataset.lvlchoicekey)).choice=choiceBtn.dataset.lvlchoiceval;
@@ -5372,18 +5454,24 @@ function raceTraitApplies(name,subName){
   return words(marker).some(w=>sub.has(w));
 }
 // Everything the current class + level + subclass + heritage entitles you to, as {key,ent,source}.
-function grantedPlan(){
-  const out=[], L=num(S.level), c=CLASSES[S.classId];
+// atLevel overrides S.level — used by the Level Up modal to preview what a not-yet-applied level
+// would grant, without touching real state. Pure pool options (a maneuver, an invocation, etc. —
+// `pool` set with no `pickCap`) are never "automatically" granted; they're a choice the player
+// makes via the pool picker (see poolOptions/poolCapAt below), so they're excluded here the same
+// way an ASI's ability choice isn't auto-granted either.
+function grantedPlan(atLevel){
+  const out=[], L=atLevel!=null?num(atLevel):num(S.level), c=CLASSES[S.classId];
+  const notPoolOnly=e=>!(e.pool && !e.pickCap);
   if(c){
     FEATURE_LIB.forEach(e=>{
-      if(e.g===c.name && num(e.l)<=L)
+      if(e.g===c.name && num(e.l)<=L && notPoolOnly(e))
         out.push({key:['class',S.classId,e.n].join(GRANT_SEP),ent:e,lib:'feature',
           source:{kind:'class',classId:S.classId,className:c.name}});
     });
     if(S.subclass){
       const g=c.name+' — '+S.subclass;
       FEATURE_LIB.forEach(e=>{
-        if(e.g===g && num(e.l)<=L)
+        if(e.g===g && num(e.l)<=L && notPoolOnly(e))
           out.push({key:['sub',S.classId,S.subclass,e.n].join(GRANT_SEP),ent:e,lib:'feature',
             source:{kind:'subclass',classId:S.classId,className:g,subclassName:S.subclass}});
       });
@@ -5432,8 +5520,11 @@ function syncGrantedFeatures(){
   let added=0;
   plan.forEach(p=>{
     if(have.has(p.key)) return;
-    // Already added by hand from the search box? Adopt that card instead of stacking a twin.
-    const dup=S.features.find(f=>!(f.source&&f.source.grantKey)&&(f.title||'').trim().toLowerCase()===p.ent.n.toLowerCase());
+    // Already added by hand from the search box, untouched since? Adopt that card instead of
+    // stacking a twin. Only counts as "untouched" when title AND description still exactly match
+    // the library — a card the player has edited is their own customized thing now, not a stand-in
+    // for the granted one, so it's left alone and a fresh copy is added alongside it instead.
+    const dup=S.features.find(f=>!(f.source&&f.source.grantKey)&&(f.title||'')===p.ent.n&&(f.desc||'')===(p.ent.d||''));
     if(dup){ dup.source={...(dup.source||{}),...p.source,grantKey:p.key}; return; }
     const f = p.lib==='race' ? raceEntryToFeature(p.ent,p.source)
       : p.lib==='background' ? backgroundEntryToFeature(p.ent,p.source)
@@ -5445,6 +5536,49 @@ function syncGrantedFeatures(){
   // the top of the list. Only swept when something was actually granted, so a blank row you just
   // added yourself on the Features tab isn't yanked out from under you.
   if(added) S.features=S.features.filter(f=>(f.title||'').trim()||(f.desc||'').trim()||(f.fx||[]).length);
+}
+// One-tap add/remove for a single grantedPlan() entry — used by the Level Up modal so a single
+// new feature (or a single chosen Battle Master maneuver) can be added without needing
+// S.autoGrant switched on. Links onto an existing same-titled card only when it's untouched
+// (title AND description still exactly match the library — same test as featureIsPristine's
+// "still exactly what the library handed you"); this app is built around letting the player
+// customize everything, so a card they've edited — even just the description — is their own
+// thing now, and "+ Add" here adds a fresh independent copy alongside it instead of silently
+// claiming it.
+function quickAddFeature(ent,source,key){
+  const have=S.features.find(f=>(f.source||{}).grantKey===key);
+  if(have) return have;
+  const dup=S.features.find(f=>!(f.source&&f.source.grantKey)&&(f.title||'')===ent.n&&(f.desc||'')===(ent.d||''));
+  if(dup){ dup.source={...(dup.source||{}),...source,grantKey:key}; return dup; }
+  const f=libEntryToFeature(ent,source);
+  f.source.grantKey=key;
+  S.features.push(f);
+  // Same blank-seed-row sweep as syncGrantedFeatures — a real card just landed, so the empty row
+  // defaultState() seeds every new sheet with is no longer "the only thing here", just clutter.
+  S.features=S.features.filter(x=>(x.title||'').trim()||(x.desc||'').trim()||(x.fx||[]).length);
+  return f;
+}
+function quickRemoveFeature(key){
+  const idx=S.features.findIndex(f=>(f.source||{}).grantKey===key);
+  if(idx<0) return;
+  if(featureIsPristine(S.features[idx])) S.features.splice(idx,1);
+  else delete S.features[idx].source.grantKey; // edited — keep the card, just stop managing it
+}
+// ----- "Choose N from a pool" features (Battle Master maneuvers today; same tags — `pool` on
+// each option, `pool`+`pickCap` on the umbrella feature that introduces them — work for any
+// future subclass's similar mechanic, e.g. Metamagic or Invocations, with no code changes here.
+function poolOptions(poolId){ return FEATURE_LIB.filter(e=>e.pool===poolId && !e.pickCap); }
+function poolCapAt(ent,level){
+  if(!ent||!ent.pickCap) return 0;
+  const at=Object.keys(ent.pickCap).map(Number).filter(L=>L<=level);
+  return at.length ? ent.pickCap[Math.max(...at)] : 0;
+}
+// Advisory only, per this app's existing philosophy (see subclassLevel's comment above) — this is
+// a live readout of what's already on the Features tab, not an enforced/persisted selection, so
+// there's nothing stopping a player from adding a 4th if their table allows it.
+function poolChosenCount(poolId){
+  const names=new Set(poolOptions(poolId).map(e=>e.n));
+  return S.features.filter(f=>names.has((f.title||'').trim())).length;
 }
 
 function wireBuild(){

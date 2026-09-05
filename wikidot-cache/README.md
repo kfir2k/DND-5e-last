@@ -12,7 +12,9 @@ One subfolder per category, mirroring the site sections used in `CLAUDE.md`:
 
 - `spells/` — `https://dnd5e.wikidot.com/spell:<kebab-case-name>` pages, plus the master
   `spells` index page
-- `classes/` — `https://dnd5e.wikidot.com/<class-name>` pages (fighter, wizard, etc.)
+- `classes/` — `https://dnd5e.wikidot.com/<class-name>` overview pages only (fighter, wizard, etc.)
+- `classes/subclasses/` — each class's subclass pages
+  (`https://dnd5e.wikidot.com/<class-name>:<subclass-slug>`, e.g. `fighter:rune-knight`)
 - `races/` — `https://dnd5e.wikidot.com/lineage` index and individual race pages
 - `items/` — pages from `adventuring-gear`, `armor`, `weapons`, `wondrous-items`, `tools`
 - `backgrounds/` — `https://dnd5e.wikidot.com/background:<kebab-case-name>` pages
@@ -28,6 +30,11 @@ subfolder, containing:
 3. The raw extracted content (text/tables) actually used
 
 Example: `wikidot-cache/spells/fireball.md` for `https://dnd5e.wikidot.com/spell:fireball`.
+
+Wikidot slugs with a colon (`fighter:rune-knight`, `cleric:war`, `spell:fireball`, …) can't be used
+verbatim as a Windows filename — replace the colon with a dash instead (`fighter-rune-knight.md`,
+`cleric-war.md`), noting the substitution in the file's own header line so the real source URL is
+still obvious.
 
 ## Staleness
 

@@ -105,6 +105,16 @@ function subclassNamesForClass(classId){
   const prefix=cname+' — ';
   return [...new Set(FEATURE_LIB.filter(e=>e.g.startsWith(prefix)).map(e=>e.g.slice(prefix.length)))];
 }
+// The PHB's own name for "subclass" varies by class — shown as the Level Up subclass-choice
+// step's heading ("Choose Your Divine Domain"). wizard.js has its own narrower WIZ_SUBCLASS_LABEL
+// (only the 3 classes that pick at level 1, for the creation wizard) — this is the full set, for
+// every class, since a subclass pick can happen mid-level-up for the other 10.
+const SUBCLASS_TYPE_LABEL={
+  barbarian:'Primal Path', bard:'Bardic College', cleric:'Divine Domain', druid:'Druid Circle',
+  fighter:'Martial Archetype', monk:'Monastic Tradition', paladin:'Sacred Oath',
+  ranger:'Ranger Archetype', rogue:'Roguish Archetype', sorcerer:'Sorcerous Origin',
+  warlock:'Otherworldly Patron', wizard:'Arcane Tradition', bloodhunter:'Blood Hunter Order'
+};
 // Full-caster spell slots by character level (index = level, values = slots for spell levels 1-9)
 const FULL_SLOTS=[[],
   [2],[3],[4,2],[4,3],[4,3,2],[4,3,3],[4,3,3,1],[4,3,3,2],[4,3,3,3,1],[4,3,3,3,2],

@@ -2871,6 +2871,40 @@ label.fld-paper input:focus{border-bottom-style:solid;border-bottom-color:var(--
 }
 .lvlup-feat b{display:block;color:var(--text);font-size:.88rem;margin-bottom:2px}
 .lvlup-feat small{color:var(--muted);font-size:.78rem;line-height:1.4}
+.lvlup-feat-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.lvlup-feat-body{flex:1;min-width:0}
+.lvlup-cd-tag{
+  display:inline-block;margin:0 0 3px 8px;font-size:.64rem;letter-spacing:.03em;
+  color:var(--gold-lt);border:1px solid var(--gold-dim);border-radius:999px;padding:1px 8px;
+  vertical-align:middle;
+}
+.lvlup-addbtn{
+  flex-shrink:0;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-lt);
+  border-radius:8px;padding:6px 12px;font-size:.78rem;cursor:pointer;white-space:nowrap;
+}
+.lvlup-addbtn:hover{border-color:var(--gold);background:var(--gold-dim)}
+.lvlup-addbtn.added{border-color:var(--border);color:var(--muted);cursor:default;background:transparent}
+/* "Choose N from a pool" (Battle Master maneuvers today) — advisory only, so no chip is ever
+   disabled; the count line is just a live readout of what's already on the Features tab. */
+.lvlup-pool{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+.lvlup-pool-count{font-size:.76rem;color:var(--muted);margin-bottom:6px}
+.lvlup-pool-count b{color:var(--gold-lt)}
+.lvlup-pool-chips{display:flex;flex-wrap:wrap;gap:6px}
+.lvlup-pool-chip{
+  background:var(--panel);border:1px solid var(--border-lt);color:var(--muted);
+  border-radius:999px;padding:5px 11px;font-size:.76rem;cursor:pointer;
+}
+.lvlup-pool-chip:hover{border-color:var(--gold-dim)}
+.lvlup-pool-chip.on{border-color:var(--gold);background:rgba(201,162,39,.16);color:var(--gold-lt)}
+/* Subclass-choice step — more, smaller cards than the 2-up ASI/Feat grid (Fighter alone offers
+   10 Martial Archetypes), so it wraps instead of forcing a fixed column count. */
+.lvlup-subclass-grid{display:flex;flex-wrap:wrap;gap:8px}
+.lvlup-subclass-card{
+  background:var(--panel2);border:1px solid var(--border-lt);color:var(--text);
+  border-radius:10px;padding:10px 14px;cursor:pointer;font-family:'Cinzel',serif;font-size:.82rem;
+  transition:border-color .15s,background .15s;
+}
+.lvlup-subclass-card:hover{border-color:var(--gold);background:rgba(201,162,39,.12)}
 .lvlup-note{margin:14px 2px 0}
 #lvlupApply{
   background:linear-gradient(180deg,var(--gold),var(--gold-dim));color:var(--ink);border-color:var(--gold);
