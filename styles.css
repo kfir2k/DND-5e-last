@@ -491,6 +491,25 @@ label.fld span{
 .save-dot-row{display:flex;justify-content:center;margin-top:6px}
 .ab-race{color:var(--faint);font-size:.7rem;margin-top:3px;min-height:.95em;position:relative;z-index:1}
 .ab-race b{color:var(--gold-dim);font-weight:600}
+/* Temporary ability adjustment stepper — always present (like the Stress widget) so a penalty
+   from ability damage/poison, or a temporary buff, can be set and cleared without leaving this
+   card, and the ±0 badge makes it obvious at a glance whether one is currently active. */
+.ab-temp-row{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;position:relative;z-index:1}
+.ab-temp-btn{
+  width:19px;height:19px;line-height:17px;padding:0;border-radius:50%;
+  border:1px solid var(--border-lt);background:transparent;color:var(--faint);
+  font-size:.75rem;cursor:pointer;
+}
+.ab-temp-btn:hover{border-color:var(--accent);color:var(--accent)}
+.ab-temp-val{
+  min-width:32px;padding:1px 7px;border-radius:999px;border:1px solid transparent;
+  background:transparent;color:var(--faint);font-size:.68rem;font-family:'Cinzel',serif;
+  font-weight:600;cursor:pointer;
+}
+.ability.temp-down{--accent:var(--red);--accent-dim:rgba(224,117,102,.22)}
+.ability.temp-down .ab-temp-val{color:var(--red);border-color:rgba(224,117,102,.5);background:rgba(224,117,102,.12)}
+.ability.temp-up{--accent:var(--green);--accent-dim:rgba(111,158,99,.22)}
+.ability.temp-up .ab-temp-val{color:var(--green);border-color:rgba(111,158,99,.5);background:rgba(111,158,99,.12)}
 
 /* ---------- Feature effects ---------- */
 .fx-badge{color:var(--gold);cursor:help;margin-left:5px;font-size:.85em}
@@ -1197,6 +1216,8 @@ label.fld span{
 .ck-conc-tip{color:var(--faint);font-size:.7rem;flex-basis:100%}
 .ck-topstates{display:inline-flex;gap:5px;flex-wrap:wrap}
 .ck-state{border:1px solid rgba(111,208,196,.45);color:#6fd0c4;border-radius:999px;padding:1px 9px;font-size:.72rem}
+.ck-state.down{border-color:rgba(224,117,102,.5);color:var(--red)}
+.ck-state.up{border-color:rgba(111,158,99,.5);color:var(--green)}
 /* reminders + rules */
 .ck-rem{color:var(--gold-lt);font-size:.8rem;padding:4px 0;border-bottom:1px solid var(--border)}
 .ck-rem:last-child{border-bottom:none}
@@ -1961,6 +1982,9 @@ select.add-btn{padding:6px 10px;font-size:.8rem;width:auto;align-self:flex-start
 .sc-input:focus{outline:none;border-bottom-color:var(--gold)}
 select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
 .sc-computed{font-family:'Cinzel',serif;font-weight:700;font-size:1.2rem;color:var(--gold-lt)}
+.sc-ability-row{display:flex;align-items:center;gap:6px}
+.sc-ability-row .sc-input{width:auto;flex:0 1 auto}
+.sc-abilitymod{flex-shrink:0;font-family:'Cinzel',serif;font-weight:600;font-size:.98rem;color:var(--gold-lt);padding:2px 0}
 /* Plain-language line under Save DC/Attack — always visible (not a hover tooltip, which doesn't
    exist on a tablet at the table) so a player who's never seen this sheet before still knows what
    the number means and why it's there, without having to ask. */

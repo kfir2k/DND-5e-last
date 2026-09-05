@@ -14,6 +14,10 @@ function defaultState(){
     // not something to decide for them the moment they tap a class.
     buildOverride:{}, autoGrant:false, buildCustomOpen:false, buildMigrated:false,
     abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},
+    // Temporary in-session penalty/bonus per ability (poison, ability drain, a buff spell…) —
+    // folded straight into score()/amod() so every derived number (mod, saves, skills, attacks,
+    // spell DC) stays correct without hand-editing the base score and having to remember to undo it.
+    tempAbility:{str:0,dex:0,con:0,int:0,wis:0,cha:0},
     saveProf:{str:false,dex:false,con:false,int:false,wis:false,cha:false},
     skills:Object.fromEntries(SKILLS.map(s=>[s[0],0])), // 0 none, 1 proficient, 2 expertise
     classSkillPicks:[], // which skills came from the class's "choose N" budget (see CLASS_SKILL_CHOICES)
@@ -115,7 +119,8 @@ function asiBonus(k){
   });
   return b;
 }
-function score(k){ return (Number(S.abilities[k])||0)+racialBonus(k)+asiBonus(k); }
+function tempAbilityDelta(k){ return num((S.tempAbility||{})[k]); }
+function score(k){ return (Number(S.abilities[k])||0)+racialBonus(k)+asiBonus(k)+tempAbilityDelta(k); }
 function amod(k){ return mod(score(k)); }
 // Uses-scale: ties a feature's max uses to a live stat instead of a fixed number that goes
 // stale the moment you level up or bump an ability score. 'prof' = proficiency bonus; any
@@ -537,13 +542,17 @@ spells:`
           <input type="text" class="sc-input" data-bind="spellClass" placeholder="—">
         </div>
         <div class="stat-cell">
-          <div class="sc-label">Ability</div>
-          <select class="sc-input" data-bind="spellAbility">
-            <option value="">— none —</option>
-            <option value="int">Intelligence</option>
-            <option value="wis">Wisdom</option>
-            <option value="cha">Charisma</option>
-          </select>
+          <div class="sc-label">Ability Modifier</div>
+          <div class="sc-ability-row">
+            <select class="sc-input" data-bind="spellAbility">
+              <option value="">— none —</option>
+              <option value="int">Intelligence</option>
+              <option value="wis">Wisdom</option>
+              <option value="cha">Charisma</option>
+            </select>
+            <span class="sc-abilitymod" data-calc="spellAbilityMod">—</span>
+          </div>
+          <div class="sc-hint">Added to the Save DC and Attack to the right.</div>
         </div>
         <div class="stat-cell">
           <div class="sc-label">Save DC</div>
@@ -1101,13 +1110,30 @@ const AB_ICON={str:'⚔',dex:'🏹',con:'🛡',int:'📖',wis:'👁',cha:'✦'};
 const AB_COLOR={str:'#e0705a',dex:'#7dc26a',con:'#e0ab4a',int:'#5aa9e0',wis:'#a58ce0',cha:'#e06bb0'};
 function renderAbilityCards(){
   $('#abilityCards').innerHTML = ABILITIES.map(([k,label])=>`
-    <div class="ability ab-${k}">
+    <div class="ability ab-${k}" data-abcard="${k}">
       <div class="ability-icon">${AB_ICON[k]||''}</div>
       <div class="ability-name">${label}</div>
       <div class="mod" data-abmod="${k}">+0</div>
       <input type="number" data-bind="abilities.${k}" value="${S.abilities[k]}">
       <div class="ab-race" data-abrace="${k}"></div>
+      <div class="ab-temp-row" title="Temporary adjustment — poison, ability drain, a buff spell…">
+        <button type="button" class="ab-temp-btn" data-abtempstep="-1" data-ab="${k}" title="Apply −1 (e.g. ability damage)">−</button>
+        <button type="button" class="ab-temp-val" data-abtempval="${k}" title="Tap to clear">±0</button>
+        <button type="button" class="ab-temp-btn" data-abtempstep="1" data-ab="${k}" title="Apply +1 (e.g. a temporary buff)">+</button>
+      </div>
     </div>`).join('');
+  $$('[data-abtempstep]').forEach(b=>b.addEventListener('click',()=>{
+    const k=b.dataset.ab, d=+b.dataset.abtempstep;
+    S.tempAbility=S.tempAbility||{};
+    S.tempAbility[k]=Math.max(-10,Math.min(10,tempAbilityDelta(k)+d));
+    recalc(); renderCockpitExtras(); save();
+  }));
+  $$('[data-abtempval]').forEach(b=>b.addEventListener('click',()=>{
+    const k=b.dataset.abtempval;
+    if(!tempAbilityDelta(k)) return;
+    S.tempAbility[k]=0;
+    recalc(); renderCockpitExtras(); save();
+  }));
 }
 // Saving throws as six ability tiles — same elemental icon + color language as the ability
 // cards, so a save reads as "that ability, defending". The whole tile is the tap target.
@@ -2651,7 +2677,9 @@ function renderCockpitExtras(){
     ? `◉ Concentrating: <b>${esc(S.concentration.name)}</b> <button data-ckconcdrop title="Drop concentration">✕</button><span class="ck-conc-tip">CON save when you take damage — DC 10 or half the damage, whichever is higher</span>`
     : '';
   $$('.ck-conc').forEach(el=>el.innerHTML=concHtml);
-  const topHtml=S.states.map(s=>`<span class="ck-state">${esc(s)}</span>`).join('');
+  const abChips=ABILITIES.filter(([k])=>tempAbilityDelta(k)).map(([k])=>
+    `<span class="ck-state ${tempAbilityDelta(k)<0?'down':'up'}" title="Temporary adjustment — clear it from the Ability Scores card on Overview">${AB_ICON[k]||''} ${k.toUpperCase()} ${fmt(tempAbilityDelta(k))}</span>`);
+  const topHtml=[...abChips,...S.states.map(s=>`<span class="ck-state">${esc(s)}</span>`)].join('');
   $$('.ck-topstates').forEach(el=>el.innerHTML=topHtml);
   const listHtml = S.states.length
     ? S.states.map((s,i)=>`<span class="fx-chip">${esc(s)}<button data-stdel="${i}">✕</button></span>`).join('')
@@ -3943,16 +3971,20 @@ function recalc(){
   // Both views read the same f.usesMax — without renderFeatures() here, the Features tab's own
   // "= N" badge went stale after an ability score change until something else forced a re-render.
   if(scaledUsesChanged){ renderFeatures(); renderCombatFeatures(); }
-  // ability modifiers (base score + racial bonus)
+  // ability modifiers (base score + racial bonus + temporary adjustment)
   ABILITIES.forEach(([k])=>{
     $$(`[data-abmod="${k}"]`).forEach(el=>el.textContent=fmt(amod(k)));
-    const rb=racialBonus(k), ab=asiBonus(k), tot=score(k);
+    const rb=racialBonus(k), ab=asiBonus(k), tp=tempAbilityDelta(k), tot=score(k);
     const parts=[];
     if(rb) parts.push(`<b>+${rb}</b> race`);
     if(ab) parts.push(`<b>+${ab}</b> ASI`);
-    let txt=parts.length?parts.join(' ')+` → ${tot}`:'';
+    if(tp) parts.push(`<b style="color:${tp<0?'var(--red)':'var(--green)'}">${fmt(tp)}</b> temp`);
+    let txt=parts.length?parts.join(', ')+` → ${tot}`:'';
     if(tot>20) txt+=` <span style="color:var(--red)">over 20!</span>`;
     $$(`[data-abrace="${k}"]`).forEach(el=>el.innerHTML=txt);
+    $$(`[data-abtempval="${k}"]`).forEach(el=>el.textContent=tp?fmt(tp):'±0');
+    $$(`[data-abcard="${k}"]`).forEach(el=>el.classList.toggle('temp-down',tp<0));
+    $$(`[data-abcard="${k}"]`).forEach(el=>el.classList.toggle('temp-up',tp>0));
   });
   // saving throws (manual proficiency OR granted by a feature effect)
   ABILITIES.forEach(([k])=>{
@@ -4049,6 +4081,7 @@ function recalc(){
   const sca=spellDCAtk();
   setCalc('spellDC', sca.dc!=null?sca.dc:'—');
   setCalc('spellAtk', sca.atk!=null?fmt(sca.atk):'—');
+  setCalc('spellAbilityMod', S.spellAbility?fmt(amod(S.spellAbility)):'—');
   // Attack rows stay in sync with ability/proficiency/magic/buff/roll changes. Each of these
   // data-atk* markers can appear more than once for the same attack at the same time (the
   // Attacks panel row, its "Do Something" grid card, and — if queued up — its Turn Plan step
