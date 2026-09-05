@@ -69,6 +69,17 @@ AC/damage, uses-per-rest, etc.) — the short one-line descriptions already in t
 deliberate paraphrases, not literal quotes from the site, so don't rewrite them to match the
 site's wording unless they're actually incorrect.
 
+### Cache fetched wikidot pages locally
+
+`wikidot-cache/` (see its own `README.md`) holds pages already fetched from
+`dnd5e.wikidot.com`, split into `spells/`, `classes/`, `races/`, `items/`, `backgrounds/`,
+`feats/`. **Before fetching a page from wikidot, check whether it's already saved there** —
+don't re-fetch over the network something already cached. **Whenever you do fetch a page from
+wikidot (for verification or to source a new entry), save it into the matching subfolder** as
+`<slug>.md` (source URL + fetch date + the extracted content actually used) so future tasks don't
+need to fetch it again. If a cached page might be stale for a fact you're checking, re-fetch and
+overwrite the cached copy rather than trusting it blindly.
+
 ## Architecture (app.js)
 
 **State**: a single global object `S` (see `defaultState()` at the top of `app.js`) holds the

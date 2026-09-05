@@ -713,6 +713,10 @@ inventory:`
         <input type="number" id="eqWeight" placeholder="0" style="max-width:120px">
       </div>
       <div class="eq-field">
+        <label>Price <span class="eq-optional">— optional, shown on the item's card</span></label>
+        <input type="text" id="eqPrice" placeholder="e.g. 15 gp" style="max-width:120px">
+      </div>
+      <div class="eq-field">
         <label>Notes / what it does</label>
         <textarea id="eqDesc" dir="auto" placeholder="Effect, quirks, where you got it…"></textarea>
       </div>
@@ -1660,6 +1664,7 @@ function renderEquipment(){
     let flags='';
     if(e.combat) flags+='<span class="eq-flag combat">⚔ Combat</span>';
     if(e.att) flags+='<span class="eq-flag attune">✦ Attuned</span>';
+    if(String(e.price||'').trim()) flags+=`<span class="eq-flag price">${esc(e.price)}</span>`;
     const picked=EQ_SELECTED.has(i);
     const catColor=ITEM_TYPE_COLOR[e.type]||ITEM_TYPE_COLOR.G;
     return `<div class="eq-card ${EQ_SELECT_MODE?'selectable':''} ${picked?'selected':''}" data-eqopen="${i}" style="--cat:${catColor}">
@@ -1718,6 +1723,7 @@ function openEqDrawer(idx){
   $('#eqName').value = it ? it.name : '';
   $('#eqQty').value = it ? it.qty : '1';
   $('#eqWeight').value = it && it.wt ? it.wt : '';
+  $('#eqPrice').value = it && it.price ? it.price : '';
   $('#eqDesc').value = it ? it.desc : '';
   const cat = it ? it.type : (ITEM_TYPES[S.eqTab] ? S.eqTab : 'G');
   $('#eqCatPicker').innerHTML = eqCatPickerHTML(cat);
@@ -1816,6 +1822,7 @@ function wireEquipmentDrawer(){
     const data={
       name, qty:$('#eqQty').value.trim(), type:cat,
       wt: parseFloat($('#eqWeight').value) || undefined,
+      price: $('#eqPrice').value.trim() || undefined,
       desc:$('#eqDesc').value,
       combat:eqSwitchOn($('#eqCombatSwitch')),
       att: cat==='M' ? eqSwitchOn($('#eqAttuneSwitch')) : false,

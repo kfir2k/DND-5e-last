@@ -683,6 +683,7 @@ label.fld span{
 .eq-flag{font-size:.64rem;font-family:'Cinzel',serif;letter-spacing:.4px;padding:1px 7px;border-radius:999px;border:1px solid var(--border-lt);color:var(--muted)}
 .eq-flag.combat{border-color:var(--gold-dim);color:var(--gold-lt)}
 .eq-flag.attune{border-color:#8b5cc9;color:#c8a8ec}
+.eq-flag.price{border-color:#6b8e5a;color:#9fc98a}
 .eq-card-desc{color:var(--muted);font-size:.78rem;font-style:italic;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eq-chev{color:var(--faint);font-size:1rem;flex-shrink:0}
 
