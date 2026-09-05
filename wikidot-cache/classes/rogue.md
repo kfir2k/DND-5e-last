@@ -28,6 +28,22 @@ Fetched: 2026-09-05
 | 19th | +6 | 10d6 | Ability Score Improvement |
 | 20th | +6 | 10d6 | Stroke of Luck |
 
+## Level 11+ base feature text (fetched 2026-09-05, additional pass)
+
+**Reliable Talent (11th level):** "Whenever you make an ability check that lets you add your
+proficiency bonus, you can treat a d20 roll of 9 or lower as a 10."
+
+**Blindsense (14th level):** "If you are able to hear, you are aware of the location of any hidden
+or invisible creature within 10 feet of you."
+
+**Slippery Mind (15th level):** Gain proficiency in Wisdom saving throws.
+
+**Elusive (18th level):** "No attack roll has advantage against you while you aren't
+incapacitated."
+
+**Stroke of Luck (20th level):** Once per short/long rest, turn a missed attack into a hit, or
+treat a failed ability check's d20 roll as a 20.
+
 ## Subclass
 
 Category: **Roguish Archetype**, first chosen at **3rd level**.

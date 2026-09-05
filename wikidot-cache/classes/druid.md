@@ -44,3 +44,29 @@ Subclass feature rows: 2 (choice), 6, 10, 14.
 - Wildfire (Tasha's) — `druid:wildfire`
 
 Out of scope (UA): Primeval, Mage of Prismari, Mage of Witherbloom.
+
+## Base class feature text (added 2026-09-05, re-fetched from https://dnd5e.wikidot.com/druid)
+
+**Druidic (Level 1)**
+"You know Druidic, the secret language of druids." You can speak it and leave hidden messages
+that others notice with a DC 15 Wisdom (Perception) check but can't decipher without magic.
+
+**Wild Companion (Level 2, optional class feature)**
+As an action, expend a Wild Shape use to cast Find Familiar without material components; the
+familiar is a fey (not a beast) and disappears after a number of hours equal to half your druid
+level.
+
+**Cantrip Versatility (Level 4, optional class feature; repeats at every ASI level)**
+Whenever you gain an Ability Score Improvement, you can swap one druid cantrip you know for
+another from the druid spell list.
+
+**Timeless Body (Level 18)**
+You age at 1/10th the normal rate (1 year of aging per 10 years that pass).
+
+**Beast Spells (Level 18)**
+You can cast most of your druid spells (verbal/somatic components only, no material components)
+while in a beast shape from Wild Shape.
+
+**Archdruid (Level 20)**
+Unlimited Wild Shape uses. You can also ignore verbal and somatic components of druid spells, and
+material components that have no cost and aren't consumed, even while in a beast shape.

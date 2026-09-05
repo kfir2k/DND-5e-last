@@ -46,3 +46,27 @@ Subclass feature rows: 3 (choice), 7, 15, 20.
 - Oathbreaker (DMG) — `paladin:oathbreaker`
 
 Out of scope (UA/archived): Treachery, Redemption (UA), Watchers (UA), Heroism (UA).
+
+## Base class feature text (re-fetched 2026-09-05 to fill in prose the table above doesn't carry)
+
+**Extra Attack (5th level):** "Beginning at 5th level, you can attack twice, instead of once,
+whenever you take the Attack action on your turn."
+
+**Improved Divine Smite (11th level):** "By 11th level, you are so suffused with righteous might
+that all your melee weapon strikes carry divine power with them. Whenever you hit a creature with
+a melee weapon, the creature takes an extra 1d8 radiant damage."
+
+**Cleansing Touch (14th level):** Action: end one spell on yourself or on one willing creature you
+touch. Usable a number of times equal to your Charisma modifier (minimum once), regaining all
+expended uses on a long rest.
+
+**Aura of Protection (6th level):** "Starting at 6th level, whenever you or a friendly creature
+within 10 feet of you must make a saving throw, the creature gains a bonus to the saving throw
+equal to your Charisma modifier (with a minimum bonus of +1). You must be conscious to grant this
+bonus." (Range becomes 30 ft. at 18th level — see Aura Improvements.)
+
+**Aura of Courage (10th level):** "Starting at 10th level, you and friendly creatures within 10
+feet of you can't be frightened while you are conscious." (Range becomes 30 ft. at 18th level.)
+
+**Aura Improvements (18th level):** Both Aura of Protection and Aura of Courage have their ranges
+increased from 10 feet to 30 feet.
