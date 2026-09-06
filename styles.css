@@ -1855,12 +1855,65 @@ input.atk-combo{width:100%;font-size:.92rem}
    lines up with its neighbors on both axes, row after row. Label-above-field (instead of
    label-beside-field) reads cleaner once every field is the same cell width — a wide "Damage
    Type" select and a narrow "Magic" number box no longer fight for label space beside them. */
-.atk-config{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));
-  gap:8px 10px;margin-top:8px;
+/* Two visually distinct clusters instead of one flat grid, so the card reads top-to-bottom as one
+   story: what the attack IS (stat/die/type) → what BOOSTS it (magic/misc bonuses). A thin divider
+   marks the seam; both clusters keep the same auto-fill sizing so fields still line up. */
+.atk-config{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.atk-config-grp{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px 10px;
 }
+.atk-config-grp+.atk-config-grp{border-top:1px dashed var(--border-lt);padding-top:8px}
+/* Weapon property tags (finesse, versatile, reach, heavy, ...) — the mechanical info that used
+   to be computed but never actually shown anywhere. Tablet-first: tapped open for a plain-
+   language explanation, same mechanism as the Skills tab's .sk-fx badges (wireAttackTips, mirrors
+   wireSkillFx) — no hover dependency anywhere in this card. The versatile tag is a real button
+   instead (it's the one property that changes your damage die, not just describes a rule), and
+   says exactly what tapping it does right in its own label, so it doesn't need a reveal at all. */
+.atk-props{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.wpn-tag{
+  display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px 5px;
+  background:var(--panel3);color:var(--muted);
+  border:1px solid var(--border-lt);border-radius:12px;padding:2px 8px;
+  font-size:.66rem;letter-spacing:.3px;max-width:100%;box-sizing:border-box;
+  transition:border-color .15s ease,background .15s ease;-webkit-tap-highlight-color:transparent;
+}
+span.wpn-tag[data-wtip]{cursor:pointer}
+span.wpn-tag[data-wtip]:hover,span.wpn-tag.open{background:var(--panel2);border-color:var(--gold-dim);color:var(--text)}
+span.wpn-tag.open{width:100%;white-space:normal}
+button.wpn-tag-ver{cursor:pointer;font-family:inherit;color:var(--gold-dim);border-color:var(--gold-dim);white-space:nowrap}
+button.wpn-tag-ver:hover{color:var(--gold-lt);border-color:var(--gold-lt)}
+button.wpn-tag-ver.on{background:var(--gold-dim);color:var(--bg);border-color:var(--gold-dim)}
+/* The tap-open explanation, nested inside a .wpn-tag — identical unfold mechanics to .sk-tip
+   (Skills tab) on purpose: one proven pattern for "explain this" everywhere in the app. */
+.wtip{
+  flex-basis:100%;max-width:100%;width:0;min-width:100%;
+  max-height:0;overflow:hidden;opacity:0;
+  white-space:normal;word-wrap:break-word;text-align:left;line-height:1.35;
+  font-style:italic;font-weight:500;
+  transition:max-height .22s ease,opacity .18s ease,margin-top .22s ease;margin-top:0;
+}
+.wpn-tag.open .wtip{max-height:80px;opacity:1;margin-top:3px}
+/* Simple/Martial sits right under the weapon name (proficiency-relevant, so worth a glance before
+   the finer per-property tags below it) rather than in the .atk-props row with the rest. */
+.wpn-cat{margin-top:6px}
 .cfg-pair{display:flex;flex-direction:column;gap:3px;min-width:0}
 .cfg-lbl{color:var(--faint);font-size:.64rem;white-space:nowrap;letter-spacing:.3px}
+/* One legend for the whole Attacks panel instead of a tooltip on every field of every card —
+   collapsed by default, a UI preference only (wireAttackTips just toggles [hidden], nothing here
+   is ever save()d into the character). */
+.atk-legend-btn{
+  display:inline-flex;align-items:center;gap:5px;cursor:pointer;background:none;
+  border:none;color:var(--gold-dim);font-size:.78rem;font-family:'Crimson Pro',serif;
+  padding:2px 0;margin-bottom:8px;-webkit-tap-highlight-color:transparent;
+}
+.atk-legend-btn:hover,.atk-legend-btn.open{color:var(--gold-lt)}
+.atk-legend{
+  background:var(--panel2);border:1px solid var(--border-lt);border-radius:8px;
+  padding:8px 12px;margin-bottom:12px;font-size:.8rem;color:var(--muted);line-height:1.45;
+}
+.atk-legend p{margin:0 0 6px}
+.atk-legend p:last-child{margin-bottom:0}
+.atk-legend b{color:var(--gold-lt);font-weight:700}
 /* These fields (stat/die/type/misc bonuses) are the ones most often tapped mid-combat on a
    touchscreen — sized well past the old ~26px targets so a fingertip doesn't miss or land on
    the field next door. Width comes from the grid cell now, not a fixed pixel value per field. */

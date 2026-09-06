@@ -486,6 +486,13 @@ combat:`
     <div class="ck-col ck-center">
       <div class="panel ck-atk-panel" id="ckAtkPanel"><h2 id="ckAtkHead">⚔ Attacks</h2>
         <div class="ck-atk-body">
+          <button type="button" class="atk-legend-btn" id="atkLegendBtn">ⓘ How to read this</button>
+          <div class="atk-legend" id="atkLegend" hidden>
+            <p><b>Hit</b> is your attack roll bonus; <b>Damage</b> is the formula you roll if it lands.</p>
+            <p><b>Magic</b> is a magic weapon's flat +N, added to both Hit and Damage. <b>Atk misc</b> only changes whether you hit (Bless, a fighting style); <b>Dmg misc</b> only changes how much you deal (Dueling, a DM boost) — split apart so one doesn't silently affect the other.</p>
+            <p>Tags under the weapon's name (Finesse, Versatile, Heavy, ...) describe its built-in rules — tap one to read what it means. The Versatile tag also switches your die between one- and two-handed.</p>
+            <p><b>+ Add buff…</b> below the Hit/Damage numbers layers on anything extra — its <i>Quick add</i> group is a one-tap magic bonus or elemental damage type, its <i>Presets</i> group covers named effects (Sneak Attack, Hunter's Mark, ...), and Custom lets you build your own. Whatever you add shows up as its own on/off switch, never deleted just by disabling it.</p>
+          </div>
           <div id="attackList"></div>
           <button class="add-btn" data-add="attacks">+ Add attack</button>
           <label class="fld" style="margin-top:14px"><span>Additional notes</span>
@@ -1402,18 +1409,51 @@ function buffPill(a,i,b,j){
     <button class="rider-del" data-buffdel="${i}.${j}" title="Remove this buff">✕</button>
   </span>`;
 }
+// Weapon-table categories for the picker's grouping + the Simple/Martial badge on a picked
+// weapon — reuses the exact same category lists data-libraries.js already built for the
+// Proficiencies library (SIMPLE_MELEE_W etc.), so this grouping can't drift from that one.
+const WEAPON_CATS=[
+  ['Simple Melee',SIMPLE_MELEE_W],['Simple Ranged',SIMPLE_RANGED_W],
+  ['Martial Melee',MARTIAL_MELEE_W],['Martial Ranged',MARTIAL_RANGED_W],
+];
+function weaponCategory(id){
+  const hit=WEAPON_CATS.find(([,ids])=>ids.includes(id));
+  return hit ? (hit[0].startsWith('Simple')?'Simple':'Martial') : '';
+}
+// One line of stats for a weapon-picker row: damage + every property tag, so a player can compare
+// weapons at a glance instead of picking blind by name alone.
+function weaponStatLine(w){
+  const dmg=w.d?`${w.d}${w.ty?' '+w.ty:''}`:'no damage';
+  const tags=weaponPropTags(w).map(t=>t.label).join(', ');
+  return tags?`${dmg} — ${tags}`:dmg;
+}
 // Themed weapon search — same searchable-dropdown pattern as the Features/Races/Languages
-// pickers (.lib-results), instead of the browser's own unstyled <datalist> popup.
+// pickers (.lib-results), instead of the browser's own unstyled <datalist> popup. Browsable, not
+// just search-filtered: grouped exactly like the PHB weapon table (Simple/Martial × Melee/Ranged)
+// with every row's stats shown inline, so an empty query shows the whole table to scan.
 function renderWeaponResults(i){
   const panel=$(`[data-wresults="${i}"]`); if(!panel) return;
   const a=S.attacks[i]; if(!a) return;
   const q=(a.name||'').trim().toLowerCase();
-  const items=Object.entries(WEAPONS).filter(([,w])=>!q||w.n.toLowerCase().includes(q));
-  if(!items.length){ panel.innerHTML='<div class="empty">No matches — this will be a custom weapon</div>'; return; }
-  const grp=(label,list)=>!list.length?'':`<div class="grp">${label}</div>`+
-    list.map(([id,w])=>`<div class="item" data-wpick="${i}.${id}">${esc(w.n)}</div>`).join('');
-  panel.innerHTML = grp('Melee',items.filter(([,w])=>!w.rng)) + grp('Ranged',items.filter(([,w])=>w.rng));
+  const matches=id=>!q||WEAPONS[id].n.toLowerCase().includes(q);
+  const groups=WEAPON_CATS.map(([label,ids])=>[label,ids.filter(matches)]);
+  const other=Object.keys(WEAPONS).filter(id=>!weaponCategory(id)&&matches(id));
+  if(other.length) groups.push(['Other',other]);
+  const html=groups.map(([label,ids])=>!ids.length?'':`<div class="grp">${label}</div>`+
+    ids.map(id=>`<div class="item" data-wpick="${i}.${id}">${esc(WEAPONS[id].n)}<small>${esc(weaponStatLine(WEAPONS[id]))}</small></div>`).join('')
+  ).join('');
+  panel.innerHTML = html || '<div class="empty">No matches — this will be a custom weapon</div>';
 }
+// A weapon-property badge that unfolds its plain-language explanation on TAP, not hover — same
+// mechanism as the Skills tab's .sk-fx badges (see wireAttackTips, mirrors wireSkillFx). Used for
+// every static property tag and the Simple/Martial badge; the versatile tag is a real button
+// instead (attackRowHTML) since tapping it changes your die rather than just explaining a rule.
+function wpnTag(label,explain,extraClass){
+  return `<span class="wpn-tag${extraClass?' '+extraClass:''}" data-wtip>${esc(label)}<span class="wtip">${esc(explain)}</span></span>`;
+}
+// Damage types worth offering as a one-tap "add this element" button — every DMG_TYPES entry
+// except the three physical ones, which don't make sense as a weapon "enhancement".
+const ENHANCE_TYPES=DMG_TYPES.filter(([v])=>v&&!['bludgeoning','piercing','slashing'].includes(v));
 // Cards default collapsed — a glance-only strip (name, Hit, Damage, roll → Final) is what you
 // actually need mid-fight; full editing (stat/die/type, misc bonuses, buffs, notes) is one tap
 // away instead of permanently taking up floor space. A brand-new, still-unnamed attack always
@@ -1462,21 +1502,34 @@ function attackRowHTML(a,i){
     <div class="atk-id">
       <input type="text" class="atk-combo" autocomplete="off" value="${esc(a.name)}" data-nameinput="${i}"
         placeholder="Weapon name — pick one or type your own" title="Pick a built-in weapon or type any name — either way this becomes the attack's name">
+      ${!isCustom&&weaponCategory(a.weapon)?wpnTag(weaponCategory(a.weapon),
+        weaponCategory(a.weapon)==='Simple'?'Every class is proficient with Simple weapons, or none are, per your training.':'Needs martial weapon proficiency to add your proficiency bonus — check your class/background.',
+        'wpn-cat'):''}
       <div class="lib-results atk-weapon-results" data-wresults="${i}"></div>
       <div class="atk-config">
-        <span class="cfg-pair"><span class="cfg-lbl">🧬 Stat</span>
-          <select class="atk-stat-sel" data-ssel="${i}" title="Which ability governs this attack's to-hit and damage">${statOpts}</select></span>
-        <span class="cfg-pair"><span class="cfg-lbl">🎲 Die</span>
-          <input type="text" class="atk-die" value="${esc(c.die)}" data-diein="${i}" placeholder="1d8" title="Damage die — type any notation, e.g. 2d6"></span>
-        ${isCustom?`<span class="cfg-pair"><span class="cfg-lbl">💥 Type</span>
-          <select class="atk-dtype-sel" data-dtsel="${i}" title="Damage type">${DMG_TYPES.map(([v,l])=>`<option value="${v}" ${(a.dmgType||'')===v?'selected':''}>${l}</option>`).join('')}</select></span>`:''}
-        <span class="cfg-pair"><span class="cfg-lbl">✨ Magic</span>
-          <input type="number" class="atk-tiny" value="${num(a.magic)}" data-wnum="attacks.${i}.magic" title="Magic +N — a magic weapon's bonus, added to BOTH to-hit and damage"></span>
-        <span class="cfg-pair"><span class="cfg-lbl">± Atk misc</span>
-          <input type="number" class="atk-tiny" value="${num(a.miscAtk)}" data-wnum="attacks.${i}.miscAtk" title="Misc to-hit ONLY — bless, fighting styles, DM boosts that don't touch damage"></span>
-        <span class="cfg-pair"><span class="cfg-lbl">± Dmg misc</span>
-          <input type="number" class="atk-tiny" value="${num(a.miscDmg)}" data-wnum="attacks.${i}.miscDmg" title="Misc damage ONLY — DM boosts, dueling/great-weapon fighting style, that don't touch to-hit"></span>
+        <div class="atk-config-grp">
+          <span class="cfg-pair"><span class="cfg-lbl">🧬 Stat</span>
+            <select class="atk-stat-sel" data-ssel="${i}">${statOpts}</select></span>
+          <span class="cfg-pair"><span class="cfg-lbl">🎲 Die</span>
+            <input type="text" class="atk-die" value="${esc(c.die)}" data-diein="${i}" placeholder="1d8"></span>
+          ${isCustom?`<span class="cfg-pair"><span class="cfg-lbl">💥 Type</span>
+            <select class="atk-dtype-sel" data-dtsel="${i}">${DMG_TYPES.map(([v,l])=>`<option value="${v}" ${(a.dmgType||'')===v?'selected':''}>${l}</option>`).join('')}</select></span>`:''}
+        </div>
+        <div class="atk-config-grp">
+          <span class="cfg-pair"><span class="cfg-lbl">✨ Magic</span>
+            <input type="number" class="atk-tiny" value="${num(a.magic)}" data-wnum="attacks.${i}.magic"></span>
+          <span class="cfg-pair"><span class="cfg-lbl">± Atk misc</span>
+            <input type="number" class="atk-tiny" value="${num(a.miscAtk)}" data-wnum="attacks.${i}.miscAtk"></span>
+          <span class="cfg-pair"><span class="cfg-lbl">± Dmg misc</span>
+            <input type="number" class="atk-tiny" value="${num(a.miscDmg)}" data-wnum="attacks.${i}.miscDmg"></span>
+        </div>
       </div>
+      ${c.propTags.length?`<div class="atk-props">
+        ${c.propTags.map(t=>t.key==='ver'
+          ? `<button type="button" class="wpn-tag wpn-tag-ver ${c.isTwoHanded?'on':''}" data-verstoggle="${i}">⇄ ${c.isTwoHanded?`One-handed (${c.w.d})`:`Two-handed (${c.w.ver})`}</button>`
+          : wpnTag(t.label,t.title)
+        ).join('')}
+      </div>`:''}
     </div>
     <div class="atk-hit">
       <span class="atk-label">Hit</span>
@@ -1496,7 +1549,15 @@ function attackRowHTML(a,i){
     ${buffs.map((b,j)=>buffPill(a,i,b,j)).join('')}
     <select class="add-btn" data-bpreset="${i}">
       <option value="">+ Add buff…</option>
-      ${BUFF_PRESETS.map((p,k)=>`<option value="${k}">${p.n}${p.conc?' ◉C':''}</option>`).join('')}
+      <optgroup label="Quick add">
+        <option value="magic1">✨ Magic Weapon +1</option>
+        <option value="magic2">✨ Magic Weapon +2</option>
+        <option value="magic3">✨ Magic Weapon +3</option>
+        ${ENHANCE_TYPES.map(([v,l])=>`<option value="dmg:${v}">${l} damage</option>`).join('')}
+      </optgroup>
+      <optgroup label="Presets">
+        ${BUFF_PRESETS.map((p,k)=>`<option value="${k}">${p.n}${p.conc?' ◉C':''}</option>`).join('')}
+      </optgroup>
       <option value="custom">✏ Custom buff…</option>
     </select>
   </div>
@@ -1559,6 +1620,15 @@ function renderAttacks(){
   $$('[data-diein]').forEach(inp=>inp.addEventListener('input',()=>{
     S.attacks[+inp.dataset.diein].die=inp.value; recalc(); save();
   }));
+  // Versatile weapons deal more damage two-handed (e.g. a longsword's 1d8 becomes 1d10) — this
+  // tag doubles as a one-tap toggle between the weapon's normal die and its versatile die,
+  // instead of making the player look up and retype the bigger die by hand.
+  $$('[data-verstoggle]').forEach(btn=>btn.addEventListener('click',()=>{
+    const i=+btn.dataset.verstoggle, a=S.attacks[i], w=a.weapon && WEAPONS[a.weapon];
+    if(!w || !w.ver) return;
+    a.die = (a.die===w.ver) ? w.d : w.ver;
+    renderAttacks(); save();
+  }));
   $$('[data-ssel]').forEach(s=>s.addEventListener('change',()=>{
     S.attacks[+s.dataset.ssel].dmgStat=s.value; recalc(); save();
   }));
@@ -1608,12 +1678,18 @@ function renderAttacks(){
     const [i,j]=b.dataset.buffdel.split('.').map(Number);
     S.attacks[i].buffs.splice(j,1); renderAttacks(); save();
   }));
-  // One dropdown covers both quick-add presets and a blank custom buff (last option) — no
-  // second button needed for the same action.
+  // One dropdown covers quick-add magic/elemental presets ("Quick add" group — pushes a
+  // ready-to-use buff straight in, no hand-typing name/dice/type), the named BUFF_PRESETS
+  // ("Presets" group), and a blank custom buff (last option) — one control, not a second row of
+  // buttons, since everything it adds is still fully editable/removable in the buff row below.
   $$('[data-bpreset]').forEach(s=>s.addEventListener('change',()=>{
     if(s.value==='') return;
     const i=+s.dataset.bpreset;
-    const buff = s.value==='custom' ? {name:'',dice:'',flat:0,type:'',on:true,rolled:''} : {...BUFF_PRESETS[+s.value],on:true,rolled:''};
+    const magic=/^magic(\d)$/.exec(s.value), dmg=/^dmg:(.+)$/.exec(s.value);
+    const buff = magic ? {name:`Magic Weapon +${magic[1]}`,dice:'',flat:+magic[1],type:'',on:true,rolled:''}
+      : dmg ? {name:DMG_TYPES.find(([v])=>v===dmg[1])[1],dice:'1d6',flat:0,type:dmg[1],on:true,rolled:''}
+      : s.value==='custom' ? {name:'',dice:'',flat:0,type:'',on:true,rolled:''}
+      : {...BUFF_PRESETS[+s.value],on:true,rolled:''};
     (S.attacks[i].buffs=S.attacks[i].buffs||[]).push(buff);
     renderAttacks(); save();
   }));
@@ -6403,6 +6479,21 @@ function wireSkillFx(){
     if(chip) chip.classList.toggle('open');
   });
 }
+// Same tap-not-hover pattern as wireSkillFx above, for the Attacks card's weapon-property tags —
+// plus the Attacks panel's one-time "how to read this" legend, whose open/closed state is a UI
+// preference (not character data), so it's plain hidden-attribute toggling, never save()d.
+function wireAttackTips(){
+  document.addEventListener('click',e=>{
+    const tag=e.target.closest('.wpn-tag[data-wtip]');
+    $$('.wpn-tag.open').forEach(o=>{ if(o!==tag) o.classList.remove('open'); });
+    if(tag) tag.classList.toggle('open');
+  });
+  const btn=$('#atkLegendBtn'), body=$('#atkLegend');
+  if(btn&&body) btn.addEventListener('click',()=>{
+    body.hidden=!body.hidden;
+    btn.classList.toggle('open',!body.hidden);
+  });
+}
 // ---------- Wide-mode toggle ----------
 // A UI-only preference, not part of the character sheet — the 1180px column is comfortable for
 // most panels but cramped for the Combat tab's card grid and turn plan on a big screen, so a
@@ -6431,7 +6522,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

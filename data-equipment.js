@@ -37,21 +37,21 @@ const WEAPONS={
  quarterstaff:{n:'Quarterstaff',d:'1d6',ty:'bludgeoning',ver:'1d8'},
  sickle:{n:'Sickle',d:'1d4',ty:'slashing',light:1},
  spear:{n:'Spear',d:'1d6',ty:'piercing',thrown:'20/60',ver:'1d8'},
- lightcrossbow:{n:'Light Crossbow',d:'1d8',ty:'piercing',rng:'80/320'},
- dart:{n:'Dart',d:'1d4',ty:'piercing',fin:1,rng:'20/60'},
- shortbow:{n:'Shortbow',d:'1d6',ty:'piercing',rng:'80/320'},
+ lightcrossbow:{n:'Light Crossbow',d:'1d8',ty:'piercing',rng:'80/320',h2:1,loading:1},
+ dart:{n:'Dart',d:'1d4',ty:'piercing',fin:1,thrown:'20/60'},
+ shortbow:{n:'Shortbow',d:'1d6',ty:'piercing',rng:'80/320',h2:1},
  sling:{n:'Sling',d:'1d4',ty:'bludgeoning',rng:'30/120'},
  battleaxe:{n:'Battleaxe',d:'1d8',ty:'slashing',ver:'1d10'},
  flail:{n:'Flail',d:'1d8',ty:'bludgeoning'},
- glaive:{n:'Glaive',d:'1d10',ty:'slashing',h2:1,reach:1},
- greataxe:{n:'Greataxe',d:'1d12',ty:'slashing',h2:1},
- greatsword:{n:'Greatsword',d:'2d6',ty:'slashing',h2:1},
- halberd:{n:'Halberd',d:'1d10',ty:'slashing',h2:1,reach:1},
- lance:{n:'Lance',d:'1d12',ty:'piercing',reach:1},
+ glaive:{n:'Glaive',d:'1d10',ty:'slashing',h2:1,reach:1,heavy:1},
+ greataxe:{n:'Greataxe',d:'1d12',ty:'slashing',h2:1,heavy:1},
+ greatsword:{n:'Greatsword',d:'2d6',ty:'slashing',h2:1,heavy:1},
+ halberd:{n:'Halberd',d:'1d10',ty:'slashing',h2:1,reach:1,heavy:1},
+ lance:{n:'Lance',d:'1d12',ty:'piercing',reach:1,special:'Disadvantage attacking a target within 5 ft.; requires two hands to wield unless you\'re mounted.'},
  longsword:{n:'Longsword',d:'1d8',ty:'slashing',ver:'1d10'},
- maul:{n:'Maul',d:'2d6',ty:'bludgeoning',h2:1},
+ maul:{n:'Maul',d:'2d6',ty:'bludgeoning',h2:1,heavy:1},
  morningstar:{n:'Morningstar',d:'1d8',ty:'piercing'},
- pike:{n:'Pike',d:'1d10',ty:'piercing',h2:1,reach:1},
+ pike:{n:'Pike',d:'1d10',ty:'piercing',h2:1,reach:1,heavy:1},
  rapier:{n:'Rapier',d:'1d8',ty:'piercing',fin:1},
  scimitar:{n:'Scimitar',d:'1d6',ty:'slashing',fin:1,light:1},
  shortsword:{n:'Shortsword',d:'1d6',ty:'piercing',fin:1,light:1},
@@ -59,10 +59,27 @@ const WEAPONS={
  warpick:{n:'War Pick',d:'1d8',ty:'piercing'},
  warhammer:{n:'Warhammer',d:'1d8',ty:'bludgeoning',ver:'1d10'},
  whip:{n:'Whip',d:'1d4',ty:'slashing',fin:1,reach:1},
- handcrossbow:{n:'Hand Crossbow',d:'1d6',ty:'piercing',rng:'30/120'},
- heavycrossbow:{n:'Heavy Crossbow',d:'1d10',ty:'piercing',rng:'100/400'},
- longbow:{n:'Longbow',d:'1d8',ty:'piercing',rng:'150/600'},
+ blowgun:{n:'Blowgun',d:'1',ty:'piercing',rng:'25/100',loading:1},
+ handcrossbow:{n:'Hand Crossbow',d:'1d6',ty:'piercing',rng:'30/120',light:1,loading:1},
+ heavycrossbow:{n:'Heavy Crossbow',d:'1d10',ty:'piercing',rng:'100/400',h2:1,heavy:1,loading:1},
+ longbow:{n:'Longbow',d:'1d8',ty:'piercing',rng:'150/600',h2:1,heavy:1},
+ net:{n:'Net',d:'',ty:'',thrown:'5/15',special:'A Large or smaller target hit is restrained until freed (its own action, DC 10 STR check) or the net takes 5 slashing damage (AC 10), destroying the net. No effect on formless or Huge+ creatures.'},
  unarmed:{n:'Unarmed Strike',d:'1',ty:'bludgeoning'}
+};
+// Property glossary — plain-language explanation of each weapon property flag, shown as a hover
+// tooltip on the property tags rendered next to a picked weapon on the Combat tab (attackRowHTML
+// in app.js). Keys match the WEAPONS flags above 1:1 except 'special', which reads its text
+// straight from the weapon's own .special field instead of a shared description here.
+const WEAPON_PROPS={
+ fin:{label:'Finesse',d:'Use either STR or DEX (whichever is better) for its attack and damage rolls.'},
+ light:{label:'Light',d:'Ideal for two-weapon fighting — attack with a second light weapon as a bonus action.'},
+ ver:{label:'Versatile',d:'Usable with one or two hands — two-handed deals more damage. Tap to switch.'},
+ reach:{label:'Reach',d:'Adds 5 ft. to your reach when attacking with it.'},
+ heavy:{label:'Heavy',d:'Small creatures have disadvantage on attack rolls with this weapon.'},
+ h2:{label:'Two-Handed',d:'Requires two hands to use.'},
+ thrown:{label:'Thrown',d:'Can be thrown for a ranged attack, using the same ability modifier as its melee attack.'},
+ rng:{label:'Ammunition',d:'Needs ammunition to fire; you recover about half of it after a fight.'},
+ loading:{label:'Loading',d:'Only one piece of ammunition can be fired per action, bonus action, or reaction, no matter how many attacks you get.'},
 };
 // Damage types — used both for a custom weapon's own damage type and for damage-buff pills.
 // Physical types stay muted/neutral (the norm); elemental/energy types get a distinct color so
@@ -94,6 +111,26 @@ const BUFF_PRESETS=[
  {n:'Sneak Attack',dice:'1d6',flat:0,type:''},
  {n:'Rage',dice:'',flat:2,type:''}
 ];
+// Property tags for a weapon on its own (no attack context needed) — {key,label,title} per flag
+// it actually has, in PHB reading order. Shared by the weapon-picker's browse list (each row's
+// stat line) and by atkSummary below (which layers the live versatile-toggle state on top of the
+// same tags for the open attack card).
+function weaponPropTags(w){
+  if(!w) return [];
+  const tag=(k,label)=>({key:k,label,title:(WEAPON_PROPS[k]&&WEAPON_PROPS[k].d)||''});
+  return [
+    w.fin&&tag('fin','Finesse'),
+    w.light&&tag('light','Light'),
+    w.ver&&tag('ver',`Versatile (${w.ver})`),
+    w.heavy&&tag('heavy','Heavy'),
+    w.h2&&tag('h2','Two-Handed'),
+    w.reach&&tag('reach','Reach'),
+    w.thrown&&tag('thrown',`Thrown ${w.thrown} ft.`),
+    w.rng&&tag('rng',`Ammunition (${w.rng} ft.)`),
+    w.loading&&tag('loading','Loading'),
+    w.special&&{key:'special',label:'Special',title:w.special},
+  ].filter(Boolean);
+}
 // Compute everything about one attack row: which weapon (or custom), which ability governs it,
 // the to-hit total + a plain-language breakdown, the damage formula, and — if the player has
 // typed in what they rolled on the die — the actual final damage number for this swing.
@@ -130,8 +167,12 @@ function atkSummary(a){
   const dmg = `${die}${dmgMod?fmt(dmgMod):''}${dmgType?' '+dmgType:''}${buffReminder}`;
   const rolled = (a.rolled===''||a.rolled==null) ? null : Number(a.rolled);
   const finalDamage = (rolled!=null && !isNaN(rolled)) ? rolled+dmgMod+buffRolled : null;
-  const props=w?[w.ver?'versatile '+w.ver:'',w.rng?'range '+w.rng:'',w.thrown?'thrown '+w.thrown:'',
-    w.reach?'reach':'',w.h2?'two-handed':'',w.light?'light':'',w.fin?'finesse':''].filter(Boolean).join(', '):'';
-  return {bonus:fmt(toHit),dmg,toHit,breakdown,dmgBreakdown,statKey,dmgMod,finalDamage,die,dmgType,isCustom,w,props};
+  // The versatile tag doubles as a one-tap toggle in the open attack card (see attackRowHTML/
+  // data-verstoggle in app.js) since it's the one property that changes your damage die rather
+  // than just describing a rule — isTwoHanded reflects whether the die currently in play matches
+  // the weapon's versatile die, so the button can show its own "on" state.
+  const isTwoHanded = !!(w && w.ver && a.die===w.ver);
+  const propTags = weaponPropTags(w);
+  return {bonus:fmt(toHit),dmg,toHit,breakdown,dmgBreakdown,statKey,dmgMod,finalDamage,die,dmgType,isCustom,w,propTags,isTwoHanded};
 }
 

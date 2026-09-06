@@ -1217,19 +1217,22 @@ const LANGUAGES=[
 // loaded before this file) so their blurbs never drift from the stats used on the Combat tab.
 function weaponBlurb(key){
   const w=WEAPONS[key]; if(!w) return '';
-  const bits=[`${w.d} ${w.ty}`];
+  const bits=[w.d?`${w.d} ${w.ty}`:'no damage'];
   if(w.fin) bits.push('finesse');
   if(w.ver) bits.push(`versatile (${w.ver})`);
   if(w.reach) bits.push('reach');
+  if(w.heavy) bits.push('heavy');
   if(w.h2) bits.push('two-handed'); else if(w.light) bits.push('light');
   if(w.thrown) bits.push(`thrown ${w.thrown} ft.`);
   if(w.rng) bits.push(`range ${w.rng} ft.`);
+  if(w.loading) bits.push('loading');
+  if(w.special) bits.push(w.special);
   return bits.join(', ');
 }
 const SIMPLE_MELEE_W=['club','dagger','greatclub','handaxe','javelin','lighthammer','mace','quarterstaff','sickle','spear'];
 const SIMPLE_RANGED_W=['lightcrossbow','dart','shortbow','sling'];
 const MARTIAL_MELEE_W=['battleaxe','flail','glaive','greataxe','greatsword','halberd','lance','longsword','maul','morningstar','pike','rapier','scimitar','shortsword','trident','warpick','warhammer','whip'];
-const MARTIAL_RANGED_W=['handcrossbow','heavycrossbow','longbow'];
+const MARTIAL_RANGED_W=['blowgun','handcrossbow','heavycrossbow','longbow','net'];
 const PROFICIENCIES=[
  {n:'Light Armor',g:'Armor',d:'Padded, leather, studded leather. Add your full Dex modifier to AC; no Strength requirement.'},
  {n:'Medium Armor',g:'Armor',d:'Hide, chain shirt, scale mail, breastplate, half plate. Add your Dex modifier to AC, max +2.'},
