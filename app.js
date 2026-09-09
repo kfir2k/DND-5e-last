@@ -501,6 +501,14 @@ combat:`
         </div>
       </div>
     </div>
+    <div class="modal-bg" id="weaponModal">
+      <div class="modal eq-index-modal">
+        <button class="close-x" id="weaponModalClose" type="button">✕</button>
+        <h2>Choose a Weapon</h2>
+        <input type="text" id="weaponModalSearch" dir="auto" placeholder="Search the weapon table…" autocomplete="off">
+        <div id="weaponModalList" class="eq-index-list"></div>
+      </div>
+    </div>
     <div class="ck-col ck-right">
       <div class="panel ov-spellslots-panel" id="combatSlotsPanel"><h2>🔮 Spell Slots</h2>
         <div class="stats-row" style="grid-template-columns:1fr 1fr">
@@ -1427,22 +1435,25 @@ function weaponStatLine(w){
   const tags=weaponPropTags(w).map(t=>t.label).join(', ');
   return tags?`${dmg} — ${tags}`:dmg;
 }
-// Themed weapon search — same searchable-dropdown pattern as the Features/Races/Languages
-// pickers (.lib-results), instead of the browser's own unstyled <datalist> popup. Browsable, not
-// just search-filtered: grouped exactly like the PHB weapon table (Simple/Martial × Melee/Ranged)
-// with every row's stats shown inline, so an empty query shows the whole table to scan.
-function renderWeaponResults(i){
-  const panel=$(`[data-wresults="${i}"]`); if(!panel) return;
-  const a=S.attacks[i]; if(!a) return;
-  const q=(a.name||'').trim().toLowerCase();
+// Weapon-picker modal — same .modal-bg/.eq-index-modal idiom as the Gear Index (wireItemIndexModal),
+// not the small anchored .lib-results dropdown the Features/Races/Languages searches use. 38
+// weapons across 5 categories is index-sized, not quick-lookup-sized, so it gets the roomier
+// pattern. Browsable, not just search-filtered: grouped exactly like the PHB weapon table
+// (Simple/Martial × Melee/Ranged) with every row's stats shown inline, so an empty query shows
+// the whole table to scan. One shared modal for every attack row — WPN_MODAL_I tracks which row's
+// pick it's currently for, same idea as a single Gear Index shared by every "+ add" entry point.
+let WPN_MODAL_I=null;
+function renderWeaponModalList(){
+  const list=$('#weaponModalList'), input=$('#weaponModalSearch'); if(!list||!input) return;
+  const q=input.value.trim().toLowerCase();
   const matches=id=>!q||WEAPONS[id].n.toLowerCase().includes(q);
   const groups=WEAPON_CATS.map(([label,ids])=>[label,ids.filter(matches)]);
   const other=Object.keys(WEAPONS).filter(id=>!weaponCategory(id)&&matches(id));
   if(other.length) groups.push(['Other',other]);
   const html=groups.map(([label,ids])=>!ids.length?'':`<div class="grp">${label}</div>`+
-    ids.map(id=>`<div class="item" data-wpick="${i}.${id}">${esc(WEAPONS[id].n)}<small>${esc(weaponStatLine(WEAPONS[id]))}</small></div>`).join('')
+    ids.map(id=>`<div class="item" data-wpick="${id}">${esc(WEAPONS[id].n)}<small>${esc(weaponStatLine(WEAPONS[id]))}</small></div>`).join('')
   ).join('');
-  panel.innerHTML = html || '<div class="empty">No matches — this will be a custom weapon</div>';
+  list.innerHTML = html || '<div class="empty">No matches — close this and type a custom name instead</div>';
 }
 // A weapon-property badge that unfolds its plain-language explanation on TAP, not hover — same
 // mechanism as the Skills tab's .sk-fx badges (see wireAttackTips, mirrors wireSkillFx). Used for
@@ -1500,12 +1511,14 @@ function attackRowHTML(a,i){
     <button class="atk-collapse" data-atkopen="${i}" title="Collapse to a summary strip">▾</button>
     <span class="atk-icon" title="${isCustom?'Custom weapon':(c.w&&c.w.rng?'Ranged weapon':'Melee weapon')}">${icon}</span>
     <div class="atk-id">
-      <input type="text" class="atk-combo" autocomplete="off" value="${esc(a.name)}" data-nameinput="${i}"
-        placeholder="Weapon name — pick one or type your own" title="Pick a built-in weapon or type any name — either way this becomes the attack's name">
+      <div class="atk-namerow">
+        <input type="text" class="atk-combo" autocomplete="off" value="${esc(a.name)}" data-nameinput="${i}"
+          placeholder="Weapon name — browse or type your own" title="Type any name for a custom weapon, or browse the PHB weapon table">
+        <button type="button" class="wpn-browse-btn" data-wpnbrowse="${i}" title="Browse the full weapon table">📖 Browse</button>
+      </div>
       ${!isCustom&&weaponCategory(a.weapon)?wpnTag(weaponCategory(a.weapon),
         weaponCategory(a.weapon)==='Simple'?'Every class is proficient with Simple weapons, or none are, per your training.':'Needs martial weapon proficiency to add your proficiency bonus — check your class/background.',
         'wpn-cat'):''}
-      <div class="lib-results atk-weapon-results" data-wresults="${i}"></div>
       <div class="atk-config">
         <div class="atk-config-grp">
           <span class="cfg-pair"><span class="cfg-lbl">🧬 Stat</span>
@@ -1575,14 +1588,10 @@ function renderAttacks(){
   // Selects & structural changes (add/remove/toggle) re-render fully — cheap for a handful of
   // rows and none of these are continuous-typing fields, so there's no focus to preserve.
   // The combo field is both the weapon picker and the name: typing a name that exactly matches
-  // a built-in weapon (usually by picking it from the themed search dropdown below) locks in
-  // that weapon's die/stat; anything else is treated as a custom weapon. Re-render only happens
-  // on that transition, not on every keystroke of a custom name, so typing doesn't lose focus.
+  // a built-in weapon locks in that weapon's die/stat (same as picking it from the Browse modal);
+  // anything else is treated as a custom weapon. Re-render only happens on that transition, not
+  // on every keystroke of a custom name, so typing doesn't lose focus.
   $$('[data-nameinput]').forEach(inp=>{
-    inp.addEventListener('focus',()=>{
-      renderWeaponResults(+inp.dataset.nameinput);
-      inp.nextElementSibling.classList.add('open');
-    });
     inp.addEventListener('input',()=>{
       const i=+inp.dataset.nameinput, a=S.attacks[i];
       a.name=inp.value;
@@ -1591,8 +1600,6 @@ function renderAttacks(){
       // without this, a re-render triggered mid-keystroke (below) would collapse the card out
       // from under the cursor. Mark it explicitly open for as long as you're typing in it.
       ATK_OPEN.add(i);
-      renderWeaponResults(i);
-      inp.nextElementSibling.classList.add('open');
       const norm=inp.value.trim().toLowerCase();
       const matchId=Object.keys(WEAPONS).find(id=>WEAPONS[id].n.toLowerCase()===norm);
       // Locking in / dropping a built-in weapon changes the die + stat select, which forces a
@@ -1610,12 +1617,9 @@ function renderAttacks(){
       save();
     });
   });
-  $$('[data-wresults]').forEach(panel=>panel.addEventListener('click',e=>{
-    const item=e.target.closest('[data-wpick]'); if(!item) return;
-    const [i,id]=item.dataset.wpick.split('.');
-    const a=S.attacks[+i], w=WEAPONS[id];
-    a.name=w.n; a.weapon=id; a.die=w.d; a.dmgStat='auto';
-    renderAttacks(); save();
+  $$('[data-wpnbrowse]').forEach(btn=>btn.addEventListener('click',()=>{
+    WPN_MODAL_I=+btn.dataset.wpnbrowse;
+    openWeaponModal();
   }));
   $$('[data-diein]').forEach(inp=>inp.addEventListener('input',()=>{
     S.attacks[+inp.dataset.diein].die=inp.value; recalc(); save();
@@ -1694,12 +1698,31 @@ function renderAttacks(){
     renderAttacks(); save();
   }));
 }
-// Closes a weapon search dropdown when the player clicks anywhere outside it. Wired once at
-// boot (not per-render) since it's a single delegated listener on the whole document.
-function wireWeaponSearch(){
-  document.addEventListener('click',e=>{
-    if(e.target.closest('.atk-combo') || e.target.closest('.atk-weapon-results')) return;
-    $$('.atk-weapon-results.open').forEach(p=>p.classList.remove('open'));
+// Weapon-picker modal — same open/close/search wiring shape as wireItemIndexModal (Gear Index),
+// just keyed by WPN_MODAL_I instead of always appending to a fixed list. Wired once at boot.
+function openWeaponModal(){
+  const modal=$('#weaponModal'), input=$('#weaponModalSearch'); if(!modal) return;
+  input.value='';
+  renderWeaponModalList();
+  modal.classList.add('open');
+  setTimeout(()=>input.focus(),50);
+}
+function wireWeaponModal(){
+  const modal=$('#weaponModal'), input=$('#weaponModalSearch'), list=$('#weaponModalList');
+  if(!modal) return;
+  document.body.appendChild(modal); // survives the tab-fade transform, same reason as the eq drawer
+  const close=()=>{ modal.classList.remove('open'); WPN_MODAL_I=null; };
+  $('#weaponModalClose').addEventListener('click',close);
+  modal.addEventListener('click',e=>{ if(e.target===modal) close(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&modal.classList.contains('open')) close(); });
+  input.addEventListener('input',renderWeaponModalList);
+  list.addEventListener('click',e=>{
+    const item=e.target.closest('[data-wpick]'); if(!item||WPN_MODAL_I==null) return;
+    const w=WEAPONS[item.dataset.wpick]; if(!w) return;
+    const a=S.attacks[WPN_MODAL_I]; if(!a) return;
+    a.name=w.n; a.weapon=item.dataset.wpick; a.die=w.d; a.dmgStat='auto';
+    close();
+    renderAttacks(); save();
   });
 }
 // Icons for the six gear categories (plus treasure) — same stroke-line language as the
@@ -6522,7 +6545,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponSearch(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

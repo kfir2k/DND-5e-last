@@ -1844,11 +1844,19 @@ input.chud-customin{width:42px;font-size:.95rem}
 .atk-row>.del-btn{position:absolute;top:8px;right:8px}
 .atk-icon{color:var(--gold-dim);font-size:.95rem;padding-top:7px;flex:0 0 auto}
 .atk-id{flex:1.6 1 220px;min-width:180px;position:relative}
-/* One combo field instead of a dropdown + a separate nickname field: type to search built-in
-   weapons (a themed dropdown, not the browser's native autocomplete) or just keep typing your
-   own name — either way it's the same input. */
-input.atk-combo{width:100%;font-size:.92rem}
-.atk-weapon-results{width:100%}
+/* One combo field instead of a dropdown + a separate nickname field: type any name for a custom
+   weapon (typing an exact built-in name locks it in, same as picking it from Browse), or tap
+   Browse for the full PHB weapon table as a modal (#weaponModal, wireWeaponModal in app.js) —
+   either way it's the same field driving the attack's name. */
+.atk-namerow{display:flex;gap:6px;align-items:center}
+input.atk-combo{width:100%;font-size:.92rem;flex:1 1 auto;min-width:0}
+.wpn-browse-btn{
+  flex:0 0 auto;white-space:nowrap;cursor:pointer;background:var(--panel3);
+  border:1px solid var(--gold-dim);border-radius:7px;color:var(--gold-lt);
+  font-size:.78rem;padding:7px 10px;font-family:'Crimson Pro',serif;
+  -webkit-tap-highlight-color:transparent;
+}
+.wpn-browse-btn:hover{background:var(--panel2);border-color:var(--gold)}
 /* A real grid instead of loose inline-flex wrapping — fields used to wrap wherever they ran out
    of row space, so "Magic" could end up floating alone on its own line while "Atk misc"/"Dmg
    misc" crowded the one above. Fixed columns mean every field lands in a predictable slot and
