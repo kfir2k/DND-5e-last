@@ -27,9 +27,26 @@ subfolder, containing:
 
 1. The source URL
 2. The date it was fetched
-3. The raw extracted content (text/tables) actually used
+3. **The complete content fetched from the page — everything, not a subset picked for the current
+   task.** "The part I actually needed" is not an acceptable filter; the next task that opens this
+   file needs the parts you didn't. For a class page that means the full level-progression table,
+   every base-class feature's complete text (not summarized), every fighting-style/maneuver/
+   invocation-style option list in full with exact wording, and the complete subclass list — all
+   of it, every time, regardless of what today's task happened to need. If one WebFetch call
+   didn't return the whole page, make more calls until it's complete before writing the file.
+
+A file that's missing something from the page it cites is worse than no file at all — it reads as
+authoritative and stops a future session from ever re-checking it. When in doubt, fetch and save
+more, not less.
 
 Example: `wikidot-cache/spells/fireball.md` for `https://dnd5e.wikidot.com/spell:fireball`.
+
+For any numeric/mechanical detail (dice, DCs, uses-per-rest, durations), prefer capturing the
+**verbatim quoted text** from the page over a paraphrase — a WebFetch summary can state a rule
+that isn't actually on the page, and a verbatim quote is what lets a future session catch that.
+When a feature or option list differs by class (Fighting Style is the running example — the same
+option can be core for one class and UA-only for another), note that explicitly instead of
+assuming one class's list applies to another.
 
 Wikidot slugs with a colon (`fighter:rune-knight`, `cleric:war`, `spell:fireball`, …) can't be used
 verbatim as a Windows filename — replace the colon with a dash instead (`fighter-rune-knight.md`,

@@ -69,16 +69,67 @@ AC/damage, uses-per-rest, etc.) — the short one-line descriptions already in t
 deliberate paraphrases, not literal quotes from the site, so don't rewrite them to match the
 site's wording unless they're actually incorrect.
 
+### Scope: official content, not just the core PHB
+
+This app's scope is **everything official/published and non-UA**, not "PHB-only." Rune Knight,
+Psi Warrior, and plenty of other Tasha's Cauldron/Xanathar's/other-sourcebook content are already
+built out in full elsewhere in `FEATURE_LIB` — so don't assume a feature, option, or subclass is
+"out of scope" just because it isn't in the core Player's Handbook or looks unfamiliar. The only
+things to actually exclude are Unearthed Arcana/playtest material and homebrew with no published
+source. When a wikidot page marks something `(UA)`, leave it out; when it doesn't, it's in scope
+even if it's from a later book. If genuinely unsure whether something is UA vs. published, check
+rather than guessing either way.
+
+### Shared "choose one from a list" options differ per class — verify per class, not once
+
+Several features across classes work the same way structurally but draw from a *different* option
+list per class — Fighting Style (Fighter/Paladin/Ranger/Blood Hunter/College of Swords) is the
+clearest example, but the same pattern applies to anything similar (e.g. a shared feat or
+maneuver-style choice gated per class). **Never assume the option list you verified for one class
+applies unchanged to another** — wikidot's own per-class pages disagree with each other on this:
+the same option can be core for one class, marked `(UA)`-only for a second, and simply absent for
+a third (e.g. Interception is official for Fighter and Paladin but UA-only for Ranger; Thrown
+Weapon Fighting is official for Fighter and Ranger but UA-only for Paladin; Paladin and Ranger each
+also get their own unique option — Blessed Warrior / Druidic Warrior — that doesn't exist for
+Fighter at all). Fetch and check **that specific class's own page** before adding or copying a
+shared option list across classes.
+
+### WebFetch summaries can hallucinate mechanical details — verify with verbatim quotes
+
+A WebFetch summary is an LLM's paraphrase of a page, not the page itself, and it can confidently
+state a rule (a uses-per-rest limit, a recharge mechanic, a duration) that simply isn't in the
+source. **Before changing or adding any numeric/mechanical detail (dice, DCs, uses-per-rest,
+durations, prerequisites), ask WebFetch explicitly for the "VERBATIM, word-for-word quoted text,"
+not a summary** — a paraphrase-only answer is not sufficient grounds to change game data. If an
+already-cached file has a verbatim quote for the same feature, that quote outranks a fresh
+summary-only fetch; re-fetch with a verbatim-quote prompt to resolve the conflict rather than
+trusting whichever came later.
+
 ### Cache fetched wikidot pages locally
 
 `wikidot-cache/` (see its own `README.md`) holds pages already fetched from
 `dnd5e.wikidot.com`, split into `spells/`, `classes/`, `races/`, `items/`, `backgrounds/`,
-`feats/`. **Before fetching a page from wikidot, check whether it's already saved there** —
-don't re-fetch over the network something already cached. **Whenever you do fetch a page from
-wikidot (for verification or to source a new entry), save it into the matching subfolder** as
-`<slug>.md` (source URL + fetch date + the extracted content actually used) so future tasks don't
-need to fetch it again. If a cached page might be stale for a fact you're checking, re-fetch and
-overwrite the cached copy rather than trusting it blindly.
+`feats/`. **Before fetching a page from wikidot, open and read the matching cache file if one
+exists** — don't just check that the filename is there, read its actual content, since a citation
+you need might already be sitting in it. Don't re-fetch over the network something already cached.
+
+**Whenever you fetch a page from wikidot for any reason, save the complete fetched content into
+the matching subfolder as `<slug>.md` — every feature, every option, every table row on that page,
+not just the part relevant to the task in front of you.** This is not optional and not a
+judgment call: "save the extracted content actually used" has been the source of every gap found
+so far (a class page cached with only its level table and subclass list, a Fighting Style option
+skipped because that task didn't need it yet). A page is only "cached" once nothing on it would
+require a re-fetch for a *different* future task — a partial save is functionally the same as no
+save, because the next session has no way to know what was left out. Concretely, for a class page
+that means: the full level-progression table, every base-class feature's full text end to end
+(not summarized), every fighting-style/maneuver/invocation-style option list in full with its
+exact wording, and the complete subclass list — even the parts that don't matter for whatever
+you're verifying right now. If a single WebFetch call didn't return everything the page has,
+issue more calls until it's actually complete before writing the file, and say so if you're
+stopping short. When you fetch a subclass or feature page and it's not yet cached, save it in
+full too, even if the fetch was only to double-check one number. If a cached page might be stale
+for a fact you're checking, re-fetch the *whole* page and overwrite the cached copy — don't patch
+in just the one fact that changed and leave the rest as it was.
 
 ## Architecture (app.js)
 

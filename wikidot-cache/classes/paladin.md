@@ -70,3 +70,22 @@ feet of you can't be frightened while you are conscious." (Range becomes 30 ft. 
 
 **Aura Improvements (18th level):** Both Aura of Protection and Aura of Courage have their ranges
 increased from 10 feet to 30 feet.
+
+## Fighting Style options (2nd level, fetched 2026-09-11)
+
+Official (non-UA) for Paladin, per the page's own labels: Blessed Warrior, Blind Fighting, Defense,
+Dueling, Great Weapon Fighting, Interception, Protection. Marked `(UA)` on this page and therefore
+excluded: Close Quarters Shooter, Mariner, **Thrown Weapon Fighting**, Tunnel Fighter, Unarmed
+Fighting — note Thrown Weapon Fighting is official for Fighter/Ranger but UA-only for Paladin.
+"Superior Technique" is not listed as an option for Paladin at all (present for Fighter only).
+
+- **Blessed Warrior** (Paladin-unique — no equivalent on the Fighter page): "You learn two cantrips
+  of your choice from the cleric spell list. They count as paladin spells for you, and Charisma is
+  your spellcasting ability for them. Whenever you gain a level in this class, you can replace one
+  of these cantrips with another cantrip from the cleric spell list."
+- **Interception**: "When a creature you can see hits a target, other than you, within 5 feet of
+  you with an attack, you can use your reaction to reduce the damage the target takes by 1d10 +
+  your proficiency bonus (to a minimum of 0 damage). You must be wielding a shield or a simple or
+  martial weapon to use this reaction."
+- Blind Fighting, Defense, Dueling, Great Weapon Fighting, Protection: same text as the Fighter
+  page (see `classes/fighter.md`).

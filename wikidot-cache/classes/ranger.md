@@ -43,3 +43,19 @@ Subclass feature rows: 3 (choice), 7, 11, 15.
 - Monster Slayer (XGE) — `ranger:monster-slayer`
 - Swarmkeeper (TCE) — `ranger:swarmkeeper`
 - Drakewarden (Fizban's) — `ranger:drakewarden`
+
+## Fighting Style options (2nd level, fetched 2026-09-11)
+
+Official (non-UA) for Ranger, per the page's own labels: Archery, Blind Fighting, Defense,
+Druidic Warrior, Dueling, Thrown Weapon Fighting, Two-Weapon Fighting. Marked `(UA)` on this page
+and therefore excluded: Close Quarters Shooter, Interception, Mariner, Tunnel Fighter, Unarmed
+Fighting — note Interception and Unarmed Fighting are official for Fighter/Paladin but UA-only for
+Ranger. "Superior Technique" is not mentioned as an option for Ranger at all (present for
+Fighter only).
+
+- **Druidic Warrior** (Ranger-unique — no equivalent on the Fighter page): "You learn two cantrips
+  of your choice from the Druid spell list. They count as ranger spells for you, and Wisdom is
+  your spellcasting ability for them. Whenever you gain a level in this class, you can replace one
+  of these cantrips with another cantrip from the Druid spell list."
+- Archery, Blind Fighting, Defense, Dueling, Thrown Weapon Fighting, Two-Weapon Fighting: same
+  text as the Fighter page (see `classes/fighter.md`).
