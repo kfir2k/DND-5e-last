@@ -52,9 +52,10 @@ const FEATURE_LIB=[
  {n:'Magical Secrets (18th)',g:'Bard',l:18,d:'Learn two more spells from any class lists.'},
  {n:'Superior Inspiration',g:'Bard',l:20,d:'When you roll initiative with no Bardic Inspiration uses left, regain one use.',combat:true},
  // Cleric
+ {n:'Divine Domain',g:'Cleric',l:1,d:'Choose your Divine Domain — search the Features library for your domain\'s name (e.g. "Life Domain") to see and add its 1st-level features.'},
  {n:'Channel Divinity',g:'Cleric',l:2,d:'Turn Undead + domain option. 1/rest (2 at lvl 6, 3 at 18).',combat:true,usesMax:1,usesPer:'short'},
- {n:'Destroy Undead',g:'Cleric',l:5,d:'Turned undead of low CR are destroyed instead.'},
- {n:'Divine Intervention',g:'Cleric',l:10,d:'Roll d100 under Cleric level: your deity intervenes. 7-day cooldown on success.',combat:true},
+ {n:'Destroy Undead',g:'Cleric',l:5,d:'Turned undead are destroyed instead of just turned, if their CR is at or below a threshold that rises with level: 1/2 at 5th, 1 at 8th, 2 at 11th, 3 at 14th, 4 at 17th.'},
+ {n:'Divine Intervention',g:'Cleric',l:10,d:'Describe the aid you seek and roll d100: success on a roll ≤ your cleric level, and your deity intervenes (DM adjudicates the effect). 7-day cooldown on success; can try again after a long rest on a failure. Automatic success, no roll, at lvl 20.',combat:true},
  // Druid
  {n:'Wild Shape',g:'Druid',l:2,d:'Transform into a beast (CR/movement limits by level), 2 uses per short/long rest.',combat:true,usesMax:2,usesPer:'short'},
  {n:'Wild Shape Improvement',g:'Druid',l:4,d:'CR 1/2 and swimming forms (lvl 4); CR 1 and flying forms (lvl 8).'},
@@ -355,7 +356,7 @@ const FEATURE_LIB=[
  {n:'Path to the Grave (Channel Divinity)',g:'Cleric — Grave Domain',l:2,d:'Channel Divinity: curse one creature within 30 ft. until the end of your next turn — the next attack against it (yours or an ally\'s) gains vulnerability to all its damage, then the curse ends.',combat:true},
  {n:'Sentinel at Death\'s Door',g:'Cleric — Grave Domain',l:6,d:'Reaction: turn a critical hit against you or a creature within 30 ft. into a normal hit, canceling crit effects. WIS mod uses (min 1) per long rest.',combat:true,usesPer:'long',usesScale:'wis'},
  {n:'Potent Spellcasting (Grave)',g:'Cleric — Grave Domain',l:8,d:'Add your WIS mod to the damage you deal with Cleric cantrips.',combat:true},
- {n:'Keeper of Souls',g:'Cleric — Grave Domain',l:17,d:'When an enemy dies within 60 ft. of you, regain HP equal to its Hit Dice and give them to yourself or one ally within 60 ft. (can\'t exceed their max HP). Not while incapacitated.',combat:true,usesMax:1,usesPer:'short'},
+ {n:'Keeper of Souls',g:'Cleric — Grave Domain',l:17,d:'When an enemy you can see dies within 30 ft. of you, you or one ally within 30 ft. regains HP equal to the enemy\'s Hit Dice. Not while incapacitated. Once per turn — usable again at the start of your next turn.',combat:true},
  // Cleric: Arcana Domain
  {n:'Arcane Initiate',g:'Cleric — Arcana Domain',l:1,d:'Gain proficiency in Arcana and learn 2 cantrips of your choice from the wizard spell list; they count as cleric cantrips for you.'},
  {n:'Arcane Abjuration (Channel Divinity)',g:'Cleric — Arcana Domain',l:2,d:'Channel Divinity: present your holy symbol to force one celestial, elemental, fey, or fiend within 30 ft. that can see or hear you to make a WIS save or be turned for 1 minute or until it takes damage.',combat:true},
