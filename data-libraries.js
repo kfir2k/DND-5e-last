@@ -1008,7 +1008,7 @@ const RACE_LIB=[
  {n:'Mask of the Wild (Wood Elf)',g:'Elf',d:'Hide even when only lightly obscured by natural foliage, rain, snow, mist, or other natural phenomena.'},
  {n:'Superior Darkvision (Drow)',g:'Elf',d:'Darkvision out to 120 ft.'},
  {n:'Sunlight Sensitivity (Drow)',g:'Elf',d:'Disadvantage on attack rolls and Perception checks that rely on sight in direct sunlight.'},
- {n:'Drow Magic',g:'Elf',d:'Know Dancing Lights; Faerie Fire 1/day at 3rd level; Darkness 1/day at 5th level (CHA).'},
+ {n:'Drow Magic (Drow)',g:'Elf',d:'Know Dancing Lights; Faerie Fire 1/day at 3rd level; Darkness 1/day at 5th level (CHA).'},
  // Halfling
  {n:'Lucky',g:'Halfling',d:'Reroll a 1 on an attack roll, ability check, or saving throw — must use the new roll.'},
  {n:'Brave',g:'Halfling',d:'Advantage on saving throws against being frightened.'},
