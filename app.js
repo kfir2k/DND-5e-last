@@ -38,7 +38,7 @@ function defaultState(){
     money:{cp:0,sp:0,ep:0,gp:0,pp:0},
     equipment:[], treasure:'',
     // Features
-    features:[{title:'',desc:'',fx:[]}], profLang:'', languages:[], otherProfs:[], featuresLocked:false,
+    features:[{title:'',desc:'',fx:[],levelAt:null}], profLang:'', languages:[], otherProfs:[], featuresLocked:false, featuresView:'source',
     // Spells (page 3): level 0 = cantrips
     spellClass:'', spellAbility:'', spellsLocked:false,
     spellLevels:Array.from({length:10},()=>({total:0,used:0,spells:[]})),
@@ -801,6 +801,10 @@ features:`
       <button type="button" class="lib-scope" id="libScope" title="Narrow all three searches to what your class, subclass, heritage and background actually give you"></button>
       <span class="prep-note" style="margin:0">effects come pre-attached</span>
     </div>
+    <div class="fv-toggle" id="featuresViewToggle">
+      <button type="button" data-fview="source">By Source</button>
+      <button type="button" data-fview="level">By Level</button>
+    </div>
     <div id="featureList"></div>
     <div class="fx-addrow" style="margin-top:0">
       <button class="add-btn" data-add="features" id="addFeatureBtn">+ Add feature</button>
@@ -949,6 +953,7 @@ function load(){
   migrateBuild();
   migrateClassSkillPicks();
   migrateRaceSkillPicks();
+  migrateFeatureLevels();
 }
 // Build overrides and feature auto-granting arrived after these characters were already written.
 // A subclass typed before subclassClassId existed is adopted by the current class every load,
@@ -1022,6 +1027,28 @@ function migrateRaceSkillPicks(){
       if(S.skills[k]===1 && fxSkillGrant(k)===0) picks.push(k);
     });
     S.raceSkillPicks[e.n]=picks;
+  });
+}
+// levelAt (when a feature was gained, used by the Features tab's "By Level" arrangement) is new
+// bookkeeping — backfill once for saves written before it existed. Race/background traits are
+// always level 1 (granted at creation, not gained later). Feats use the ASI slot they were linked
+// to, if any. Class/subclass features get a best-effort name match against FEATURE_LIB to recover
+// the level they unlock at. Anything left unmatched (hand-written features, no library hit) is
+// left unset — it lands in "Along the Way" until the player sets one, same as any new custom entry.
+function migrateFeatureLevels(){
+  if(S.featureLevelsMigrated) return;
+  S.featureLevelsMigrated=true;
+  (S.features||[]).forEach(f=>{
+    if(f.levelAt!==undefined) return; // field already present (even if explicitly null) — leave it
+    const kind=(f.source||{}).kind;
+    if(kind==='race'||kind==='background'){ f.levelAt=1; return; }
+    if(kind==='feat'){ f.levelAt=f.source.asiLevel!=null?num(f.source.asiLevel):null; return; }
+    if(kind==='class'||kind==='subclass'){
+      const match=FEATURE_LIB.find(e=>e.n===f.title && e.l!=null && (f.source.className?e.g===f.source.className:true));
+      f.levelAt=match?num(match.l):null;
+      return;
+    }
+    f.levelAt=null;
   });
 }
 // Notes predate tags/session (the Session Timeline layout) — backfill both on any older save
@@ -2173,120 +2200,225 @@ function featureSourceMeta(f){
   if(s.kind==='feat') return {byline:'Feat',color:'#a58ce0'};
   return {byline:'',color:'#5aa9e0'};
 }
-function renderFeatures(){
-  // Locked = compact read-only pass: no inputs, no edit chrome. Everything just sits there
-  // plainly (title, description, effects) — no collapse/expand needed for a handful of features.
-  if(S.featuresLocked){
-    $('#featureList').innerHTML = S.features.map(f=>{
-      const src=featureSourceMeta(f);
-      const chips=(f.fx||[]).map(x=>`<span class="fx-chip ro">${esc(fxChipLabel(x))}</span>`).join('');
-      return `
-      <div class="feature-card locked" style="--src:${src.color}">
-        <div class="feature-cap">${esc((f.title||'?').trim().charAt(0).toUpperCase()||'?')}</div>
-        <div class="feature-body">
-          <div class="cf-row" style="align-items:flex-start">
-            <div>
-              ${src.byline?`<span class="feature-byline">${esc(src.byline)}</span>`:''}
-              <span class="cf-name">${esc(f.title||'Feature')}</span>
-            </div>
-            ${f.combat?'<span class="cf-tag">⚔</span>':''}
-          </div>
-          ${f.desc?`<div class="locked-desc">${esc(f.desc)}</div>`:''}
-          ${chips?`<div class="fx-chip-row">${chips}</div>`:''}
+// Six buckets a feature can be grouped under in "By Source" view, in priority order — the same
+// order used to break ties when two features share a level in "By Level" view. Subclass is its
+// own bucket (not folded into Class) so "Oath of Devotion" reads apart from the base class list.
+const FEAT_GROUP_DEFS=[
+  {key:'class',icon:'⚔',label:()=>'Class Features'},
+  {key:'subclass',icon:'✦',label:items=>((items[0].source||{}).subclassName)||'Subclass Features'},
+  {key:'race',icon:'🌿',label:()=>'Racial Traits'},
+  {key:'background',icon:'🎖',label:()=>'Background'},
+  {key:'feat',icon:'★',label:()=>'Feats'},
+  {key:'custom',icon:'✎',label:()=>'Custom'},
+];
+const FEAT_ORDER_MAP={class:0,subclass:1,race:2,background:3,feat:4};
+function featureGroupKind(f){
+  const k=(f.source||{}).kind;
+  return FEAT_GROUP_DEFS.some(g=>g.key===k) ? k : 'custom';
+}
+function featureSortOrder(f){ return FEAT_ORDER_MAP[featureGroupKind(f)] ?? 5; }
+// Which "By Source" sections are collapsed — session-only, like the cockpit's open/pinned sets,
+// so it doesn't need a migration and resets to "everything open" on a fresh load.
+const FEAT_SECTION_COLLAPSED=new Set();
+function featureCardLockedHTML(f,i){
+  const src=featureSourceMeta(f);
+  const chips=(f.fx||[]).map(x=>`<span class="fx-chip ro">${esc(fxChipLabel(x))}</span>`).join('');
+  // The level badge is only shown grouped "By Source" — in "By Level" view the timeline node
+  // above the card already says the level, so repeating it on every card would be noise.
+  const lvlBadge=(S.featuresView!=='level' && f.levelAt!=null && f.levelAt!=='') ? `<span class="feat-lvl-badge">Lv ${esc(f.levelAt)}</span>` : '';
+  return `
+  <div class="feature-card locked" data-featidx="${i}" style="--src:${src.color}">
+    <div class="feature-cap">${esc((f.title||'?').trim().charAt(0).toUpperCase()||'?')}</div>
+    <div class="feature-body">
+      <div class="cf-row" style="align-items:flex-start">
+        <div>
+          ${src.byline?`<span class="feature-byline">${esc(src.byline)}</span>`:''}
+          <span class="cf-name">${esc(f.title||'Feature')}</span>
         </div>
-      </div>`;
-    }).join('');
-    return;
-  }
-  $('#featureList').innerHTML = S.features.map((f,i)=>{
-    const chips=(f.fx||[]).map((x,j)=>
-      `<span class="fx-chip" title="${esc(x.text||x.cond||'')}">${esc(fxChipLabel(x))}<button class="edit" data-fxedit="${i}.${j}" title="Edit this effect in place">✎</button><button class="copy" data-fxcopy="${i}.${j}" title="Duplicate as a separate new effect (e.g. to also cover another skill)">⧉</button><button data-fxdel="${i}.${j}" title="Remove effect">✕</button></span>`).join('');
-    const d=FX_DRAFT[i]||{};
-    const draftSkills=xSkills(d);
-    const editing=d._editIdx!=null;
-    const addLabel=editing?'Save changes':'Add';
-    const cancelBtn=editing?`<button class="cancel-btn" data-fxcancel="${i}">Cancel</button>`:'';
-    const editHint=editing?`<div class="fx-edit-hint">Editing this effect — "${addLabel}" updates it in place. "Cancel" leaves it unchanged.</div>`:'';
-    let stage='';
-    if(d.t==='stat') stage=`
-      <select data-fxa="${i}">${Object.entries(FX_STATS).map(([v,l])=>`<option value="${v}" ${d.stat===v?'selected':''}>${l}</option>`).join('')}</select>
-      <input type="text" style="width:150px" value="${esc(d.n??1)}" data-fxn="${i}" placeholder="2 / PROF / LVL / DEX+1" title="A number, or an auto-calc formula: PROF, LVL, STR, DEX, CON, INT, WIS, CHA (ability modifiers) — e.g. PROF, LVL, 2*LVL, DEX+1. Updates itself on level-up.">
-      <span class="fx-amt-hint">= ${fmt(fxAmount(d.n??1))}</span>
-      <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}
-      <span class="prep-note" style="flex-basis:100%;margin:0">Formulas work here too: PROF, LVL, STR…CHA (e.g. LVL for "+1 per level", 2*LVL, DEX+1) — recalculates automatically as you level up.</span>`;
-    else if(d.t==='skill') stage=`
-      ${skillPickHTML(i,draftSkills)}
-      <select data-fxg="${i}"><option value="prof" ${d.grant!=='exp'?'selected':''}>Proficiency</option><option value="exp" ${d.grant==='exp'?'selected':''}>Expertise</option></select>
-      <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}`;
-    else if(d.t==='save') stage=`
-      <select data-fxa="${i}">${ABILITIES.map(([v,l])=>`<option value="${v}" ${d.ab===v?'selected':''}>${l}</option>`).join('')}</select>
-      <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}`;
-    else if(d.t==='note') stage=`
-      ${skillPickHTML(i,draftSkills)}
-      <select data-fxk="${i}">
-        <option value="dprof" ${d.kind!=='adv'&&d.kind!=='flat'?'selected':''}>Proficiency boost (grants it, or doubles it if already proficient)</option>
-        <option value="adv" ${d.kind==='adv'?'selected':''}>Advantage</option>
-        <option value="flat" ${d.kind==='flat'?'selected':''}>Flat bonus +N</option>
-      </select>
-      ${d.kind==='flat'?`<input type="text" style="width:90px" value="${esc(d.n??10)}" data-fxn="${i}" placeholder="10 / PROF" title="A number or a formula (PROF, LVL, STR…, e.g. 2*PROF)">`:''}
-      <input type="text" style="min-width:180px;flex:1" placeholder="When? e.g. in favored terrain" value="${esc(d.text||d.cond||'')}" data-fxt="${i}">
-      <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}`;
-    else if(d.t==='statnote') stage=`
-      <select data-fxa="${i}">${Object.entries(FX_STATS).map(([v,l])=>`<option value="${v}" ${d.stat===v?'selected':''}>${l}</option>`).join('')}</select>
-      <input type="text" style="width:190px" value="${esc(d.n??'')}" data-fxn="${i}" placeholder="Optional bonus: 2 / PROF / DEX+1" title="Optional bonus shown on the badge — a number or a formula (PROF, DEX+1…). Not added to the stat: it's a reminder, the situational math stays yours.">
-      <input type="text" style="min-width:180px;flex:1" placeholder="When? e.g. while raging" value="${esc(d.text||d.cond||'')}" data-fxt="${i}">
-      <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}
-      <span class="prep-note" style="flex-basis:100%;margin:0">Shows as a ★ badge on the Overview — the bonus is a reminder only, not added to the stat. Formulas: PROF, LVL, STR…CHA (e.g. DEX+1, 2*PROF).</span>`;
-    if(stage) stage=editHint+stage;
-    const src=featureSourceMeta(f);
-    return `
-    <div class="feature-card" style="--src:${src.color}">
-      <div class="feature-cap">${esc((f.title||'?').trim().charAt(0).toUpperCase()||'?')}</div>
-      <div class="feature-body">
-        <div class="feature-head">
-          <div class="feature-headtext">
-            ${src.byline?`<span class="feature-byline">${esc(src.byline)}</span>`:''}
-            <input type="text" class="feature-title" value="${esc(f.title)}" data-li="features.${i}.title" placeholder="Feature name (e.g. Natural Explorer)">
-          </div>
-          <button class="combat-flag ${f.combat?'on':''}" data-combat="${i}" title="${f.combat?'Shown in Combat tab — tap to remove':'Tap to show in Combat tab'}">⚔</button>
-          <button class="del-btn" data-del="features.${i}">✕</button>
-        </div>
-        <textarea class="desc-ta" data-li="features.${i}.desc" placeholder="What it does...">${esc(f.desc)}</textarea>
-        ${f.combat?`
-        <div class="fx-addrow" style="margin:4px 0 0">
-          <span class="prep-note" style="margin:0">Uses</span>
-          ${f.usesScale
-            ? `<span class="prof-uses-val" title="Auto-set from ${usesScaleLabel(f.usesScale)}${num(f.usesScaleBonus)?` + ${num(f.usesScaleBonus)}`:''} (min 1) — updates when the stat changes">= ${num(f.usesMax)}</span>`
-            : `<input type="number" min="0" style="width:50px" value="${num(f.usesMax)}" data-uses="${i}" title="0 = not tracked (passive/at-will)">`}
-          <select data-usesper="${i}"><option value="short" ${f.usesPer!=='long'?'selected':''}>per short rest</option><option value="long" ${f.usesPer==='long'?'selected':''}>per long rest</option></select>
-          <select class="uses-scale-sel" data-usesscale="${i}" title="Tie max uses to a stat instead of typing a fixed number">
-            <option value="">Fixed number</option>
-            <option value="prof" ${f.usesScale==='prof'?'selected':''}>= Proficiency</option>
-            ${ABILITIES.map(([k,l])=>`<option value="${k}" ${f.usesScale===k?'selected':''}>= ${l} mod</option>`).join('')}
-          </select>
-          ${f.usesScale?`<select data-usesbonus="${i}" title="Flat amount added on top, if any — e.g. Divine Sense is 1 + CHA mod">
-            ${[0,1,2,3].map(n=>`<option value="${n}" ${num(f.usesScaleBonus)===n?'selected':''}>${n?'+'+n:'+0'}</option>`).join('')}
-          </select>`:''}
-        </div>`:''}
-        ${chips?`<div style="margin-top:6px">${chips}</div>`:''}
-        ${d.t||d._pickerOpen?`
-        <div class="fx-addrow" style="margin-top:6px">
-          <select data-fxtype="${i}" style="flex:0 0 230px">
-            <option value="">+ add effect…</option>
-            <option value="stat" ${d.t==='stat'?'selected':''}>Stat bonus (AC, speed, HP…)</option>
-            <option value="skill" ${d.t==='skill'?'selected':''}>Skill proficiency / expertise</option>
-            <option value="save" ${d.t==='save'?'selected':''}>Saving throw proficiency</option>
-            <option value="note" ${d.t==='note'?'selected':''}>★ Skill reminder (conditional)</option>
-            <option value="statnote" ${d.t==='statnote'?'selected':''}>★ Stat reminder (shown on Overview)</option>
-          </select>
-          ${stage}
-        </div>`:`
-        <button class="fx-open-btn" style="margin-top:6px" data-fxopen="${i}">+ Effect</button>`}
+        <div class="feat-cf-tags">${lvlBadge}${f.combat?'<span class="cf-tag">⚔</span>':''}</div>
       </div>
+      ${f.desc?`<div class="locked-desc">${esc(f.desc)}</div>`:''}
+      ${chips?`<div class="fx-chip-row">${chips}</div>`:''}
+    </div>
+  </div>`;
+}
+function featureCardEditHTML(f,i){
+  const chips=(f.fx||[]).map((x,j)=>
+    `<span class="fx-chip" title="${esc(x.text||x.cond||'')}">${esc(fxChipLabel(x))}<button class="edit" data-fxedit="${i}.${j}" title="Edit this effect in place">✎</button><button class="copy" data-fxcopy="${i}.${j}" title="Duplicate as a separate new effect (e.g. to also cover another skill)">⧉</button><button data-fxdel="${i}.${j}" title="Remove effect">✕</button></span>`).join('');
+  const d=FX_DRAFT[i]||{};
+  const draftSkills=xSkills(d);
+  const editing=d._editIdx!=null;
+  const addLabel=editing?'Save changes':'Add';
+  const cancelBtn=editing?`<button class="cancel-btn" data-fxcancel="${i}">Cancel</button>`:'';
+  const editHint=editing?`<div class="fx-edit-hint">Editing this effect — "${addLabel}" updates it in place. "Cancel" leaves it unchanged.</div>`:'';
+  let stage='';
+  if(d.t==='stat') stage=`
+    <select data-fxa="${i}">${Object.entries(FX_STATS).map(([v,l])=>`<option value="${v}" ${d.stat===v?'selected':''}>${l}</option>`).join('')}</select>
+    <input type="text" style="width:150px" value="${esc(d.n??1)}" data-fxn="${i}" placeholder="2 / PROF / LVL / DEX+1" title="A number, or an auto-calc formula: PROF, LVL, STR, DEX, CON, INT, WIS, CHA (ability modifiers) — e.g. PROF, LVL, 2*LVL, DEX+1. Updates itself on level-up.">
+    <span class="fx-amt-hint">= ${fmt(fxAmount(d.n??1))}</span>
+    <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}
+    <span class="prep-note" style="flex-basis:100%;margin:0">Formulas work here too: PROF, LVL, STR…CHA (e.g. LVL for "+1 per level", 2*LVL, DEX+1) — recalculates automatically as you level up.</span>`;
+  else if(d.t==='skill') stage=`
+    ${skillPickHTML(i,draftSkills)}
+    <select data-fxg="${i}"><option value="prof" ${d.grant!=='exp'?'selected':''}>Proficiency</option><option value="exp" ${d.grant==='exp'?'selected':''}>Expertise</option></select>
+    <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}`;
+  else if(d.t==='save') stage=`
+    <select data-fxa="${i}">${ABILITIES.map(([v,l])=>`<option value="${v}" ${d.ab===v?'selected':''}>${l}</option>`).join('')}</select>
+    <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}`;
+  else if(d.t==='note') stage=`
+    ${skillPickHTML(i,draftSkills)}
+    <select data-fxk="${i}">
+      <option value="dprof" ${d.kind!=='adv'&&d.kind!=='flat'?'selected':''}>Proficiency boost (grants it, or doubles it if already proficient)</option>
+      <option value="adv" ${d.kind==='adv'?'selected':''}>Advantage</option>
+      <option value="flat" ${d.kind==='flat'?'selected':''}>Flat bonus +N</option>
+    </select>
+    ${d.kind==='flat'?`<input type="text" style="width:90px" value="${esc(d.n??10)}" data-fxn="${i}" placeholder="10 / PROF" title="A number or a formula (PROF, LVL, STR…, e.g. 2*PROF)">`:''}
+    <input type="text" style="min-width:180px;flex:1" placeholder="When? e.g. in favored terrain" value="${esc(d.text||d.cond||'')}" data-fxt="${i}">
+    <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}`;
+  else if(d.t==='statnote') stage=`
+    <select data-fxa="${i}">${Object.entries(FX_STATS).map(([v,l])=>`<option value="${v}" ${d.stat===v?'selected':''}>${l}</option>`).join('')}</select>
+    <input type="text" style="width:190px" value="${esc(d.n??'')}" data-fxn="${i}" placeholder="Optional bonus: 2 / PROF / DEX+1" title="Optional bonus shown on the badge — a number or a formula (PROF, DEX+1…). Not added to the stat: it's a reminder, the situational math stays yours.">
+    <input type="text" style="min-width:180px;flex:1" placeholder="When? e.g. while raging" value="${esc(d.text||d.cond||'')}" data-fxt="${i}">
+    <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}
+    <span class="prep-note" style="flex-basis:100%;margin:0">Shows as a ★ badge on the Overview — the bonus is a reminder only, not added to the stat. Formulas: PROF, LVL, STR…CHA (e.g. DEX+1, 2*PROF).</span>`;
+  if(stage) stage=editHint+stage;
+  const src=featureSourceMeta(f);
+  // The level input lives on every card regardless of view — editing it here is what moves a
+  // card between timeline nodes in "By Level" (blank = "Along the Way"), and it's just as valid
+  // to correct in "By Source" view without switching over first.
+  const lvlIn=`<input type="number" class="feat-lvl-in" min="1" max="20" value="${f.levelAt??''}" data-lvlat="${i}" placeholder="Lv" title="Level gained — leave blank if it isn't tied to a level (homebrew, DM boon, race/background at creation, etc.)">`;
+  return `
+  <div class="feature-card" data-featidx="${i}" style="--src:${src.color}">
+    <div class="feature-cap">${esc((f.title||'?').trim().charAt(0).toUpperCase()||'?')}</div>
+    <div class="feature-body">
+      <div class="feature-head">
+        <div class="feature-headtext">
+          ${src.byline?`<span class="feature-byline">${esc(src.byline)}</span>`:''}
+          <input type="text" class="feature-title" value="${esc(f.title)}" data-li="features.${i}.title" placeholder="Feature name (e.g. Natural Explorer)">
+        </div>
+        ${lvlIn}
+        <button class="combat-flag ${f.combat?'on':''}" data-combat="${i}" title="${f.combat?'Shown in Combat tab — tap to remove':'Tap to show in Combat tab'}">⚔</button>
+        <button class="del-btn" data-del="features.${i}">✕</button>
+      </div>
+      <textarea class="desc-ta" data-li="features.${i}.desc" placeholder="What it does...">${esc(f.desc)}</textarea>
+      ${f.combat?`
+      <div class="fx-addrow" style="margin:4px 0 0">
+        <span class="prep-note" style="margin:0">Uses</span>
+        ${f.usesScale
+          ? `<span class="prof-uses-val" title="Auto-set from ${usesScaleLabel(f.usesScale)}${num(f.usesScaleBonus)?` + ${num(f.usesScaleBonus)}`:''} (min 1) — updates when the stat changes">= ${num(f.usesMax)}</span>`
+          : `<input type="number" min="0" style="width:50px" value="${num(f.usesMax)}" data-uses="${i}" title="0 = not tracked (passive/at-will)">`}
+        <select data-usesper="${i}"><option value="short" ${f.usesPer!=='long'?'selected':''}>per short rest</option><option value="long" ${f.usesPer==='long'?'selected':''}>per long rest</option></select>
+        <select class="uses-scale-sel" data-usesscale="${i}" title="Tie max uses to a stat instead of typing a fixed number">
+          <option value="">Fixed number</option>
+          <option value="prof" ${f.usesScale==='prof'?'selected':''}>= Proficiency</option>
+          ${ABILITIES.map(([k,l])=>`<option value="${k}" ${f.usesScale===k?'selected':''}>= ${l} mod</option>`).join('')}
+        </select>
+        ${f.usesScale?`<select data-usesbonus="${i}" title="Flat amount added on top, if any — e.g. Divine Sense is 1 + CHA mod">
+          ${[0,1,2,3].map(n=>`<option value="${n}" ${num(f.usesScaleBonus)===n?'selected':''}>${n?'+'+n:'+0'}</option>`).join('')}
+        </select>`:''}
+      </div>`:''}
+      ${chips?`<div style="margin-top:6px">${chips}</div>`:''}
+      ${d.t||d._pickerOpen?`
+      <div class="fx-addrow" style="margin-top:6px">
+        <select data-fxtype="${i}" style="flex:0 0 230px">
+          <option value="">+ add effect…</option>
+          <option value="stat" ${d.t==='stat'?'selected':''}>Stat bonus (AC, speed, HP…)</option>
+          <option value="skill" ${d.t==='skill'?'selected':''}>Skill proficiency / expertise</option>
+          <option value="save" ${d.t==='save'?'selected':''}>Saving throw proficiency</option>
+          <option value="note" ${d.t==='note'?'selected':''}>★ Skill reminder (conditional)</option>
+          <option value="statnote" ${d.t==='statnote'?'selected':''}>★ Stat reminder (shown on Overview)</option>
+        </select>
+        ${stage}
+      </div>`:`
+      <button class="fx-open-btn" style="margin-top:6px" data-fxopen="${i}">+ Effect</button>`}
+    </div>
+  </div>`;
+}
+function featureCardHTML(f,i){ return S.featuresLocked ? featureCardLockedHTML(f,i) : featureCardEditHTML(f,i); }
+// "By Source" — a labeled, collapsible section per FEAT_GROUP_DEFS bucket. Empty buckets (e.g.
+// no feats taken yet) are skipped entirely rather than shown empty.
+function renderFeaturesBySource(){
+  const groups=FEAT_GROUP_DEFS.map(def=>({def,items:[]}));
+  S.features.forEach((f,i)=>{
+    const k=featureGroupKind(f);
+    groups.find(g=>g.def.key===k).items.push({f,i});
+  });
+  const live=groups.filter(g=>g.items.length);
+  if(!live.length) return '';
+  return live.map(g=>{
+    const collapsed=FEAT_SECTION_COLLAPSED.has(g.def.key);
+    const cardsHTML=g.items.map(({f,i})=>featureCardHTML(f,i)).join('');
+    return `
+    <div class="fv-group ${collapsed?'collapsed':''}" style="--src:${featureSourceMeta(g.items[0].f).color}">
+      <div class="fv-group-head" data-fvtoggle="${g.def.key}">
+        <span class="fv-group-ic">${g.def.icon}</span>
+        <span class="fv-group-name">${esc(g.def.label(g.items.map(x=>x.f)))}</span>
+        <span class="fv-group-count">${g.items.length}</span>
+        <span class="fv-group-rule"></span>
+        <span class="fv-group-chev">▾</span>
+      </div>
+      <div class="fv-group-clip"><div class="fv-group-cards">${cardsHTML}</div></div>
     </div>`;
   }).join('');
+}
+// "By Level" — one timeline node per level a feature was gained at (race/background bundle into
+// Level 1 unless hand-edited), sorted ascending, plus a trailing "Along the Way" node for anything
+// with no level set at all (custom entries, by default, until the player gives them one).
+function renderFeaturesByLevel(){
+  const buckets=new Map(), away=[];
+  S.features.forEach((f,i)=>{
+    const lv=f.levelAt;
+    if(lv==null||lv===''){ away.push({f,i}); return; }
+    const n=num(lv);
+    if(!buckets.has(n)) buckets.set(n,[]);
+    buckets.get(n).push({f,i});
+  });
+  if(!buckets.size && !away.length) return '';
+  const sortWithin=items=>items.slice().sort((a,b)=>featureSortOrder(a.f)-featureSortOrder(b.f));
+  const node=(badgeInner,badgeCls,heading,items)=>`
+    <div class="fv-tl-node">
+      <div class="fv-tl-spine"><div class="fv-tl-badge ${badgeCls||''}">${badgeInner}</div></div>
+      <div class="fv-tl-body">
+        <div class="fv-tl-heading"><h3>${esc(heading)}</h3></div>
+        <div class="fv-tl-cards">${sortWithin(items).map(({f,i})=>featureCardHTML(f,i)).join('')}</div>
+      </div>
+    </div>`;
+  const levels=[...buckets.keys()].sort((a,b)=>a-b);
+  let html=levels.map(n=>node(n,'',`Level ${n}`,buckets.get(n))).join('');
+  if(away.length) html+=node('✎','fv-tl-badge-away','Along the Way',away);
+  return html;
+}
+function renderFeatures(){
+  const html = S.featuresView==='level' ? renderFeaturesByLevel() : renderFeaturesBySource();
+  $('#featureList').innerHTML = html || '<div class="fv-empty">No features yet — search above or add one below.</div>';
   wireList('#featureList');
   wireFx();
+  wireFeatureLevelInputs();
+  wireFeatureGroupToggles();
+}
+function wireFeatureLevelInputs(){
+  $$('[data-lvlat]').forEach(el=>el.addEventListener('change',()=>{
+    const f=S.features[+el.dataset.lvlat];
+    f.levelAt = el.value===''?null:num(el.value);
+    renderFeatures(); save();
+  }));
+}
+function wireFeatureGroupToggles(){
+  $$('[data-fvtoggle]').forEach(el=>el.addEventListener('click',()=>{
+    const k=el.dataset.fvtoggle;
+    if(FEAT_SECTION_COLLAPSED.has(k)) FEAT_SECTION_COLLAPSED.delete(k); else FEAT_SECTION_COLLAPSED.add(k);
+    el.closest('.fv-group').classList.toggle('collapsed');
+  }));
+}
+// View-mode buttons live in the static panel chrome (not rebuilt by renderFeatures), so they're
+// wired once at boot, same as the lock toggle.
+function wireFeaturesView(){
+  const sync=()=>$$('#featuresViewToggle button').forEach(b=>b.classList.toggle('on',b.dataset.fview===(S.featuresView||'source')));
+  $$('#featuresViewToggle button').forEach(b=>b.addEventListener('click',()=>{
+    S.featuresView=b.dataset.fview;
+    sync(); renderFeatures(); save();
+  }));
+  sync();
 }
 // Re-render everything a feature effect can touch
 function fxRefresh(){ renderFeatures(); renderSkills(); renderSaves(); renderCombatFeatures(); recalc(); save(); }
@@ -3129,7 +3261,13 @@ function libEntryToFeature(ent,source){
   if(ent.n==='Tough') fx=[{t:'stat',stat:'hpmax',n:2*Math.max(1,num(S.level))}];
   const usesScale=ent.usesScale||'';
   const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
-  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,actionType:ent.actionType||'',usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source};
+  // Feats carry no real level in the library (every entry is l:0, just a placeholder) — the level
+  // actually taken lives on source.asiLevel instead, set by the level-up flow that called us.
+  // Class/subclass entries DO carry a real level (when this feature unlocks), so use that.
+  const levelAt = source.kind==='feat'
+    ? (source.asiLevel!=null ? num(source.asiLevel) : null)
+    : (ent.l!=null && ent.l!=='' ? num(ent.l) : null);
+  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,actionType:ent.actionType||'',usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,levelAt,source};
 }
 // Same job for RACE_LIB entries — shared by the race-trait search box below and the heritage
 // auto-grant (syncGrantedFeatures), so a trait added either way comes out identically wired.
@@ -3141,14 +3279,16 @@ function raceEntryToFeature(ent,source){
   // so their max uses stay synced to that stat automatically as you level up.
   const usesScale=ent.usesScale||'';
   const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
-  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source};
+  // Race traits aren't level-gated in RACE_LIB (no l field) — they're always there from creation.
+  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,levelAt:1,source};
 }
 // Same job for BACKGROUND_LIB entries — no level-scaling special case exists for any background.
 function backgroundEntryToFeature(ent,source){
   const fx=(ent.fx||[]).map(x=>({...x}));
   const usesScale=ent.usesScale||'';
   const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
-  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,source};
+  // Same as race traits: backgrounds are picked at creation, not gained at a later level.
+  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,levelAt:1,source};
 }
 // ----- Feature library: searchable instead of one giant native <select> (a lot of options) -----
 // Both search boxes used to list the entire library — all twelve classes, every subclass, every
@@ -4507,7 +4647,7 @@ function wireBackstoryExpand(){
 // ---------- Add buttons (attacks / equipment / features / notes) ----------
 const ADD_TEMPLATES = {
   attacks:()=>({name:'',weapon:'custom',die:'',dmgStat:'auto',magic:0,miscAtk:0,miscDmg:0,rolled:'',buffs:[]}),
-  features:()=>({title:'',desc:'',fx:[],combat:false,usesMax:0,usesPer:'short',usesUsed:0,usesScale:'',source:{kind:'custom'}}),
+  features:()=>({title:'',desc:'',fx:[],combat:false,usesMax:0,usesPer:'short',usesUsed:0,usesScale:'',levelAt:null,source:{kind:'custom'}}),
   notes:()=>({title:'',body:'',tags:[],session:nextSessionLabel()})
 };
 function wireAddButtons(){
@@ -4526,7 +4666,7 @@ function wireAddButtons(){
   // shows up under the Combat cockpit's Feats filter — everything else about it (title, description,
   // effects, combat tracking) is the same free-form editor as any other hand-written feature.
   $('#addFeatBtn')?.addEventListener('click',()=>{
-    S.features.push({title:'',desc:'',fx:[],combat:false,usesMax:0,usesPer:'short',usesUsed:0,usesScale:'',source:{kind:'feat',custom:true}});
+    S.features.push({title:'',desc:'',fx:[],combat:false,usesMax:0,usesPer:'short',usesUsed:0,usesScale:'',levelAt:null,source:{kind:'feat',custom:true}});
     renderFeatures(); renderCombatFeatures(); save();
     focusLast('#featureList');
   });
@@ -4918,7 +5058,7 @@ function renderAsi(){
     const idx=S.features.findIndex(f=>f===asiLinkedFeat(parseAsiRef(b.dataset.asifeatjump)));
     showTab('features');
     if(idx<0) return;
-    const card=$$('#featureList .feature-card')[idx];
+    const card=$(`#featureList .feature-card[data-featidx="${idx}"]`);
     if(card){ card.scrollIntoView({behavior:'smooth',block:'center'}); card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),900); }
   }));
   $$('[data-asibonuslabel]').forEach(inp=>inp.addEventListener('input',()=>{
@@ -5174,7 +5314,7 @@ function openLevelUpModal(){
       const idx=S.features.findIndex(f=>f===asiLinkedFeat(parseAsiRef(key)));
       closeLevelUpModal(); showTab('features');
       if(idx<0) return;
-      const card=$$('#featureList .feature-card')[idx];
+      const card=$(`#featureList .feature-card[data-featidx="${idx}"]`);
       if(card){ card.scrollIntoView({behavior:'smooth',block:'center'}); card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),900); }
     }
   });
@@ -6545,7 +6685,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab('overview');
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

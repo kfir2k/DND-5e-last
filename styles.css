@@ -1351,8 +1351,10 @@ label.fld.sug-wrap{display:block}
 #spellResults .item:hover,#spellResults .item.hi{background:var(--panel3);border-left-color:var(--accent)}
 #spellResults .sp-badge{margin-right:3px}
 /* Feature cards — two columns of shorter cards instead of one long full-width column, so short
-   feats don't leave a wall of empty space next to their one-line description. */
-#featureList{column-width:360px;column-gap:20px}
+   feats don't leave a wall of empty space next to their one-line description. The column layout
+   now lives one level down (.fv-group-cards / .fv-tl-cards), since #featureList's direct children
+   are section/timeline-node wrappers, not cards, once "By Source"/"By Level" arrangement is in play. */
+#featureList{display:block}
 /* Take two: the stamped wax-seal medallion (repeated down a long list) read as a sticker, not a
    flourish — a device that works once on a hero panel gets noisy at a dozen repeats. Replaced with
    something quieter and more bookish: an illuminated capital, the feature's own first letter set
@@ -1374,6 +1376,22 @@ label.fld.sug-wrap{display:block}
 .feature-body{flex:1;min-width:0}
 .feature-head{display:flex;gap:8px;align-items:center;margin-bottom:7px}
 .feature-headtext{flex:1;min-width:0}
+/* The level a feature was gained at — editable right on the card (not tucked behind a settings
+   panel) since it's the one field that decides where this card lands in "By Level" view. Blank
+   reads as "Along the Way", same meaning as leaving any other optional field empty. */
+.feat-lvl-in{
+  flex:0 0 44px;width:44px;text-align:center;background:var(--panel3);border:1px solid var(--border-lt);
+  border-radius:7px;color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;
+  padding:5px 2px;
+}
+.feat-lvl-in::placeholder{color:var(--faint);font-weight:400}
+.feat-lvl-in:focus{border-color:var(--gold);outline:none;background:var(--ink)}
+.feat-cf-tags{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.feat-lvl-badge{
+  font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.4px;color:var(--gold-lt);
+  background:var(--panel3);border:1px solid var(--border-lt);border-radius:999px;padding:2px 8px;
+  white-space:nowrap;
+}
 .feature-byline{
   display:block;color:var(--muted);font-size:.76rem;font-style:italic;
   margin:0 0 1px 1px;letter-spacing:.2px;
@@ -1388,6 +1406,72 @@ label.fld.sug-wrap{display:block}
 .feature-title:hover{border-bottom-color:var(--border-lt)}
 .feature-title:focus{background:var(--ink);border-color:transparent;border-bottom-color:var(--src,var(--gold));border-radius:4px}
 .desc-ta{min-height:42px;font-size:.92rem;resize:none;overflow:hidden}
+/* ---------- Features tab arrangement: By Source / By Level ---------- */
+.fv-toggle{display:flex;gap:0;margin-bottom:16px;background:var(--panel2);border:1px solid var(--border-lt);border-radius:999px;padding:3px;width:fit-content}
+.fv-toggle button{
+  background:none;border:none;color:var(--muted);font-family:'Cinzel',serif;font-size:.74rem;
+  letter-spacing:.08em;text-transform:uppercase;padding:7px 18px;border-radius:999px;cursor:pointer;
+  transition:background .15s ease,color .15s ease;
+}
+.fv-toggle button.on{background:var(--gold-dim);color:var(--ink)}
+.fv-toggle button:hover:not(.on){color:var(--gold-lt)}
+.fv-empty{color:var(--faint);font-style:italic;font-size:.88rem;padding:8px 2px}
+/* By Source: one labeled, collapsible section per origin — class, subclass, race, background,
+   feats, custom — in that priority order. Cards inside flow in the same short-column layout
+   #featureList used to do at the top level, now scoped per section. */
+.fv-group{margin-bottom:6px}
+.fv-group + .fv-group{margin-top:22px}
+.fv-group-head{
+  display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;
+  padding:3px 0 6px;-webkit-tap-highlight-color:transparent;
+}
+.fv-group-ic{font-size:1.05rem;flex-shrink:0;width:1.4em;text-align:center;color:var(--src,var(--gold))}
+.fv-group-name{
+  font-family:'Cinzel',serif;font-size:.86rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--src,var(--gold));font-weight:600;
+}
+.fv-group-count{font-family:'Crimson Pro',serif;font-style:italic;color:var(--faint);font-size:.82rem}
+.fv-group-rule{flex:1;height:1px;background:linear-gradient(90deg,var(--border-lt),transparent)}
+.fv-group-chev{color:var(--faint);font-size:.78rem;transition:transform .2s ease;flex-shrink:0}
+.fv-group.collapsed .fv-group-chev{transform:rotate(-90deg)}
+/* max-height clip (not a bare height/grid-rows collapse) — a grid/flex item's default min-size
+   fights collapsing to 0 against its own content, this doesn't. */
+.fv-group-clip{max-height:6000px;overflow:hidden;transition:max-height .3s ease,opacity .25s ease,margin-top .3s ease;margin-top:14px}
+.fv-group.collapsed .fv-group-clip{max-height:0;opacity:0;margin-top:0}
+/* A wash of the section's own color, framing the whole card zone top-to-bottom — cards
+   themselves stay opaque (--panel2), so this only ever shows in the gaps between/around them,
+   never under any text. Percentage stops (not a fixed px fade) so it covers a two-card section
+   and a ten-card one the same way. */
+.fv-group-cards{
+  column-width:360px;column-gap:20px;border-radius:16px;padding:16px 14px 12px;
+  background:linear-gradient(180deg,
+    color-mix(in srgb,var(--src,var(--gold)) 20%,transparent) 0%,
+    color-mix(in srgb,var(--src,var(--gold)) 7%,transparent) 100%);
+}
+.fv-group-cards .feature-card{break-inside:avoid}
+/* By Level: a numbered node per level, connected by the same lit-spine idiom the Combat tab's
+   Turn Plan uses for its steps — this tab and that one are now visibly the same kind of list. */
+.fv-tl-node{display:flex;gap:16px;position:relative;padding-bottom:24px}
+.fv-tl-node:last-child{padding-bottom:0}
+.fv-tl-spine{flex:0 0 auto;width:36px;position:relative;display:flex;justify-content:center}
+.fv-tl-spine::before{
+  content:'';position:absolute;top:36px;bottom:-24px;left:50%;width:1px;
+  background:linear-gradient(var(--gold-dim),var(--border-lt));
+}
+.fv-tl-node:last-child .fv-tl-spine::before{display:none}
+.fv-tl-badge{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;position:relative;z-index:1;
+  background:radial-gradient(circle at 35% 30%,var(--gold-lt),var(--gold-dim));
+  color:var(--ink);font-family:'Cinzel',serif;font-weight:700;font-size:.92rem;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 0 4px var(--panel),0 0 12px rgba(201,162,39,.35);
+}
+.fv-tl-badge-away{background:radial-gradient(circle at 35% 30%,#7db8e8,#2d5a76);font-size:1rem}
+.fv-tl-body{flex:1;min-width:0;padding-top:4px}
+.fv-tl-heading{margin-bottom:12px}
+.fv-tl-heading h3{margin:0;font-size:.92rem;letter-spacing:.1em;color:var(--gold-lt);text-transform:uppercase;font-family:'Cinzel',serif}
+.fv-tl-cards{column-width:340px;column-gap:16px}
+.fv-tl-cards .feature-card{break-inside:avoid}
 /* Lock toggle — sits in the panel header (h2 is already a flex row with space-between, so this
    just drops into the right side). Locked = compact read-only view; unlocked = full editor. */
 .lock-toggle{
