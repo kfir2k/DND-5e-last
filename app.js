@@ -931,12 +931,14 @@ function saveNow(){
     localStorage.setItem(charKey(ROSTER.active),JSON.stringify(S));
     ROSTER.meta[ROSTER.active]={t:Date.now()}; saveRoster();
     const el=$('#saveStatus');
-    el.textContent='saved'; el.classList.add('flash');
+    el.textContent='saved'; el.classList.remove('pending'); el.classList.add('flash');
     setTimeout(()=>el.classList.remove('flash'),600);
-  }catch(e){ $('#saveStatus').textContent='save failed'; }
+  }catch(e){ const el=$('#saveStatus'); el.textContent='save failed'; el.classList.remove('pending','flash'); }
 }
 function save(){
   clearTimeout(saveTimer);
+  // Show the debounce honestly: the dot turns amber and reads "saving…" until saveNow lands.
+  const el=$('#saveStatus'); if(el){ el.textContent='saving…'; el.classList.add('pending'); el.classList.remove('flash'); }
   saveTimer=setTimeout(saveNow,350);
 }
 // Any pending debounced save must land in the OLD character's slot before S is replaced —
@@ -1090,13 +1092,24 @@ function migrateAttacks(){
 // ---------- Build tabs & pages ----------
 function buildShell(){
   $('#tabs').innerHTML = TABS.map(([id,label])=>
-    `<button class="tab-btn" data-tab="${id}">${label}</button>`).join('');
+    `<button class="tab-btn" role="tab" id="tab-${id}" data-tab="${id}" aria-controls="page-${id}" aria-selected="false" tabindex="-1">${label}</button>`).join('');
   $('#pages').innerHTML = TABS.map(([id])=>
-    `<section class="tab-page" id="page-${id}">${PAGES[id]}</section>`).join('');
-  $$('.tab-btn').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+    `<section class="tab-page" role="tabpanel" id="page-${id}" aria-labelledby="tab-${id}">${PAGES[id]}</section>`).join('');
+  // A tap on a tab while scrolled deep into a long page (Spells, Combat) used to land you
+  // mid-way down the NEW page; jump back to the top so every tab opens at its start.
+  $$('.tab-btn').forEach(b=>b.addEventListener('click',()=>{ showTab(b.dataset.tab); if(window.scrollY>0) window.scrollTo({top:0,behavior:'auto'}); }));
+  wireTabStrip();
 }
 function showTab(id){
-  $$('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+  $$('.tab-btn').forEach(b=>{ const on=b.dataset.tab===id; b.classList.toggle('active',on); b.setAttribute('aria-selected',on?'true':'false'); b.tabIndex=on?0:-1; });
+  // Keep the active tab in view when the strip overflows (tablet/phone), and remember it so a
+  // reload reopens where you left off instead of always bouncing back to Overview.
+  const nav=$('#tabs'), tb=$('#tab-'+id);
+  if(nav&&tb&&nav.scrollWidth>nav.clientWidth+4){
+    const left=tb.getBoundingClientRect().left-nav.getBoundingClientRect().left+nav.scrollLeft-(nav.clientWidth-tb.offsetWidth)/2;
+    nav.scrollTo({left:Math.max(0,left),behavior:'smooth'});
+  }
+  try{ localStorage.setItem(TAB_KEY,id); }catch(e){}
   $$('.tab-page').forEach(p=>p.classList.toggle('active',p.id==='page-'+id));
   // Textareas rendered while their tab was hidden measured scrollHeight 0, so auto-grow
   // clipped them to the minimum — remeasure everything the moment the tab is actually visible.
@@ -4393,7 +4406,7 @@ function renderOverviewIdentity(){
   // XP: the input always sits here for tables that track it; the bar/threshold text only shows
   // once there's a real number in it, so milestone-leveling tables just never see it.
   const xpVal=num(S.xp), next=XP_THRESHOLDS[lvl+1];
-  let xpHtml=`<input type="text" class="ov-xp-in" data-li="xp" value="${esc(S.xp)}" placeholder="XP">`;
+  let xpHtml=`<input type="text" class="ov-xp-in" data-li="xp" value="${esc(S.xp)}" placeholder="XP — tap to track">`;
   if(xpVal>0 && lvl<20 && next!=null){
     const prev=XP_THRESHOLDS[lvl]||0;
     const pct=Math.max(0,Math.min(100,(xpVal-prev)/Math.max(1,next-prev)*100));
@@ -6582,6 +6595,7 @@ function wireCharSelect(){
 function wireSettings(){
   $('#settingsBtn').addEventListener('click',()=>$('#settingsModal').classList.add('open'));
   $('#settingsClose').addEventListener('click',()=>$('#settingsModal').classList.remove('open'));
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#settingsModal').classList.contains('open')) $('#settingsModal').classList.remove('open'); });
   $('#settingsModal').addEventListener('click',e=>{
     if(e.target.id==='settingsModal') $('#settingsModal').classList.remove('open');
   });
@@ -6663,6 +6677,39 @@ function wireAttackTips(){
 // single button in the header (present on every tab, not just Combat/Overview) widens the whole
 // layout. Kept in its own localStorage key, independent of which character/roster slot is active.
 const WIDE_KEY='dnd5e-binder-wide-v1';
+// Last-open tab — UI-only, like wide mode: a reload (or the tablet closing the page overnight)
+// reopens the same tab instead of always landing on Overview. Switching heroes still picks its own
+// tab explicitly (Overview for a finished hero, Build for a fresh one).
+const TAB_KEY='dnd5e-binder-tab-v1';
+function lastTab(){
+  try{ const t=localStorage.getItem(TAB_KEY); if(TABS.some(([id])=>id===t)) return t; }catch(e){}
+  return 'overview';
+}
+// Tab strip behaviour that CSS alone can't do: edge fades only while there is more strip to
+// scroll to, a "stuck" state once the sticky bar has pinned to the top, the strip's live height
+// exposed as --nav-h so the sticky coin purse / grimoire head park underneath it instead of
+// sliding behind it, and arrow-key movement between tabs for keyboard users.
+function wireTabStrip(){
+  const nav=$('#tabs'); if(!nav) return;
+  const edges=()=>{
+    nav.classList.toggle('can-l',nav.scrollLeft>4);
+    nav.classList.toggle('can-r',nav.scrollLeft+nav.clientWidth<nav.scrollWidth-4);
+  };
+  nav.addEventListener('scroll',edges,{passive:true});
+  window.addEventListener('resize',edges);
+  edges();
+  const setH=()=>document.documentElement.style.setProperty('--nav-h',nav.offsetHeight+'px');
+  if(window.ResizeObserver) new ResizeObserver(()=>{ setH(); edges(); }).observe(nav); else setH();
+  const sentinel=document.createElement('div'); sentinel.className='nav-sentinel'; sentinel.setAttribute('aria-hidden','true');
+  nav.parentNode.insertBefore(sentinel,nav);
+  if(window.IntersectionObserver) new IntersectionObserver(([e])=>nav.classList.toggle('stuck',!e.isIntersecting),{threshold:0}).observe(sentinel);
+  nav.addEventListener('keydown',e=>{
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+    const ids=TABS.map(([id])=>id); const cur=$('.tab-btn.active'); let i=Math.max(0,ids.indexOf(cur?cur.dataset.tab:''));
+    if(e.key==='ArrowLeft') i=(i-1+ids.length)%ids.length; else if(e.key==='ArrowRight') i=(i+1)%ids.length; else if(e.key==='Home') i=0; else i=ids.length-1;
+    e.preventDefault(); showTab(ids[i]); const b=$('#tab-'+ids[i]); if(b) b.focus();
+  });
+}
 function applyWideMode(on){
   document.body.classList.toggle('wide-mode',on);
   $$('[data-widetoggle]').forEach(b=>{
@@ -6686,7 +6733,7 @@ load();
 buildShell();
 renderAll();
 wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
-showTab('overview');
+showTab(lastTab());
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
 

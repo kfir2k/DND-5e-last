@@ -192,6 +192,7 @@ Everything is `localStorage`, no backend:
 - `dnd5e-binder-roster-v1` — the roster (`ROSTER`)
 - `dnd5e-binder-map-v2` — the campaign map
 - `dnd5e-binder-wide-v1` — UI-only wide-layout preference, independent of character/roster
+- `dnd5e-binder-tab-v1` — UI-only last-open tab (restored at boot by `lastTab()`), independent of character/roster
 
 Characters can be exported/imported as standalone `.json` files (Settings, or the character-select
 screen) — see the `Characters/` folder for example exports. Import always creates a *new* roster

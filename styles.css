@@ -18,7 +18,10 @@
   --ember-lt:#ffd08a;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
+html{height:100%}
+/* min-height, not height: a body pinned to exactly one viewport tall is the containing block for
+   the sticky tab strip, so the strip stopped sticking after the first screenful of a long tab. */
+body{min-height:100%}
 body{
   background:var(--bg);
   background-image:radial-gradient(ellipse at 50% -10%, #241c12 0%, var(--bg) 60%);
@@ -1442,16 +1445,19 @@ label.fld.sug-wrap{display:block}
    themselves stay opaque (--panel2), so this only ever shows in the gaps between/around them,
    never under any text. Percentage stops (not a fixed px fade) so it covers a two-card section
    and a ten-card one the same way. */
-/* Uniform 16px breathing room: the padding on three sides, the column gap, and every card's own
-   margin-bottom (which also supplies the bottom edge — a multicol box is its own formatting
-   context, so that last margin can't collapse away) all match. */
+/* A responsive grid rather than CSS multi-column: multicol always opened as many 360px columns
+   as the width allowed, so on a wide screen a two-card section stranded both cards at the left of
+   the wash box with empty columns beside them. auto-fit collapses the unused tracks and stretches
+   the cards across instead, and rows read left-to-right in feature order. Uniform 16px padding
+   and gap keep the breathing room even on every side. */
 .fv-group-cards{
-  column-width:360px;column-gap:16px;border-radius:16px;padding:16px 16px 0;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:16px;align-items:start;
+  border-radius:16px;padding:16px;
   background:linear-gradient(180deg,
     color-mix(in srgb,var(--src,var(--gold)) 20%,transparent) 0%,
     color-mix(in srgb,var(--src,var(--gold)) 7%,transparent) 100%);
 }
-.fv-group-cards .feature-card{break-inside:avoid}
+.fv-group-cards .feature-card{break-inside:avoid;margin-bottom:0}
 /* By Level: a numbered node per level, connected by the same lit-spine idiom the Combat tab's
    Turn Plan uses for its steps — this tab and that one are now visibly the same kind of list. */
 .fv-tl-node{display:flex;gap:16px;position:relative;padding-bottom:24px}
@@ -1473,8 +1479,8 @@ label.fld.sug-wrap{display:block}
 .fv-tl-body{flex:1;min-width:0;padding-top:4px}
 .fv-tl-heading{margin-bottom:12px}
 .fv-tl-heading h3{margin:0;font-size:.92rem;letter-spacing:.1em;color:var(--gold-lt);text-transform:uppercase;font-family:'Cinzel',serif}
-.fv-tl-cards{column-width:340px;column-gap:16px}
-.fv-tl-cards .feature-card{break-inside:avoid}
+.fv-tl-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:16px;align-items:start}
+.fv-tl-cards .feature-card{break-inside:avoid;margin-bottom:0}
 /* Lock toggle — sits in the panel header (h2 is already a flex row with space-between, so this
    just drops into the right side). Locked = compact read-only view; unlocked = full editor. */
 .lock-toggle{
@@ -3842,3 +3848,104 @@ input.sug-sheet-search{display:block;width:calc(100% - 36px);margin:0 18px 10px}
   .wiz-car-card{width:190px}
   .wiz-car-arrow{width:38px;height:38px}
 }
+
+/* ---------- UI polish pass: navigation, header, feedback, accessibility ----------
+   Cross-cutting fixes that don't belong to any one tab. Kept together at the end so they win
+   the cascade over the per-section rules above without having to edit each of those in place. */
+:root{--nav-h:50px} /* refined live by wireTabStrip() from the strip's real height */
+
+/* Tab strip pins to the top while a long tab (Spells, Combat) scrolls beneath it — the name and
+   rest buttons scroll away, the navigation never does. Sits above sticky in-page bars (coin
+   purse z=15, grimoire head z=5) and below every modal/drawer (z=40+). */
+.nav-sentinel{height:1px;margin-bottom:-1px;visibility:hidden;pointer-events:none}
+nav#tabs{
+  position:sticky;top:0;z-index:30;
+  transition:border-color .2s ease,background .2s ease;
+}
+nav#tabs.stuck{background:#120e08;border-bottom-color:var(--gold-dim)}
+/* Edge fades — only while there is actually more strip in that direction, so a strip that fits
+   (desktop) looks exactly as before. mask-image rather than overlaid gradients because the
+   strip itself is the scroll container; a pseudo-element would scroll away with the buttons. */
+nav#tabs.can-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 48px),transparent)}
+nav#tabs.can-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 48px);mask-image:linear-gradient(90deg,transparent,#000 48px)}
+nav#tabs.can-l.can-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 48px,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(90deg,transparent,#000 48px,#000 calc(100% - 48px),transparent)}
+.tab-btn{transition:color .15s ease,border-color .15s ease}
+.tab-btn:focus-visible{outline:2px solid var(--gold);outline-offset:-4px;border-radius:6px}
+/* Sticky bars inside a tab park just under the strip instead of sliding behind it. */
+.money-hud{top:calc(var(--nav-h) + 8px)}
+.ledger-head{top:var(--nav-h)}
+
+/* Header: one tidy row of controls on tablets, icon-only buttons on phones. */
+@media (max-width:900px){
+  header{gap:8px 12px;padding:12px 16px 10px}
+  .title-block{flex:1 1 100%}
+  .rest-inline{flex:1 1 auto}
+  .header-right{margin-left:auto}
+}
+@media (max-width:560px){
+  header{padding:10px 12px 8px}
+  #shortRestBtn .btn-lbl,#longRestBtn .btn-lbl,.header-right .btn-lbl{display:none}
+  .rest-inline,.header-right{gap:6px}
+  header .icon-btn{padding:8px 11px;font-size:1rem;line-height:1}
+  header .icon-btn.lvlup-btn{font-size:.82rem;padding:8px 12px}
+  header #saveStatus{font-size:0;gap:0} /* dot only — the colour still tells the story */
+  header #saveStatus::before{width:9px;height:9px}
+}
+
+/* Save status: a dot that is amber while a save is pending and green the moment it lands,
+   instead of a bare italic word that never visibly changed. */
+#saveStatus{display:inline-flex;align-items:center;gap:6px;color:var(--faint);font-size:.8rem;font-style:italic;transition:color .3s;white-space:nowrap}
+#saveStatus::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--faint);transition:background .3s,box-shadow .3s;flex:0 0 auto}
+#saveStatus.pending{color:var(--gold-dim)}
+#saveStatus.pending::before{background:var(--gold);box-shadow:0 0 6px rgba(201,162,39,.6)}
+#saveStatus.flash{color:var(--green)}
+#saveStatus.flash::before{background:var(--green);box-shadow:0 0 8px var(--green)}
+
+/* Keyboard focus: a visible gold ring on anything you can Tab to and press. Text inputs keep
+   their existing border-colour cue (and the caret) so the many transparent inline fields don't
+   sprout boxes. Pointer clicks never trigger :focus-visible, so the sheet looks the same by touch. */
+button:focus-visible,select:focus-visible,a:focus-visible,[tabindex]:focus-visible,[role=button]:focus-visible{
+  outline:2px solid var(--gold);outline-offset:2px;
+}
+input[type=text]:focus-visible,input[type=number]:focus-visible,textarea:focus-visible{outline:none;border-color:var(--gold)}
+/* Every button gets a tiny press so taps feel acknowledged even before the state re-renders. */
+.icon-btn{transition:background .15s ease,border-color .15s ease,color .15s ease,transform .08s ease}
+.icon-btn:active{transform:translateY(1px)}
+/* Honour the OS "reduce motion" setting everywhere, not just in the handful of blocks above. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+/* Touch: the smallest round controls (ability ± steppers, resource pips, death-save dots) keep
+   their compact look but gain an invisible ~34px hit area on coarse pointers. */
+@media (pointer:coarse){
+  .ab-temp-btn,.pip,.ds-dot{position:relative}
+  .ab-temp-btn::after,.pip::after,.ds-dot::after{content:'';position:absolute;inset:-7px;border-radius:50%}
+}
+
+/* Overview XP: the shared input[type=text] rule out-ranked .ov-xp-in on specificity, so the field
+   rendered as a panel-coloured pill that read as a disabled button. input.ov-xp-in wins that
+   fight and makes it look like what it is — a field you tap to type in. */
+input.ov-xp-in{
+  background:transparent;border:none;border-bottom:1px dashed var(--border-lt);border-radius:0;
+  padding:4px 2px;width:100%;text-align:center;
+  color:var(--gold-lt);font-family:'Cinzel',serif;font-weight:600;font-size:.9rem;letter-spacing:.5px;
+}
+input.ov-xp-in::placeholder{color:var(--faint);font-family:'Crimson Pro',serif;font-style:italic;font-weight:400;font-size:.85rem;letter-spacing:0}
+input.ov-xp-in:hover{border-bottom-color:var(--gold-dim)}
+
+/* Settings dialog: each action is a row with an icon and a one-line consequence, and the
+   destructive one sits alone below a rule instead of in the same stack as Export/Import. */
+.settings-modal{max-width:460px}
+.settings-group{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.settings-group.settings-danger{border-top:1px solid var(--border);padding-top:14px;margin-bottom:0}
+.modal .icon-btn.settings-row{display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;margin:0;letter-spacing:0}
+.settings-ico{
+  flex:0 0 36px;height:36px;display:flex;align-items:center;justify-content:center;
+  border-radius:9px;background:var(--panel3);border:1px solid var(--border-lt);
+  font-family:'Crimson Pro',serif;font-size:1.15rem;color:var(--gold);
+}
+.settings-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.settings-txt b{font-size:.9rem;letter-spacing:.6px;font-weight:600}
+.settings-txt small{font-family:'Crimson Pro',serif;font-size:.86rem;color:var(--muted);letter-spacing:0;text-transform:none;font-style:italic}
+.modal .icon-btn.settings-row.danger .settings-ico{border-color:#5a352f;color:var(--red);background:rgba(224,117,102,.08)}
+.modal .icon-btn.settings-row.danger:hover{background:rgba(224,117,102,.1);border-color:var(--red)}

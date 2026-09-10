@@ -28,20 +28,20 @@
     </div>
   </div>
   <div class="rest-inline">
-    <button class="icon-btn sm lvlup-btn" id="levelUpBtn" title="Walk through this level's HP, ASI/Feat and a reminder of what's new">⬆ Level Up</button>
-    <button class="icon-btn sm" id="shortRestBtn" title="Spend hit dice to heal; Warlock pact slots return.">🌙 Short Rest</button>
-    <button class="icon-btn sm" id="longRestBtn" title="Full HP, all slots, half your hit dice back.">☀ Long Rest</button>
+    <button class="icon-btn sm lvlup-btn" id="levelUpBtn" aria-label="Level up" title="Walk through this level's HP, ASI/Feat and a reminder of what's new">⬆ <span class="btn-lbl">Level Up</span></button>
+    <button class="icon-btn sm" id="shortRestBtn" aria-label="Short rest" title="Spend hit dice to heal; Warlock pact slots return.">🌙 <span class="btn-lbl">Short Rest</span></button>
+    <button class="icon-btn sm" id="longRestBtn" aria-label="Long rest" title="Full HP, all slots, half your hit dice back.">☀ <span class="btn-lbl">Long Rest</span></button>
   </div>
   <div class="header-right">
-    <span id="saveStatus">saved</span>
-    <button type="button" class="chud-wide-btn" data-widetoggle title="Widen the layout for more room" aria-pressed="false">⤢</button>
-    <button class="icon-btn" id="charsBtn" title="Choose or manage characters">🎭 Characters</button>
-    <button class="icon-btn" id="mapBtn" title="Open the map">🗺 Map</button>
-    <button class="icon-btn" id="settingsBtn">⚙ Settings</button>
+    <span id="saveStatus" class="save-status" role="status" aria-live="polite">saved</span>
+    <button type="button" class="chud-wide-btn" data-widetoggle aria-label="Toggle wide layout" title="Widen the layout for more room" aria-pressed="false">⤢</button>
+    <button class="icon-btn" id="charsBtn" aria-label="Characters" title="Choose or manage characters">🎭 <span class="btn-lbl">Characters</span></button>
+    <button class="icon-btn" id="mapBtn" aria-label="Map" title="Open the map">🗺 <span class="btn-lbl">Map</span></button>
+    <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Export, import or reset this character">⚙ <span class="btn-lbl">Settings</span></button>
   </div>
 </header>
 
-<nav id="tabs"></nav>
+<nav id="tabs" role="tablist" aria-label="Character sheet sections"></nav>
 
 <main id="pages"></main>
 
@@ -114,14 +114,18 @@
 </div>
 
 <div class="modal-bg" id="settingsModal">
-  <div class="modal">
-    <button class="close-x" id="settingsClose">✕</button>
-    <h2>Settings</h2>
-    <p>Your character auto-saves in this browser. Use export to back up or move between devices.</p>
-    <button class="icon-btn" id="exportBtn">Export character (JSON)</button>
-    <button class="icon-btn" id="importBtn">Import character (JSON)</button>
-    <input type="file" id="importFile" accept=".json,application/json" style="display:none">
-    <button class="icon-btn danger" id="resetBtn">Reset this character</button>
+  <div class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <button class="close-x" id="settingsClose" aria-label="Close settings">✕</button>
+    <h2 id="settingsTitle">Settings</h2>
+    <p>Your character auto-saves in this browser. Export a copy to back it up or move it to another device.</p>
+    <div class="settings-group">
+      <button class="icon-btn settings-row" id="exportBtn"><span class="settings-ico">⇩</span><span class="settings-txt"><b>Export character</b><small>Download this sheet as a .json file</small></span></button>
+      <button class="icon-btn settings-row" id="importBtn"><span class="settings-ico">⇧</span><span class="settings-txt"><b>Import character</b><small>Adds the file as a new hero on your roster</small></span></button>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+    </div>
+    <div class="settings-group settings-danger">
+      <button class="icon-btn settings-row danger" id="resetBtn"><span class="settings-ico">↺</span><span class="settings-txt"><b>Reset this character</b><small>Wipes this sheet back to a blank one</small></span></button>
+    </div>
   </div>
 </div>
 
