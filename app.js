@@ -4366,6 +4366,10 @@ function recalc(){
   // bloodied / critical feedback directly on the real HP bar(s) — no separate decorative copy
   const hpPct=max?cur/max:1;
   $$('.hp-bar').forEach(bar=>{ bar.classList.toggle('low',hpPct<=.5&&hpPct>.25); bar.classList.toggle('critical',hpPct<=.25); });
+  // At 0 HP the whole binder dims under a slow red vignette (see .fx-vignette) — you are dying,
+  // and the sheet should feel it on every tab, not just the HP bar on Combat.
+  const dying=max>0&&cur<=0; if(dying) fxLayer(); // the vignette layer is lazy; make sure it exists to dim
+  document.body.classList.toggle('hp-zero',dying);
   // Combat tab's sticky mini-HUD — the one thing you always need in sight while scrolling
   setCalc('chudHp',`${cur}/${max}`);
   setCalc('chudAc',num(S.ac));
@@ -4687,6 +4691,7 @@ function wireAddButtons(){
 
 // ---------- HP quick buttons ----------
 function applyHpDelta(d){
+  const before=num(S.hpCurrent)+num(S.hpTemp);
   if(d<0){ // damage soaks temp HP first (5e rule)
     let dmg=-d;
     const soak=Math.min(num(S.hpTemp),dmg);
@@ -4695,6 +4700,8 @@ function applyHpDelta(d){
   }else{
     S.hpCurrent=Math.min(num(S.hpMax)+fxStat('hpmax'),num(S.hpCurrent)+d);
   }
+  const after=num(S.hpCurrent)+num(S.hpTemp);
+  if(after<before) screenFlash('hit'); else if(after>before) screenFlash('heal');
   syncBound(); recalc(); save();
 }
 function wireHpButtons(){
@@ -4801,6 +4808,7 @@ function renderBuildTheme(){
   const panel=$('#buildPanel'); if(!panel) return;
   const c=CLASSES[S.classId];
   const accent=CLASS_COLOR[S.classId]||'#c9a227';
+  applyClassAmbience(accent);
   panel.style.setProperty('--accent',accent);
   panel.style.setProperty('--accent-dim',accent+'30');
 
@@ -5875,6 +5883,7 @@ function wireRest(){
     if(CLASSES[S.classId]&&CLASSES[S.classId].cast==='pact') S.spellLevels.forEach(lv=>lv.used=0);
     S.features.forEach(f=>{ if(f.combat && num(f.usesMax)>0 && f.usesPer!=='long') f.usesUsed=0; });
     renderSpellLevels(); renderCombatFeatures(); recalc(); save();
+    restCeremony('short');
   });
   $('#longRestBtn').addEventListener('click',()=>{
     S.hpCurrent=num(S.hpMax)+fxStat('hpmax');
@@ -5886,7 +5895,62 @@ function wireRest(){
     S.deathS=[false,false,false]; S.deathF=[false,false,false];
     S.features.forEach(f=>{ if(f.combat && num(f.usesMax)>0) f.usesUsed=0; }); // long rest recharges everything
     renderSpellLevels(); renderDeathSaves(); renderCombatFeatures(); syncBound(); recalc(); save();
+    restCeremony('long');
   });
+}
+
+// ---------- Immersion: class ambience, hit/heal flashes, rest ceremonies ----------
+// The class accent used to stop at the Build panel and the Overview banner. Now it also tints
+// the page's own backdrop, the header sigil + name glow, the active tab's underline and (on a
+// tablet/PWA) the browser chrome via theme-color, so every tab reads as THIS hero's binder.
+let lastAmbience=null;
+function applyClassAmbience(accent){
+  const key=accent+'|'+S.classId;
+  if(key===lastAmbience) return; lastAmbience=key;
+  const root=document.documentElement.style;
+  root.setProperty('--class',accent);
+  root.setProperty('--class-dim',accent+'30');
+  const sig=$('#hdrSigil');
+  if(sig){ sig.textContent=CLASS_ICON[S.classId]||''; sig.classList.toggle('empty',!CLASS_ICON[S.classId]); }
+  // theme-color wants a flat colour: blend ~22% of the accent into the page background.
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta){
+    const h=accent.replace('#',''); if(h.length===6){
+      const mix=(i,b)=>Math.round(parseInt(h.substr(i,2),16)*.22+b*.78).toString(16).padStart(2,'0');
+      meta.setAttribute('content','#'+mix(0,0x14)+mix(2,0x10)+mix(4,0x0b));
+    }
+  }
+}
+// One fixed, pointer-transparent vignette layer: a red edge flash on damage, a soft green one on
+// healing. Created lazily so the markup stays clean; the dying state (body.hp-zero) reuses it.
+function fxLayer(){
+  let el=$('#fxVignette');
+  if(!el){ el=document.createElement('div'); el.id='fxVignette'; el.className='fx-vignette'; el.setAttribute('aria-hidden','true'); document.body.appendChild(el); }
+  return el;
+}
+let fxTimer=null;
+function screenFlash(kind){
+  const el=fxLayer();
+  el.classList.remove('hit','heal'); void el.offsetWidth; // restart the fade if hits come fast
+  el.classList.add(kind);
+  clearTimeout(fxTimer); fxTimer=setTimeout(()=>el.classList.remove('hit','heal'),420);
+}
+// Short/Long Rest used to happen with no feedback at all — numbers quietly reset. A moon-blue or
+// dawn-gold veil now sweeps the screen for a beat with a one-line caption of what came back.
+function restCeremony(kind){
+  const old=$('.rest-veil'); if(old) old.remove();
+  const v=document.createElement('div');
+  v.className='rest-veil '+kind; v.setAttribute('role','status'); v.setAttribute('aria-live','polite');
+  const {n}=hdCount();
+  const back=Math.max(1,Math.floor(n/2));
+  const pact=CLASSES[S.classId]&&CLASSES[S.classId].cast==='pact';
+  const msg=kind==='long'
+    ? `<b>☀ Long Rest</b><span>Dawn breaks. Hit points, spell slots and ${back} hit ${back===1?'die':'dice'} restored.</span>`
+    : `<b>🌙 Short Rest</b><span>An hour passes. Short-rest features${pact?' and pact slots':''} return.</span>`;
+  v.innerHTML=`<div class="rest-veil-card">${msg}</div>`;
+  document.body.appendChild(v);
+  v.addEventListener('animationend',e=>{ if(e.target===v) v.remove(); });
+  setTimeout(()=>{ if(v.parentNode) v.remove(); },3000); // belt and braces if animations are off
 }
 
 // ---------- Character HUD: armor & AC engine ----------

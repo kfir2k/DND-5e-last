@@ -3949,3 +3949,77 @@ input.ov-xp-in:hover{border-bottom-color:var(--gold-dim)}
 .settings-txt small{font-family:'Crimson Pro',serif;font-size:.86rem;color:var(--muted);letter-spacing:0;text-transform:none;font-style:italic}
 .modal .icon-btn.settings-row.danger .settings-ico{border-color:#5a352f;color:var(--red);background:rgba(224,117,102,.08)}
 .modal .icon-btn.settings-row.danger:hover{background:rgba(224,117,102,.1);border-color:var(--red)}
+
+/* ---------- Immersion pass: class ambience, leather grain, hit/heal, rest ceremonies ---------- */
+/* --class / --class-dim are set on :root by applyClassAmbience(); gold is the no-class default so
+   a blank sheet looks exactly as before. */
+:root{--class:var(--gold);--class-dim:rgba(201,162,39,.19)}
+/* The page's own backdrop takes a breath of the class colour at the top — a ranger's binder sits
+   on a faintly green desk, a warlock's on violet. color-mix keeps it a tint, never a wash. */
+body{
+  background-image:
+    radial-gradient(ellipse at 50% -10%,color-mix(in srgb,var(--class) 16%,#241c12) 0%,var(--bg) 62%);
+}
+/* Leather grain: a fixed, tiled SVG noise at 5% — texture in the gaps between panels, never
+   over text (every panel is opaque). z-index:-1 parks it behind all in-flow content. */
+body::before{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.055;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.9  0 0 0 0 0.8  0 0 0 0 0.6  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size:220px 220px;
+}
+/* Header: class-coloured hairline along the top, the hero's sigil beside the name, and a soft
+   glow of the same colour behind the name itself. */
+header{position:relative;box-shadow:inset 0 2px 0 var(--class);transition:box-shadow .4s ease}
+.title-block{display:flex;align-items:center;gap:12px}
+.title-text{flex:1;min-width:0}
+.hdr-sigil{
+  flex:0 0 auto;width:42px;height:42px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;background:var(--panel2);border:2px solid var(--class);
+  box-shadow:0 0 16px var(--class-dim),inset 0 0 10px rgba(0,0,0,.35);
+  font-size:1.3rem;line-height:1;transition:border-color .4s ease,box-shadow .4s ease;
+}
+.hdr-sigil.empty{display:none}
+#charNameHeader{text-shadow:0 0 22px color-mix(in srgb,var(--class) 45%,transparent);transition:text-shadow .4s ease}
+.tab-btn.active{border-bottom-color:var(--class)}
+nav#tabs.stuck{border-bottom-color:color-mix(in srgb,var(--class) 45%,var(--border))}
+@media (max-width:560px){ .hdr-sigil{width:32px;height:32px;font-size:1rem} }
+
+/* Inspiration: a lit star is worth a glow, not just a fill. */
+.insp-btn.on{box-shadow:0 0 18px rgba(227,193,92,.45);animation:inspGlow 2.6s ease-in-out infinite}
+@keyframes inspGlow{0%,100%{box-shadow:0 0 12px rgba(227,193,92,.35)}50%{box-shadow:0 0 24px rgba(227,193,92,.7)}}
+
+/* Hit / heal: a full-screen edge vignette that flashes in instantly and fades out. Above the
+   sticky strip (30), below every modal (40+); pointer-events none so nothing is ever blocked. */
+.fx-vignette{
+  position:fixed;inset:0;z-index:35;pointer-events:none;opacity:0;
+  transition:opacity .7s ease;
+}
+.fx-vignette.hit{opacity:1;transition:opacity .04s;background:radial-gradient(ellipse at center,transparent 52%,rgba(190,34,22,.62) 100%)}
+.fx-vignette.heal{opacity:1;transition:opacity .04s;background:radial-gradient(ellipse at center,transparent 56%,rgba(111,158,99,.5) 100%)}
+/* Dying: at 0 HP the vignette stays, breathing slowly in deep red, on every tab. */
+body.hp-zero .fx-vignette:not(.hit):not(.heal){
+  opacity:1;background:radial-gradient(ellipse at center,transparent 38%,rgba(120,10,10,.78) 100%);
+  animation:dyingBreath 3.2s ease-in-out infinite;
+}
+@keyframes dyingBreath{0%,100%{opacity:.7}50%{opacity:1}}
+
+/* Rest ceremonies: a veil sweeps down the screen and a wax-seal card names what came back. */
+.rest-veil{
+  position:fixed;inset:0;z-index:45;pointer-events:none;display:flex;align-items:center;justify-content:center;
+  animation:restVeil 2.2s ease-in-out forwards;
+}
+.rest-veil.short{background:radial-gradient(ellipse at 50% 20%,rgba(90,120,200,.42),rgba(10,14,40,.72) 70%)}
+.rest-veil.long{background:radial-gradient(ellipse at 50% 100%,rgba(255,196,110,.5),rgba(40,22,6,.7) 70%)}
+@keyframes restVeil{0%{opacity:0}12%{opacity:1}72%{opacity:1}100%{opacity:0}}
+.rest-veil-card{
+  display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;max-width:min(88vw,460px);
+  padding:20px 28px;border-radius:14px;background:var(--panel);border:1px solid var(--gold-dim);
+  box-shadow:0 20px 50px rgba(0,0,0,.6),0 0 0 4px rgba(0,0,0,.25);
+  animation:restCard 2.2s ease-in-out forwards;
+}
+.rest-veil.short .rest-veil-card{border-color:#6f86d6}
+.rest-veil.long .rest-veil-card{border-color:var(--gold)}
+.rest-veil-card b{font-family:'Cinzel',serif;font-size:1.15rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold-lt)}
+.rest-veil.short .rest-veil-card b{color:#a9b9f0}
+.rest-veil-card span{font-family:'Crimson Pro',serif;font-style:italic;color:var(--muted);font-size:.98rem;line-height:1.35}
+@keyframes restCard{0%{opacity:0;transform:translateY(14px) scale(.96)}18%{opacity:1;transform:none}70%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-8px)}}

@@ -20,11 +20,14 @@
 
 <header>
   <div class="title-block">
-    <input id="charNameHeader" data-bind="name" placeholder="Character Name" autocomplete="off">
-    <div class="subtitle">
-      <input data-bind="classLevel" placeholder="Class &amp; Level" size="14">
-      <input data-bind="race" placeholder="Race" size="10">
-      <input data-bind="background" placeholder="Background" size="10">
+    <span class="hdr-sigil" id="hdrSigil" aria-hidden="true"></span>
+    <div class="title-text">
+      <input id="charNameHeader" data-bind="name" placeholder="Character Name" autocomplete="off">
+      <div class="subtitle">
+        <input data-bind="classLevel" placeholder="Class &amp; Level" size="14">
+        <input data-bind="race" placeholder="Race" size="10">
+        <input data-bind="background" placeholder="Background" size="10">
+      </div>
     </div>
   </div>
   <div class="rest-inline">
