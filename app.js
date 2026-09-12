@@ -129,6 +129,7 @@ function amod(k){ return mod(score(k)); }
 // Always floored at 1 so a scaled feature never silently shows "0 uses" from a bad modifier.
 function usesScaleBase(scale){
   if(scale==='prof') return num(S.profBonus);
+  if(scale==='level') return num(S.level);
   if(ABILITIES.some(([k])=>k===scale)) return amod(scale);
   return null;
 }
@@ -138,6 +139,7 @@ function usesScaleValue(scale,bonus){
 }
 function usesScaleLabel(scale){
   if(scale==='prof') return 'your proficiency bonus';
+  if(scale==='level') return 'your character level';
   const ab=ABILITIES.find(([k])=>k===scale);
   return ab ? `your ${ab[1]} modifier` : '';
 }
@@ -2324,6 +2326,7 @@ function featureCardEditHTML(f,i){
         <select class="uses-scale-sel" data-usesscale="${i}" title="Tie max uses to a stat instead of typing a fixed number">
           <option value="">Fixed number</option>
           <option value="prof" ${f.usesScale==='prof'?'selected':''}>= Proficiency</option>
+          <option value="level" ${f.usesScale==='level'?'selected':''}>= Character level</option>
           ${ABILITIES.map(([k,l])=>`<option value="${k}" ${f.usesScale===k?'selected':''}>= ${l} mod</option>`).join('')}
         </select>
         ${f.usesScale?`<select data-usesbonus="${i}" title="Flat amount added on top, if any — e.g. Divine Sense is 1 + CHA mod">
