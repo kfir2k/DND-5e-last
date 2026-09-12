@@ -2676,7 +2676,8 @@ function ckSubHTML(card,withRoll){
     // gives Hit/Damage — a save spell shows its DC, an attack spell shows the spell attack bonus,
     // and any damage/healing line (sp.dmg) rides along either way. Resolve heuristic is the same
     // one already used by the Spells-tab modal (spellRulesCallout), just surfaced here too.
-    const bits=[`${card.L===0?'Cantrip':ordinalLevel(card.L)+' level'}${sp.meta?' · '+esc(sp.meta):''}`];
+    // (The spell's level itself is shown as its own badge next to the name, not repeated here.)
+    const bits=sp.meta?[esc(sp.meta)]:[];
     const resolve=spellRulesCallout(sp.desc).resolve;
     const sca=spellDCAtk();
     if(resolve) bits.push(`${resolve.glyph} ${esc(resolve.label)}${sca.dc!=null?' DC '+sca.dc:''}`);
@@ -2709,10 +2710,14 @@ function ckCardHTML(card){
   // One pill per tag — usually just one, but a card tagged for more than one economy slot
   // (Action + Bonus Action) shows both right here, no need to open it to see where it lives.
   const pills=card.types.map(v=>`<span class="sp-pill ${CK_PILL[v]||'pill-cast'}">${tl[v]||'Other'}</span>`).join('');
+  // Spell level as its own badge in the header — the sub-line already carries it, but buried
+  // among DC/damage text it's easy to miss when scanning a full grid at a glance.
+  const lvlBadge=card.kind==='sp'?`<span class="ck-lvl-badge">${card.L===0?'Cantrip':'Lv '+card.L}</span>`:'';
   return `<div class="ck-card ck-card-${card.type||'other'} ${card.kind==='sp'?'ck-card-spell':''} ${card.isFeat?'ck-card-feat':''} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${active?'ck-active':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
     <div class="ck-card-head">
       <span class="ck-drag-handle" data-ckdraghandle title="Drag to place in your turn plan">⠿</span>
       <span class="ck-card-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</span>
+      ${lvlBadge}
       <span class="ck-pillgroup">${pills}</span>
       ${card.kind==='it'&&!card.out?`<button class="ck-quickuse" data-ckituse="${card.i}" title="Use one — no need to open the card">Use</button>`:''}
       <button class="ck-plan-add" data-ckplan="${card.key}" title="Add to end of turn plan (or drag the ⠿ handle to place it precisely)">⤵</button>
@@ -2894,6 +2899,7 @@ function renderCockpitPlan(){
           <div class="ck-ps-main">
             <div class="ck-ps-head">
               <span class="ck-ps-name">${card.conc?'◉ ':''}${esc(card.name)}</span>
+              ${card.kind==='sp'?`<span class="ck-lvl-badge">${card.L===0?'Cantrip':'Lv '+card.L}</span>`:''}
               <span class="sp-pill ${CK_PILL[stepType]||'pill-cast'}">${tl[stepType]||'Other'}</span>
             </div>
             ${noteIn}

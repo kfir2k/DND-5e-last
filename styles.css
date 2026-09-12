@@ -1016,6 +1016,13 @@ label.fld span{
 /* Scoped bump, not the shared .sp-pill rule — that class also renders at .62-.8rem in half a
    dozen other contexts (spell modal, turn-plan steps), each already tuned to its own spot. */
 .ck-pillgroup .sp-pill{font-size:.72rem}
+/* Spell level, always visible next to the name — same pill idiom as .feat-lvl-badge, so a
+   caster can tell cantrips from leveled spells at a glance without opening the card. */
+.ck-lvl-badge{
+  flex:0 0 auto;font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.4px;color:var(--gold-lt);
+  background:var(--panel3);border:1px solid var(--border-lt);border-radius:999px;padding:2px 8px;
+  white-space:nowrap;
+}
 .ck-card-sub{color:var(--muted);font-size:.8rem;margin-top:5px;display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center}
 .ck-card-sub b{color:var(--text)}
 /* Hit and Damage are the numbers you actually need mid-swing — give them the same bold
