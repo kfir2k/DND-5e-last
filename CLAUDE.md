@@ -197,3 +197,15 @@ Everything is `localStorage`, no backend:
 Characters can be exported/imported as standalone `.json` files (Settings, or the character-select
 screen) — see the `Characters/` folder for example exports. Import always creates a *new* roster
 entry rather than overwriting the current sheet.
+
+## End-of-task changelog line
+
+After finishing a change (a bug fix, a new feature, a data addition/correction — anything the user
+might want in a GitHub commit message or release notes), end the response with a short suggested
+title line for it, clearly marked so it's easy to spot and copy, e.g.:
+
+> **Changelog:** Add advantage-on-save reminders to Features/Skills/Overview
+
+Keep it to one line, written the way a changelog entry reads (imperative, no trailing period), not
+a recap of the conversation. This is a convenience, not a commit — don't run any git commands
+because of it, and skip it entirely for pure investigation/discussion turns with no actual change.
