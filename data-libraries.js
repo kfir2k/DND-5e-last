@@ -2,10 +2,10 @@
 // g=group, l=class level gained, d=short description, fx=mechanical effects (same format as feature effects)
 const FEATURE_LIB=[
  // Barbarian
- {n:'Rage',g:'Barbarian',l:1,d:'Bonus action: advantage on STR checks & saves, bonus rage damage, resistance to bludgeoning/piercing/slashing. Not in heavy armor.',combat:true},
+ {n:'Rage',g:'Barbarian',l:1,d:'Bonus action: advantage on STR checks & saves, bonus rage damage, resistance to bludgeoning/piercing/slashing. Not in heavy armor.',combat:true,fx:[{t:'savenote',ab:'str',cond:'while raging'}]},
  {n:'Unarmored Defense (Barbarian)',g:'Barbarian',l:1,d:'While not wearing armor, AC = 10 + DEX mod + CON mod (shield allowed). Use the AC override in Inventory.'},
  {n:'Reckless Attack',g:'Barbarian',l:2,d:'Advantage on melee STR attacks this turn; attacks against you have advantage until your next turn.',combat:true},
- {n:'Danger Sense',g:'Barbarian',l:2,d:'Advantage on DEX saves against effects you can see (traps, spells).',combat:true},
+ {n:'Danger Sense',g:'Barbarian',l:2,d:'Advantage on DEX saves against effects you can see (traps, spells).',combat:true,fx:[{t:'savenote',ab:'dex',cond:'against effects you can see (traps, spells)'}]},
  {n:'Extra Attack',g:'Barbarian',l:5,d:'Attack twice when you take the Attack action.',combat:true},
  {n:'Fast Movement',g:'Barbarian',l:5,d:'+10 ft. speed while not in heavy armor.',fx:[{t:'stat',stat:'speed',n:10}]},
  {n:'Feral Instinct',g:'Barbarian',l:7,d:'Advantage on initiative rolls; act normally when surprised if you rage first.',combat:true},

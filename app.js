@@ -148,6 +148,9 @@ function usesScaleLabel(scale){
 // Each feature can carry effects: {t:'stat',stat,n} flat bonus,
 // {t:'skill',skills:[...],grant} proficiency/expertise on one or more skills,
 // {t:'save',ab} save proficiency,
+// {t:'savenote',ab,cond} = ★ conditional advantage-on-save reminder shown on that save's tile
+//   (Skills tab & Overview, which share the same tiles) — same idea as {t:'note'} below, but for
+//   saving throws (e.g. Rage: advantage on STR saves while raging).
 // {t:'note',skills:[...],kind,cond} = ★ conditional reminder shown on each affected skill's row,
 // {t:'statnote',stat,n?,cond} = ★ conditional reminder shown next to that stat on the Overview.
 // (skills:[...] is the current format; skill:'x' — a single string — is still read for old saved data.)
@@ -188,6 +191,7 @@ function fxSkillGrant(k){
 }
 function effSkill(k){ return Math.max(S.skills[k]||0,fxSkillGrant(k)); }
 function fxSaveProf(k){ return allFx().some(x=>x.t==='save'&&x.ab===k); }
+function fxSaveNotes(k){ return allFx().filter(x=>x.t==='savenote'&&x.ab===k); }
 function fxNotes(k){ return allFx().filter(x=>x.t==='note'&&xSkills(x).includes(k)); }
 // Compute what a conditional reminder means in actual numbers for this skill.
 // 'dprof' (and the older 'prof' alias) is a single adaptive rule: it grants proficiency
@@ -1196,12 +1200,23 @@ function renderAbilityCards(){
 // cards, so a save reads as "that ability, defending". The whole tile is the tap target.
 // Rendered into both the Skills tab's full list and Overview's compact mirror — same tiles, same
 // data-save/data-savebonus wiring, two homes (see combatHudHTML for the same pattern on Combat).
+// Terse ★ advantage-on-save reminder for a save tile — same tap-to-reveal pattern as
+// skillBadgesHTML below, but for {t:'savenote'} effects (e.g. Rage: advantage on STR saves
+// while raging). There's no "already counted" math to show (advantage isn't a number), so the
+// badge is just the source + condition, unlike skill notes' noteBadge().
+function saveBadgesHTML(k){
+  return fxSaveNotes(k).map(n=>{
+    const tip=n.cond?`<span class="sk-tip">${esc(n.cond)}</span>`:'';
+    return `<span class="sk-fx">★ ${esc(n.src)} <b>adv</b>${tip}</span>`;
+  }).join('');
+}
 function renderSaves(){
   const html = ABILITIES.map(([k,label])=>{
     const srcs=allFx().filter(x=>x.t==='save'&&x.ab===k).map(x=>x.src);
     const granted=srcs.length>0&&!S.saveProf[k];
     const cls=S.saveProf[k]?'on':granted?'grant':'';
     const tag=S.saveProf[k]?'proficient':granted?`✦ ${esc(srcs.join(', '))}`:'&nbsp;';
+    const badges=saveBadgesHTML(k);
     return `
     <button class="save-tile ${cls}" data-save="${k}" style="--ab-color:${AB_COLOR[k]};--ab-glow:${AB_COLOR[k]}40"
       title="${granted?'Proficiency granted by: '+esc(srcs.join(', '))+' — already counted':'Tap to toggle save proficiency'}">
@@ -1209,9 +1224,13 @@ function renderSaves(){
       <span class="save-name">${label}</span>
       <span class="save-bonus" data-savebonus="${k}">+0</span>
       <span class="save-tag">${tag}</span>
+      ${badges?`<span class="save-fx-row">${badges}</span>`:''}
     </button>`;}).join('');
   $$('#saveList, #ovSaves').forEach(el=>el.innerHTML=html);
-  $$('[data-save]').forEach(b=>b.addEventListener('click',()=>{
+  $$('[data-save]').forEach(b=>b.addEventListener('click',e=>{
+    // A ★ advantage badge lives inside the tile (the whole tile is otherwise the tap target for
+    // proficiency) — tapping the badge should open its tooltip, not also toggle proficiency.
+    if(e.target.closest('.sk-fx')) return;
     S.saveProf[b.dataset.save]=!S.saveProf[b.dataset.save];
     // Toggling a save by hand takes the field over from the class default — otherwise the next
     // tap on the Build tab would stamp c.saves straight back over it. ↺ in Build ▸ Customize
@@ -2170,6 +2189,7 @@ function fxChipLabel(x){
   if(x.t==='stat')  return `${FX_STATS[x.stat]} ${fmtAmount(x.n)}`;
   if(x.t==='skill') return `${xSkills(x).map(s=>SKILL_NAMES[s]).join(', ')}: ${x.grant==='exp'?'Expertise':'Proficiency'}`;
   if(x.t==='save')  return `${AB_NAMES[x.ab]} save proficiency`;
+  if(x.t==='savenote') return `★ ${AB_NAMES[x.ab]} save: advantage${x.cond?' ('+x.cond+')':''}`;
   if(x.t==='note'){
     const kind=x.kind==='prof'?'dprof':x.kind;
     const what=kind==='adv'?'advantage':kind==='dprof'?'proficiency boost':kind==='flat'?fmtAmount(x.n):'note';
@@ -2280,6 +2300,11 @@ function featureCardEditHTML(f,i){
   else if(d.t==='save') stage=`
     <select data-fxa="${i}">${ABILITIES.map(([v,l])=>`<option value="${v}" ${d.ab===v?'selected':''}>${l}</option>`).join('')}</select>
     <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}`;
+  else if(d.t==='savenote') stage=`
+    <select data-fxa="${i}">${ABILITIES.map(([v,l])=>`<option value="${v}" ${d.ab===v?'selected':''}>${l}</option>`).join('')}</select>
+    <input type="text" style="min-width:180px;flex:1" placeholder="When? e.g. while raging" value="${esc(d.text||d.cond||'')}" data-fxt="${i}">
+    <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}
+    <span class="prep-note" style="flex-basis:100%;margin:0">Shows as a ★ badge on that save's tile (Skills tab &amp; Overview) — a reminder only; roll with advantage yourself when the condition applies.</span>`;
   else if(d.t==='note') stage=`
     ${skillPickHTML(i,draftSkills)}
     <select data-fxk="${i}">
@@ -2341,6 +2366,7 @@ function featureCardEditHTML(f,i){
           <option value="stat" ${d.t==='stat'?'selected':''}>Stat bonus (AC, speed, HP…)</option>
           <option value="skill" ${d.t==='skill'?'selected':''}>Skill proficiency / expertise</option>
           <option value="save" ${d.t==='save'?'selected':''}>Saving throw proficiency</option>
+          <option value="savenote" ${d.t==='savenote'?'selected':''}>★ Save reminder (advantage, conditional)</option>
           <option value="note" ${d.t==='note'?'selected':''}>★ Skill reminder (conditional)</option>
           <option value="statnote" ${d.t==='statnote'?'selected':''}>★ Stat reminder (shown on Overview)</option>
         </select>
@@ -3621,7 +3647,7 @@ function wireFx(){
   }));
   $$('[data-fxa]').forEach(s=>s.addEventListener('change',()=>{
     const d=FX_DRAFT[+s.dataset.fxa];
-    if(d.t==='stat'||d.t==='statnote') d.stat=s.value; else if(d.t==='save') d.ab=s.value;
+    if(d.t==='stat'||d.t==='statnote') d.stat=s.value; else if(d.t==='save'||d.t==='savenote') d.ab=s.value;
   }));
   // multi-skill picker (used by 'skill' and 'note' effect types) — tappable chips, not checkboxes.
   // Delegated per-picker so it survives re-renders triggered by other controls (e.g. the kind select).
@@ -3672,6 +3698,7 @@ function wireFx(){
       x.skills=sk;x.grant=d.grant;
     }
     if(d.t==='save'){x.ab=d.ab;}
+    if(d.t==='savenote'){x.ab=d.ab;x.cond=d.text||'';}
     if(d.t==='note'){
       const sk=xSkills(d); if(!sk.length) return;
       x.skills=sk;x.kind=(d.kind==='prof'?'dprof':d.kind)||'dprof';x.cond=d.text||'';if(d.kind==='flat')x.n=rawN(d.n)||0;

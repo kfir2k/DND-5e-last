@@ -830,6 +830,9 @@ label.fld span{
 .save-tile.grant{border-color:var(--green)}
 .save-tile.grant .save-bonus{color:var(--green)}
 .save-tile.grant .save-tag{color:var(--green);font-style:normal}
+/* ★ advantage-on-save reminders — reuses the Skills tab's .sk-fx pill, centered under the tile's
+   own bonus/tag text since the whole tile is otherwise a button (see renderSaves' click guard). */
+.save-fx-row{display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin-top:6px}
 /* Senses — no panel of their own: one slim row tucked under the save tiles */
 .sense-row{
   display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;
