@@ -1309,28 +1309,34 @@ label.fld span{
 .ck-cond-btn.on.bad{border-color:var(--red);color:#e08a80;background:rgba(192,80,70,.12)}
 .ck-cond-btn.on.buff{border-color:var(--gold);color:var(--gold-lt);background:rgba(201,162,39,.12)}
 
-/* ===== Class Resources drawer — left-side mirror of .eq-drawer/.eq-backdrop above (the same
-   left-drawer slot the condition picker used before it became a modal): maneuvers/dice pools
-   from a limited-use class or subclass feature, plus any special save DC effect. ===== */
-.ck-cust-backdrop{position:fixed;inset:0;background:rgba(6,4,2,.6);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:55}
-.ck-cust-backdrop.open{opacity:1;pointer-events:auto}
-.ck-cust-drawer{
-  position:fixed;z-index:56;background:var(--panel);border:1px solid var(--gold-dim);
-  box-shadow:16px 0 40px rgba(0,0,0,.5);display:flex;flex-direction:column;
-  transition:transform .25s cubic-bezier(.2,.8,.2,1);
-  left:0;top:0;bottom:0;width:min(360px,88vw);border-width:0 1px 0 0;transform:translateX(-100%);
-  padding:18px;overflow-y:auto;
+/* ===== Custom Stats — a slim handle fixed to the left edge of the viewport (not part of
+   `main`'s centered column), so on a wide window it sits in the empty margin outside the sheet
+   rather than overlaying it; on a narrow one it necessarily overlaps when opened, same trade-off
+   any edge panel makes. No dimming backdrop — this isn't modal, so the handle (tap again) or the
+   ✕ are the only ways to close it. ===== */
+.ck-customstats-handle{
+  position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:54;
+  writing-mode:vertical-rl;background:var(--panel);border:1px solid var(--gold-dim);border-left:none;
+  border-radius:0 10px 10px 0;color:var(--gold-lt);font-family:'Cinzel',serif;font-size:.78rem;
+  letter-spacing:1.5px;padding:16px 8px;cursor:pointer;box-shadow:4px 0 14px rgba(0,0,0,.35);
+  transition:background .15s ease,color .15s ease;
 }
-.ck-cust-drawer.open{transform:translateX(0)}
+.ck-customstats-handle:hover{background:var(--panel2);color:var(--gold)}
+.ck-customstats-panel{
+  position:fixed;left:0;top:0;bottom:0;z-index:55;width:min(280px,80vw);
+  background:var(--panel);border-right:1px solid var(--gold-dim);box-shadow:6px 0 24px rgba(0,0,0,.45);
+  transform:translateX(-100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);
+  padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;
+}
+.ck-customstats-panel.open{transform:translateX(0)}
 .ck-cust-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
 .ck-cust-head h2{font-size:.95rem;color:var(--gold-lt);letter-spacing:1px;text-transform:uppercase;font-family:'Cinzel',serif}
-@media(max-width:700px){.ck-cust-drawer{width:auto;right:0}}
-.ck-classres-item{border-bottom:1px solid var(--border);padding:12px 0}
-.ck-classres-item:first-child{padding-top:0}
-.ck-classres-item:last-child{border-bottom:none}
-.ck-classres-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.ck-classres-head b{color:var(--text);font-size:.92rem}
-.ck-classres-dcs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+@media(max-width:700px){.ck-customstats-panel{width:auto;right:0}}
+.ck-customstats-tile{
+  background:var(--panel3);border:1px solid var(--border-lt);border-radius:9px;
+  padding:10px 12px;text-align:center;
+}
+.ck-customstats-tile .ckv-big{font-size:1.4rem;width:auto;display:block}
 .ck-rsec-head{
   display:block;width:100%;text-align:left;background:transparent;border:none;
   color:var(--muted);font-size:.84rem;padding:7px 0;cursor:pointer;border-bottom:1px solid var(--border);

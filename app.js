@@ -151,9 +151,10 @@ function usesScaleLabel(scale){
 // {t:'savenote',ab,cond} = ★ conditional advantage-on-save reminder shown on that save's tile
 //   (Skills tab & Overview, which share the same tiles) — same idea as {t:'note'} below, but for
 //   saving throws (e.g. Rage: advantage on STR saves while raging).
-// {t:'savedc',ab,label} = a computed 8+proficiency+ability save DC, shown as its own tile in
-//   Combat's ★ Special DCs panel (e.g. a Battle Master's Maneuver DC, a Rune Knight's Rune DC) —
-//   for anything with a save DC that isn't the character's one spellcasting DC.
+// {t:'statformula',n,label} = a free-form formula (same PROF/LVL/ability-mod mini-language as a
+//   {t:'stat'} bonus's n) shown as its own tile in Combat's Custom Stats panel — e.g. "8+PROF+STR"
+//   for a Battle Master's Maneuver DC, "4+LVL" for a homebrew resource pool. Not tied to any one
+//   ability field the way {t:'save'}/{t:'savenote'} are; the whole formula is player-written.
 // {t:'note',skills:[...],kind,cond} = ★ conditional reminder shown on each affected skill's row,
 // {t:'statnote',stat,n?,cond} = ★ conditional reminder shown next to that stat on the Overview.
 // (skills:[...] is the current format; skill:'x' — a single string — is still read for old saved data.)
@@ -195,9 +196,7 @@ function fxSkillGrant(k){
 function effSkill(k){ return Math.max(S.skills[k]||0,fxSkillGrant(k)); }
 function fxSaveProf(k){ return allFx().some(x=>x.t==='save'&&x.ab===k); }
 function fxSaveNotes(k){ return allFx().filter(x=>x.t==='savenote'&&x.ab===k); }
-function fxSaveDCs(){ return allFx().filter(x=>x.t==='savedc'); }
-// Mirrors spellDCAtk()'s formula, for a non-spell save DC (maneuvers, Ki, runes...).
-function saveDCValue(x){ return 8+num(S.profBonus)+amod(x.ab); }
+function fxStatFormulas(){ return allFx().filter(x=>x.t==='statformula'); }
 function fxNotes(k){ return allFx().filter(x=>x.t==='note'&&xSkills(x).includes(k)); }
 // Compute what a conditional reminder means in actual numbers for this skill.
 // 'dprof' (and the older 'prof' alias) is a single adaptive rule: it grants proficiency
@@ -445,7 +444,7 @@ combat:`
     <button class="ck-tbtn" id="ckAddConditionBtn" title="Add a condition">+ Condition</button>
   </div>
   <div class="ck-duo" id="ckDuo">
-    <div class="panel ck-actions-panel"><h2>⚡ Do Something<button class="ck-tbtn" id="ckClassResBtn" title="Maneuvers, resource dice, and special save DCs from your class/subclass">Class Resources</button></h2>
+    <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
       <div id="ckUndo"></div>
       <div class="ck-toolbar">
         <div class="ck-search"><span class="ck-search-ic">🔍</span><input type="text" id="ckSearch" placeholder="Search actions…" autocomplete="off"></div>
@@ -552,11 +551,11 @@ combat:`
       </div>
     </div>
   </div>
-  <div class="ck-cust-backdrop" id="classResBackdrop"></div>
-  <div class="ck-cust-drawer" id="classResDrawer">
-    <div class="ck-cust-head"><h2>Class Resources</h2><button class="close-x" id="classResDrawerClose" type="button">✕</button></div>
-    <p class="prep-note" style="margin:0 0 10px">Subclass/class features with tracked uses (maneuvers, Ki, dice pools...) and any special save DC you've added on the Features tab.</p>
-    <div id="classResBody"></div>
+  <button class="ck-customstats-handle" id="customStatsHandle" title="Custom stats" hidden><span>Custom Stats</span></button>
+  <div class="ck-customstats-panel" id="customStatsPanel">
+    <div class="ck-cust-head"><h2>Custom Stats</h2><button class="close-x" id="customStatsClose" type="button">✕</button></div>
+    <p class="prep-note" style="margin:0 0 4px">Any formula you add on the Features tab (e.g. 8+PROF+STR, or 4+LVL) shows up here as its own tile.</p>
+    <div id="customStatsBody"></div>
   </div>`,
 
 skills:`
@@ -1166,6 +1165,11 @@ function showTab(id){
   // yank focus mid-keystroke), so re-render it fresh whenever the Combat tab is opened — otherwise
   // a feature edited after its "Show in Combat" flag was set could show a stale row with no chevron.
   if(id==='combat') renderCombatFeatures();
+  // The Custom Stats handle/panel are fixed to the viewport edge (so they can use the empty
+  // margin beside a wide `main` column), which means they're outside any one tab's own DOM and
+  // would otherwise stay visible/open while browsing a different tab entirely.
+  updateCustomStatsHandle();
+  if(id!=='combat') closeCustomStatsPanel();
 }
 
 // ---------- Data binding ----------
@@ -2227,7 +2231,7 @@ function fxChipLabel(x){
   if(x.t==='skill') return `${xSkills(x).map(s=>SKILL_NAMES[s]).join(', ')}: ${x.grant==='exp'?'Expertise':'Proficiency'}`;
   if(x.t==='save')  return `${AB_NAMES[x.ab]} save proficiency`;
   if(x.t==='savenote') return `★ ${AB_NAMES[x.ab]} save: advantage${x.cond?' ('+x.cond+')':''}`;
-  if(x.t==='savedc') return `${x.label||'Special DC'} (${AB_NAMES[x.ab]}) = 8+prof+mod`;
+  if(x.t==='statformula') return `${x.label||'Custom Stat'}: ${fmtAmount(x.n)}`;
   if(x.t==='note'){
     const kind=x.kind==='prof'?'dprof':x.kind;
     const what=kind==='adv'?'advantage':kind==='dprof'?'proficiency boost':kind==='flat'?fmtAmount(x.n):'note';
@@ -2343,11 +2347,12 @@ function featureCardEditHTML(f,i){
     <input type="text" style="min-width:180px;flex:1" placeholder="When? e.g. while raging" value="${esc(d.text||d.cond||'')}" data-fxt="${i}">
     <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}
     <span class="prep-note" style="flex-basis:100%;margin:0">Shows as a ★ badge on that save's tile (Skills tab &amp; Overview) — a reminder only; roll with advantage yourself when the condition applies.</span>`;
-  else if(d.t==='savedc') stage=`
-    <select data-fxa="${i}">${ABILITIES.map(([v,l])=>`<option value="${v}" ${d.ab===v?'selected':''}>${l}</option>`).join('')}</select>
-    <input type="text" style="min-width:180px;flex:1" placeholder="Label, e.g. Maneuver DC" value="${esc(d.text||d.label||'')}" data-fxt="${i}">
+  else if(d.t==='statformula') stage=`
+    <input type="text" style="min-width:170px;flex:1" placeholder="Label, e.g. Maneuver DC" value="${esc(d.text||d.label||'')}" data-fxt="${i}">
+    <input type="text" style="width:150px" value="${esc(d.n??'')}" data-fxn="${i}" placeholder="8+PROF+STR" title="Any formula: PROF, LVL, STR, DEX, CON, INT, WIS, CHA, numbers, + - * / ( ) — e.g. 8+PROF+STR, 4+LVL, 2*PROF">
+    <span class="fx-amt-hint">= ${fmt(fxAmount(d.n??''))}</span>
     <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}
-    <span class="prep-note" style="flex-basis:100%;margin:0">Shows as its own 8+prof+mod tile in Combat's ★ Special DCs panel — for a maneuver, Ki, or rune DC that isn't your one spellcasting DC.</span>`;
+    <span class="prep-note" style="flex-basis:100%;margin:0">Shows as its own tile in Combat's Custom Stats panel (behind the handle on the left edge) — any formula, not just a save DC: a maneuver/Ki/rune DC (8+PROF+STR), a resource pool size (4+LVL), anything.</span>`;
   else if(d.t==='note') stage=`
     ${skillPickHTML(i,draftSkills)}
     <select data-fxk="${i}">
@@ -2410,7 +2415,7 @@ function featureCardEditHTML(f,i){
           <option value="skill" ${d.t==='skill'?'selected':''}>Skill proficiency / expertise</option>
           <option value="save" ${d.t==='save'?'selected':''}>Saving throw proficiency</option>
           <option value="savenote" ${d.t==='savenote'?'selected':''}>★ Save reminder (advantage, conditional)</option>
-          <option value="savedc" ${d.t==='savedc'?'selected':''}>Special save DC (maneuver, Ki, rune…)</option>
+          <option value="statformula" ${d.t==='statformula'?'selected':''}>Custom stat formula (any formula)</option>
           <option value="note" ${d.t==='note'?'selected':''}>★ Skill reminder (conditional)</option>
           <option value="statnote" ${d.t==='statnote'?'selected':''}>★ Stat reminder (shown on Overview)</option>
         </select>
@@ -3104,52 +3109,44 @@ function wireConditionsModal(){
     renderCockpitExtras(); save();
   });
 }
-// ----- Class Resources drawer -----
-// Anything a class/subclass grants beyond the generic sheet — a limited-use feature (Combat
-// Superiority's superiority dice, Ki, sorcery points...) or a special save DC (Maneuver DC,
-// Rune DC...) added via the Features tab's "+ Effect" — collected in one place instead of being
-// scattered across feature cards. Off-canvas, left side, same mechanism the equipment drawer uses.
-function classResourceFeatures(){
-  return S.features.map((f,gi)=>({f,gi})).filter(({f})=>{
-    const kind=(f.source||{}).kind;
-    return (kind==='class'||kind==='subclass') && num(f.usesMax)>0;
+// ----- Custom Stats panel -----
+// Any {t:'statformula'} effect (added on the Features tab: a free label + any formula using
+// PROF/LVL/ability mods — e.g. "8+PROF+STR" for a maneuver DC, "4+LVL" for a resource pool) shown
+// as its own tile. Lives behind a slim handle fixed to the left edge of the viewport rather than
+// an overlay: on a wide window that's empty margin outside the centered `main` column, so opening
+// it doesn't cover anything; on a narrow one it necessarily overlaps, same trade-off any edge
+// panel makes. No dimming backdrop — this isn't modal, so closing is the handle or the ✕ only.
+function customStatsPanelHTML(){
+  const list=fxStatFormulas();
+  if(!list.length) return '<p class="prep-note" style="margin:0">Nothing here yet.</p>';
+  return list.map(x=>`<div class="ck-customstats-tile">
+    <span class="ckv-l">${esc(x.label||'Custom Stat')}</span>
+    <span class="ckv-big">${fmt(fxAmount(x.n))}</span>
+    <p class="prep-note" style="margin:2px 0 0">${esc(String(x.n).toUpperCase())} · ${esc(x.src)}</p>
+  </div>`).join('');
+}
+function openCustomStatsPanel(){
+  $('#customStatsBody').innerHTML=customStatsPanelHTML();
+  $('#customStatsPanel').classList.add('open');
+}
+function closeCustomStatsPanel(){ $('#customStatsPanel').classList.remove('open'); }
+// Combat-only (the handle is fixed to the viewport edge, outside any tab's own DOM, so it needs
+// its own visibility rule instead of just living inside the hidden Combat tab-page) and only
+// when there's actually a formula to show.
+function updateCustomStatsHandle(){
+  const h=$('#customStatsHandle'); if(!h) return;
+  const onCombat=!!($('#page-combat')&&$('#page-combat').classList.contains('active'));
+  h.hidden=!onCombat||!fxStatFormulas().length;
+}
+function wireCustomStatsPanel(){
+  const handle=$('#customStatsHandle'), panel=$('#customStatsPanel');
+  if(!handle||!panel) return;
+  document.body.appendChild(handle);
+  document.body.appendChild(panel);
+  handle.addEventListener('click',()=>{
+    panel.classList.contains('open') ? closeCustomStatsPanel() : openCustomStatsPanel();
   });
-}
-function hasClassResources(){ return classResourceFeatures().length>0 || fxSaveDCs().length>0; }
-function classResourceDrawerHTML(){
-  const feats=classResourceFeatures(), dcs=fxSaveDCs();
-  if(!feats.length&&!dcs.length) return '<p class="prep-note" style="margin:0">Nothing here yet.</p>';
-  const featHtml=feats.map(({f,gi})=>{
-    const max=num(f.usesMax), used=Math.min(num(f.usesUsed),max);
-    const pips=`<span class="pips ck-pips">${Array.from({length:max},(_,k)=>
-      `<button class="pip ${k<used?'used':''}" data-ckuse="${gi}.${k}"></button>`).join('')}</span>`;
-    return `<div class="ck-classres-item">
-      <div class="ck-classres-head"><b>${esc(f.title||'Feature')}</b>${pips}</div>
-      <p class="prep-note" style="margin:2px 0 0">Recharges on a ${f.usesPer==='long'?'long':'short'} rest.</p>
-      ${f.desc?`<div class="ck-desc">${esc(f.desc)}</div>`:''}
-    </div>`;
-  }).join('');
-  const dcHtml=dcs.length?`<div class="ck-classres-dcs">${dcs.map(x=>
-    `<div class="ckv ckv-sec"><span class="ckv-l">${esc(x.label||'Special DC')}</span><span class="ckv-big">${saveDCValue(x)}</span><p class="prep-note" style="margin:2px 0 0">${AB_NAMES[x.ab]||x.ab} · ${esc(x.src)}</p></div>`).join('')}</div>`:'';
-  return featHtml+dcHtml;
-}
-function openClassResDrawer(){
-  $('#classResBody').innerHTML=classResourceDrawerHTML();
-  $('#classResBackdrop').classList.add('open');
-  $('#classResDrawer').classList.add('open');
-}
-function closeClassResDrawer(){
-  $('#classResBackdrop').classList.remove('open');
-  $('#classResDrawer').classList.remove('open');
-}
-function wireClassResDrawer(){
-  const backdrop=$('#classResBackdrop'), drawer=$('#classResDrawer');
-  if(!backdrop||!drawer) return;
-  document.body.appendChild(backdrop);
-  document.body.appendChild(drawer);
-  $('#ckClassResBtn').addEventListener('click',openClassResDrawer);
-  $('#classResDrawerClose').addEventListener('click',closeClassResDrawer);
-  backdrop.addEventListener('click',closeClassResDrawer);
+  $('#customStatsClose').addEventListener('click',closeCustomStatsPanel);
 }
 // Concentration banner, state chips, ★ reminders feed, rules drawer. Concentration/top-states/
 // full-states-list each render into every instance found (Combat's HUD + reference zone, and
@@ -3195,12 +3192,9 @@ function renderCockpitExtras(){
         return `<div class="ck-rem">★ ${esc(r.src)} — ${FX_STATS[r.stat]||r.stat}${amt}${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
       }).join('')
     : '<p class="prep-note" style="margin:0">★ Stat and save reminders you add on the Features tab show up here too.</p>';
-  const crBtn=$('#ckClassResBtn');
-  if(crBtn) crBtn.style.display=hasClassResources()?'':'none';
-  // Keep an already-open Class Resources drawer in sync — spending a die (data-ckuse) in there
-  // is handled by the same global click handler every other pip uses, which doesn't know this
-  // drawer's content exists to refresh it.
-  if($('#classResDrawer')&&$('#classResDrawer').classList.contains('open')) $('#classResBody').innerHTML=classResourceDrawerHTML();
+  updateCustomStatsHandle();
+  const csPanel=$('#customStatsPanel');
+  if(csPanel&&csPanel.classList.contains('open')) $('#customStatsBody').innerHTML=customStatsPanelHTML();
   applyCombatPanelVisibility();
   const rulesBox=$('#ckRules');
   if(rulesBox && typeof RULES_DB!=='undefined'){
@@ -3905,7 +3899,7 @@ function wireFx(){
   }));
   $$('[data-fxa]').forEach(s=>s.addEventListener('change',()=>{
     const d=FX_DRAFT[+s.dataset.fxa];
-    if(d.t==='stat'||d.t==='statnote') d.stat=s.value; else if(d.t==='save'||d.t==='savenote'||d.t==='savedc') d.ab=s.value;
+    if(d.t==='stat'||d.t==='statnote') d.stat=s.value; else if(d.t==='save'||d.t==='savenote') d.ab=s.value;
   }));
   // multi-skill picker (used by 'skill' and 'note' effect types) — tappable chips, not checkboxes.
   // Delegated per-picker so it survives re-renders triggered by other controls (e.g. the kind select).
@@ -3957,7 +3951,7 @@ function wireFx(){
     }
     if(d.t==='save'){x.ab=d.ab;}
     if(d.t==='savenote'){x.ab=d.ab;x.cond=d.text||'';}
-    if(d.t==='savedc'){x.ab=d.ab;x.label=d.text||'Special DC';}
+    if(d.t==='statformula'){x.label=d.text||'Custom Stat';x.n=rawN(d.n)||0;}
     if(d.t==='note'){
       const sk=xSkills(d); if(!sk.length) return;
       x.skills=sk;x.kind=(d.kind==='prof'?'dprof':d.kind)||'dprof';x.cond=d.text||'';if(d.kind==='flat')x.n=rawN(d.n)||0;
@@ -7091,7 +7085,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireClassResDrawer(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab(lastTab());
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
