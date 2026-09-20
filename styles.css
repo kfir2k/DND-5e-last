@@ -471,7 +471,7 @@ label.fld span{
 .ability.ab-int{--accent:#5aa9e0;--accent-dim:rgba(90,169,224,.22)}
 .ability.ab-wis{--accent:#a58ce0;--accent-dim:rgba(165,140,224,.22)}
 .ability.ab-cha{--accent:#e06bb0;--accent-dim:rgba(224,107,176,.22)}
-.ability-icon{position:absolute;top:6px;right:9px;font-size:1rem;opacity:.4;z-index:1;filter:saturate(1.3)}
+.ability-icon{position:absolute;top:6px;right:9px;font-size:1rem;opacity:.4;z-index:1;filter:saturate(1.3);color:var(--accent)}
 /* Full ability names ("INTELLIGENCE", "CONSTITUTION"...) are one unbreakable uppercase word —
    in a narrow card (e.g. Overview's half-width column) that word is wider than the card, so
    without a break it either overflows past the edge or runs straight through the corner icon.
@@ -2028,6 +2028,20 @@ input.chud-customin{width:42px;font-size:.95rem}
 .chud-item{color:var(--muted);font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;font-family:'Cinzel',serif}
 .chud-item b{color:var(--gold-lt);font-size:1.05rem;margin-left:6px;letter-spacing:0;text-transform:none}
 
+/* ---------- Glyph icons (game-icons.net, CSS-masked) ---------- */
+/* Monochrome SVG silhouettes stand in for what used to be full-color emoji (CLASS_ICON, AB_ICON,
+   etc. — see giHTML() in app.js). A mask-image (not <img>) means the icon paints in whatever
+   `color` its context already sets — the same accent/class-color language every other element on
+   the sheet uses — instead of carrying its own fixed color the way a color emoji glyph did. */
+.gi{
+  display:inline-block;width:1em;height:1em;vertical-align:-0.15em;flex-shrink:0;
+  background-color:currentColor;
+  -webkit-mask-image:var(--gi-url);mask-image:var(--gi-url);
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-position:center;mask-position:center;
+  -webkit-mask-size:contain;mask-size:contain;
+}
+
 /* ---------- Toggle dots & pips ---------- */
 .dot{
   width:16px;height:16px;border-radius:50%;border:2px solid var(--gold-dim);
@@ -2089,7 +2103,7 @@ input.chud-customin{width:42px;font-size:.95rem}
    app.js. .sk-racetag reuses the same shape for a heritage pick, just in a fixed neutral color
    (races have no CLASS_COLOR-style palette of their own to draw from). */
 .sk-classtag{
-  flex:0 0 auto;width:20px;height:20px;font-size:.78rem;line-height:1;
+  flex:0 0 auto;width:20px;height:20px;font-size:.78rem;line-height:1;color:var(--c);
   display:flex;align-items:center;justify-content:center;border-radius:50%;
   background:color-mix(in srgb,var(--c) 22%,transparent);border:1px solid var(--c);
 }
@@ -2106,7 +2120,7 @@ input.chud-customin{width:42px;font-size:.95rem}
   transition:background .12s ease,border-color .12s ease;
 }
 .cls-train-trigger:hover{background:color-mix(in srgb,var(--c,var(--gold)) 18%,var(--panel2))}
-.cls-train-trigger .ctt-icon{font-size:1rem;filter:saturate(1.3)}
+.cls-train-trigger .ctt-icon{font-size:1rem;filter:saturate(1.3);color:var(--c,var(--gold-lt))}
 .cls-train-trigger .ctt-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
 .cls-train-trigger .ctt-text b{font-family:'Cinzel',serif;font-weight:700;font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--c,var(--gold-lt))}
 .cls-train-trigger .ctt-text i{font-style:normal;font-size:.7rem;color:var(--muted)}
@@ -2125,7 +2139,7 @@ input.chud-customin{width:42px;font-size:.95rem}
 }
 .prof-modal-watermark{
   position:absolute;top:-8px;right:10px;font-size:7rem;line-height:1;opacity:.12;
-  pointer-events:none;user-select:none;z-index:0;
+  pointer-events:none;user-select:none;z-index:0;color:var(--c,var(--gold-lt));
 }
 .modal.prof-modal .close-x{position:absolute;top:16px;right:16px;float:none;z-index:2;font-size:1.4rem}
 .prof-modal-head{position:relative;z-index:1;flex-shrink:0;padding-right:70px;margin-bottom:20px}
@@ -2816,7 +2830,7 @@ select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
   flex:0 0 auto;width:64px;height:64px;display:flex;align-items:center;justify-content:center;
   font-size:2.1rem;border-radius:50%;background:var(--panel2);
   border:2px solid var(--accent);box-shadow:0 0 18px var(--accent-dim);
-  position:relative;z-index:1;
+  position:relative;z-index:1;color:var(--accent);
 }
 .ov-id-main{flex:1 1 320px;min-width:0;position:relative;z-index:1}
 .ov-id-name{
@@ -3177,7 +3191,7 @@ label.fld-paper input:focus{border-bottom-style:solid;border-bottom-color:var(--
   font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;
   border:1px solid var(--cs-accent);border-radius:999px;padding:2px 9px;opacity:.9;
 }
-.cs-icon{font-size:2.1rem;line-height:1;margin-bottom:8px;filter:drop-shadow(0 0 12px color-mix(in srgb,var(--cs-accent) 45%,transparent))}
+.cs-icon{font-size:2.1rem;line-height:1;margin-bottom:8px;color:var(--cs-accent);filter:drop-shadow(0 0 12px color-mix(in srgb,var(--cs-accent) 45%,transparent))}
 .cs-name{font-family:'Cinzel',serif;font-weight:700;font-size:1.05rem;color:var(--gold-lt);overflow-wrap:anywhere}
 .cs-line{color:var(--muted);font-size:.85rem;font-style:italic;min-height:1.2em}
 .cs-hp{
@@ -4256,6 +4270,8 @@ input.ov-xp-in:hover{border-bottom-color:var(--gold-dim)}
 .settings-txt small{font-family:'Crimson Pro',serif;font-size:.86rem;color:var(--muted);letter-spacing:0;text-transform:none;font-style:italic}
 .modal .icon-btn.settings-row.danger .settings-ico{border-color:#5a352f;color:var(--red);background:rgba(224,117,102,.08)}
 .modal .icon-btn.settings-row.danger:hover{background:rgba(224,117,102,.1);border-color:var(--red)}
+.settings-credit{margin-top:14px;font-size:.72rem;color:var(--faint);line-height:1.5}
+.settings-credit a{color:var(--gold-dim)}
 
 /* ---------- Immersion pass: class ambience, leather grain, hit/heal, rest ceremonies ---------- */
 /* --class / --class-dim are set on :root by applyClassAmbience(); gold is the no-class default so
@@ -4281,7 +4297,7 @@ header{position:relative;box-shadow:inset 0 2px 0 var(--class);transition:box-sh
 .title-text{flex:1;min-width:0}
 .hdr-sigil{
   flex:0 0 auto;width:42px;height:42px;display:flex;align-items:center;justify-content:center;
-  border-radius:50%;background:var(--panel2);border:2px solid var(--class);
+  border-radius:50%;background:var(--panel2);border:2px solid var(--class);color:var(--class);
   box-shadow:0 0 16px var(--class-dim),inset 0 0 10px rgba(0,0,0,.35);
   font-size:1.3rem;line-height:1;transition:border-color .4s ease,box-shadow .4s ease;
 }

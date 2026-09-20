@@ -403,7 +403,7 @@ function wizClassDetail(id){
   const prio=(WIZ_CLASS_PRIO[id]||[])[0];
   const cast=c.cast==='full'?'Full spellcaster':c.cast==='half'?'Half spellcaster':c.cast==='pact'?'Pact magic':'No spellcasting';
   const sel=WIZ.classId===id;
-  return `<div class="wiz-det-name" style="--c:${CLASS_COLOR[id]}">${CLASS_ICON[id]||''} ${esc(c.name)}${sel?'<span class="wiz-det-sel">✓ chosen</span>':''}${rec?'<span class="wiz-det-rec">★ fits your instincts</span>':''}</div>
+  return `<div class="wiz-det-name" style="--c:${CLASS_COLOR[id]}">${giHTML(CLASS_ICON[id],'',CLASS_COLOR[id])} ${esc(c.name)}${sel?'<span class="wiz-det-sel">✓ chosen</span>':''}${rec?'<span class="wiz-det-rec">★ fits your instincts</span>':''}</div>
     <p class="wiz-det-lore">${esc(CLASS_FLAVOR[id]||'')}</p>
     <div class="wiz-chiprow">
       <span class="wiz-chip">d${c.hd} hit die</span>
@@ -678,7 +678,7 @@ function sceneFinale(){
   ].filter(Boolean);
   const trained=WIZ.skills.map(k=>{const s=SKILLS.find(x=>x[0]===k);return s?s[1]:k;});
   return `
-    <div class="wiz-finale-seal">${CLASS_ICON[WIZ.classId]||'⚜'}</div>
+    <div class="wiz-finale-seal">${CLASS_ICON[WIZ.classId]?giHTML(CLASS_ICON[WIZ.classId]):'⚜'}</div>
     <div class="wiz-eyebrow">Destiny sealed</div>
     <div class="wiz-herocard wiz-tilt" style="--c:${CLASS_COLOR[WIZ.classId]||'#c9a227'}">
       <div class="wiz-hc-art" style="background-image:url('class-art/${WIZ.classId}-portrait.jpg')"></div>

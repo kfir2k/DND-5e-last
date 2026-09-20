@@ -1221,12 +1221,24 @@ function syncBound(path=null,skipEl=null){
 }
 
 // ---------- Static component renderers ----------
-const AB_ICON={str:'⚔',dex:'🏹',con:'🛡',int:'📖',wis:'👁',cha:'✦'};
+// Filenames under icons/glyphs/ (monochrome game-icons.net silhouettes) rather than emoji — see
+// giHTML() below and the credit line in the Settings modal for licensing (CC BY 3.0).
+const AB_ICON={str:'ab-str.svg',dex:'ab-dex.svg',con:'ab-con.svg',int:'ab-int.svg',wis:'ab-wis.svg',cha:'ab-cha.svg'};
 const AB_COLOR={str:'#e0705a',dex:'#7dc26a',con:'#e0ab4a',int:'#5aa9e0',wis:'#a58ce0',cha:'#e06bb0'};
+// Renders a CSS-masked glyph icon (see .gi in styles.css) in place of an emoji character —
+// paints in `color`, so by default it inherits whatever accent color its context already sets;
+// pass `color` to pin it explicitly when the surrounding element's own text color is fixed to
+// something else (e.g. a heading already colored gold that still wants a class-tinted icon).
+// `file` is a filename from AB_ICON/CLASS_ICON; an empty/missing file renders nothing (same as
+// the old `AB_ICON[k]||''` fallback pattern).
+function giHTML(file,extraCls,color){
+  if(!file) return '';
+  return `<i class="gi${extraCls?` ${extraCls}`:''}" style="--gi-url:url('icons/glyphs/${file}')${color?`;color:${color}`:''}"></i>`;
+}
 function renderAbilityCards(){
   $('#abilityCards').innerHTML = ABILITIES.map(([k,label])=>`
     <div class="ability ab-${k}" data-abcard="${k}">
-      <div class="ability-icon">${AB_ICON[k]||''}</div>
+      <div class="ability-icon">${giHTML(AB_ICON[k])}</div>
       <div class="ability-name">${label}</div>
       <div class="mod" data-abmod="${k}">+0</div>
       <input type="number" data-bind="abilities.${k}" value="${S.abilities[k]}">
@@ -1275,7 +1287,7 @@ function renderSaves(){
     return `
     <button class="save-tile ${cls}" data-save="${k}" style="--ab-color:${AB_COLOR[k]};--ab-glow:${AB_COLOR[k]}40"
       title="${granted?'Proficiency granted by: '+esc(srcs.join(', '))+' — already counted':'Tap to toggle save proficiency'}">
-      <span class="save-icon">${AB_ICON[k]||''}</span>
+      <span class="save-icon">${giHTML(AB_ICON[k])}</span>
       <span class="save-name">${label}</span>
       <span class="save-bonus" data-savebonus="${k}">+0</span>
       <span class="save-tag">${tag}</span>
@@ -1391,10 +1403,7 @@ function renderClassSkillPicker(){
 
   const cls=CLASSES[S.classId];
   const accent=CLASS_COLOR[S.classId]||'#c9a227';
-  // Trailing VS16 forces color-emoji presentation — a couple of CLASS_ICON entries (fighter's
-  // crossed-swords, monk's yin-yang) default to a thin monochrome text glyph without it, which
-  // would otherwise show as a bare, illegible sliver at the watermark's large size.
-  const icon=(CLASS_ICON[S.classId]||'\u{1F393}')+'️';
+  const icon=giHTML(CLASS_ICON[S.classId]);
 
   // src 'class' -> S.classSkillPicks; src 'race:<trait name>' -> S.raceSkillPicks[<trait name>].
   // Built once here and read back by the click handler below, so a click always mutates the exact
@@ -1485,7 +1494,7 @@ function renderSkills(){
       // animated tooltip with just the "when" condition (e.g. "in favored terrain") — kept short.
       const badges=skillBadgesHTML(k,abKey);
       const classTag=(S.classSkillPicks||[]).includes(k)
-        ? `<span class="sk-classtag" style="--c:${CLASS_COLOR[S.classId]||'#c9a227'}" title="${esc(CLASSES[S.classId]?CLASSES[S.classId].name:'Class')} pick">${CLASS_ICON[S.classId]||'🎓'}</span>`
+        ? `<span class="sk-classtag" style="--c:${CLASS_COLOR[S.classId]||'#c9a227'}" title="${esc(CLASSES[S.classId]?CLASSES[S.classId].name:'Class')} pick">${giHTML(CLASS_ICON[S.classId])}</span>`
         : '';
       const raceTraitPick=Object.keys(S.raceSkillPicks||{}).find(name=>(S.raceSkillPicks[name]||[]).includes(k));
       const raceTag=raceTraitPick ? `<span class="sk-classtag sk-racetag" title="${esc(raceTraitPick)} pick">◈</span>` : '';
@@ -1500,7 +1509,7 @@ function renderSkills(){
         ${badges?`<div class="skill-fx-row">${badges}</div>`:''}
       </div>`;
     }).join('');
-    return `<div class="skill-group ab-${abKey}"><div class="skill-group-head"><span class="sgh-icon">${AB_ICON[abKey]||''}</span>${abLabel}</div>${rows}</div>`;
+    return `<div class="skill-group ab-${abKey}"><div class="skill-group-head"><span class="sgh-icon">${giHTML(AB_ICON[abKey])}</span>${abLabel}</div>${rows}</div>`;
   }).join('');
   $$('[data-skill]').forEach(b=>b.addEventListener('click',()=>{
     const k=b.dataset.skill;
@@ -1622,7 +1631,7 @@ function refocusNameInput(i,cursor){
 function attackRowHTML(a,i){
   const c=atkSummary(a);
   const isCustom=a.weapon==='custom'||!WEAPONS[a.weapon];
-  const icon=isCustom?'✏':(c.w&&c.w.rng?'🏹':'⚔');
+  const icon=isCustom?'✏':giHTML(c.w&&c.w.rng?'class-ranger.svg':'class-fighter.svg');
   const open=ATK_OPEN.has(i)||!(a.name||'').trim();
   const roll=`
     <div class="atk-roll">
@@ -3299,7 +3308,7 @@ function ckQuickSavesHTML(){
     const notes=fxSaveNotes(k), hot=notes.filter(n=>condActive(n.cond));
     const tip=hot.length?hot.map(n=>`${n.src}: advantage${n.cond?` (${n.cond})`:''}`).join('; '):(notes.length?notes.map(n=>`${n.src}: advantage${n.cond?` (${n.cond})`:''}`).join('; '):'');
     return `<div class="ck-qr-cell${hot.length?' active':''}" style="--ab-color:${AB_COLOR[k]}" title="${esc(tip)}">
-      <span class="ck-qr-ic">${AB_ICON[k]||''}</span>
+      <span class="ck-qr-ic">${giHTML(AB_ICON[k])}</span>
       <span class="ck-qr-l">${esc(label)}</span><span class="ck-qr-v">${fmt(b)}</span>
       ${hot.length?'<span class="ck-qr-badge">ADV</span>':(notes.length?'<span class="ck-qr-badge dim">★</span>':'')}
     </div>`;
@@ -3327,7 +3336,7 @@ function ckQuickSkillsHTML(){
       </div>`;
     }).join('');
     return `<div class="ck-qr-abgroup">
-      <span class="ck-qr-abgroup-title" style="--ab-color:${AB_COLOR[abKey]}">${AB_ICON[abKey]||''} ${esc(abLabel)}</span>
+      <span class="ck-qr-abgroup-title" style="--ab-color:${AB_COLOR[abKey]}">${giHTML(AB_ICON[abKey])} ${esc(abLabel)}</span>
       <div class="ck-qr-grid ck-qr-skills">${cells}</div>
     </div>`;
   }).join('');
@@ -3425,7 +3434,7 @@ function renderCockpitExtras(){
     : '';
   $$('.ck-conc').forEach(el=>el.innerHTML=concHtml);
   const abChips=ABILITIES.filter(([k])=>tempAbilityDelta(k)).map(([k])=>
-    `<span class="ck-state ${tempAbilityDelta(k)<0?'down':'up'}" title="Temporary adjustment — clear it from the Ability Scores card on Overview">${AB_ICON[k]||''} ${k.toUpperCase()} ${fmt(tempAbilityDelta(k))}</span>`);
+    `<span class="ck-state ${tempAbilityDelta(k)<0?'down':'up'}" title="Temporary adjustment — clear it from the Ability Scores card on Overview">${giHTML(AB_ICON[k])} ${k.toUpperCase()} ${fmt(tempAbilityDelta(k))}</span>`);
   const topHtml=[...abChips,...S.states.map(s=>{
     const p=s.key?statePresetFor(s.key):null;
     const durTag=s.dur!=null?` ${s.dur}`:'';
@@ -4996,7 +5005,10 @@ function renderOverviewIdentity(){
   panel.style.setProperty('--accent',accent);
   panel.style.setProperty('--accent-dim',accent+'30');
   const icon=$('#ovIdIcon');
-  if(icon) icon.textContent = CLASS_ICON[S.classId] || ((S.name||'').trim()[0]||'?').toUpperCase();
+  if(icon){
+    const f=CLASS_ICON[S.classId];
+    if(f) icon.innerHTML=giHTML(f); else icon.textContent=((S.name||'').trim()[0]||'?').toUpperCase();
+  }
   const lvl=Math.max(1,Math.min(20,num(S.level)||1));
   const nextAsi=asiLevels(S.classId).find(L=>L>lvl);
   const nextBump=[5,9,13,17].find(L=>L>lvl);
@@ -6509,7 +6521,7 @@ function applyClassAmbience(accent){
   root.setProperty('--class',accent);
   root.setProperty('--class-dim',accent+'30');
   const sig=$('#hdrSigil');
-  if(sig){ sig.textContent=CLASS_ICON[S.classId]||''; sig.classList.toggle('empty',!CLASS_ICON[S.classId]); }
+  if(sig){ const f=CLASS_ICON[S.classId]; sig.innerHTML=giHTML(f); sig.classList.toggle('empty',!f); }
   // theme-color wants a flat colour: blend ~22% of the accent into the page background.
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta){
@@ -7127,7 +7139,7 @@ function charSummary(id){
       lvl:cls?num(d.level)||1:'',
       race:(d.race||'').trim(),
       hp:num(d.hpCurrent), hpMax:num(d.hpMax),
-      icon:CLASS_ICON[d.classId]||'⚔',
+      icon:giHTML(CLASS_ICON[d.classId]||CLASS_ICON.fighter),
       color:CLASS_COLOR[d.classId]||'#c9a227',
     };
   }catch(e){ return {name:'Corrupted save',cls:'',lvl:'',race:'',hp:0,hpMax:0,icon:'⚠',color:'#c05046'}; }

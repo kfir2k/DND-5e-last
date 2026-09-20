@@ -60,8 +60,12 @@ const CLASS_SKILL_CHOICES={
 };
 // Flavor-color per class (the same elemental-accent language used everywhere else on the sheet)
 // so the Build screen feels like it's forging a character instead of filling out a form.
-const CLASS_ICON={barbarian:'🪓',bloodhunter:'🩸',bard:'🎵',cleric:'✨',druid:'🍃',fighter:'⚔',monk:'☯',
-  paladin:'🛡',ranger:'🏹',rogue:'🗡',sorcerer:'🔥',warlock:'👁',wizard:'📖'};
+// Filenames under icons/glyphs/ (monochrome game-icons.net silhouettes, CSS-masked via giHTML()
+// in app.js) rather than emoji — see the credit line in the Settings tab for licensing.
+const CLASS_ICON={barbarian:'class-barbarian.svg',bloodhunter:'class-bloodhunter.svg',bard:'class-bard.svg',
+  cleric:'class-cleric.svg',druid:'class-druid.svg',fighter:'class-fighter.svg',monk:'class-monk.svg',
+  paladin:'class-paladin.svg',ranger:'class-ranger.svg',rogue:'class-rogue.svg',sorcerer:'class-sorcerer.svg',
+  warlock:'class-warlock.svg',wizard:'class-wizard.svg'};
 const CLASS_COLOR={barbarian:'#c0524a',bloodhunter:'#9c2b3c',bard:'#d9599b',cleric:'#e3c15c',druid:'#7dc26a',
   fighter:'#8b98ab',monk:'#5fbfa0',paladin:'#c9a227',ranger:'#4f9e5c',rogue:'#6b6f8a',
   sorcerer:'#e0705a',warlock:'#8b5cc9',wizard:'#5aa9e0'};
