@@ -1992,6 +1992,11 @@ input.chud-customin{width:42px;font-size:.95rem}
    into .ckv-mod, big and beside the value itself, impossible to miss; this line is just who it's
    from and when — plain, no icon, since the big green number already carries the "pay attention". */
 .ckv-cond{display:block;color:var(--gold-dim);margin-top:1px}
+/* A condition-driven note (Restrained/Grappled/Prone on Speed — see activeSpeedNotes()) is always
+   currently true by construction (it only renders while the state is active), unlike a feature's
+   situational reminder which may or may not apply right now — ember marks it as live, same
+   "this actually applies to you at this moment" language as .ck-rem.active elsewhere. */
+.ckv-cond-warn{color:var(--ember-lt)}
 /* The value and its situational add-on sit on one line — the number you'd actually add by hand
    is exactly as prominent as the number above it, not buried in small print underneath. Green
    (not gold) so it reads as its own thing at a glance — the same "active bonus" green already

@@ -2686,6 +2686,26 @@ function activeLinkedBuffs(){
   });
   return out;
 }
+// Same idea as STATE_BUFF_LINKS, but for conditions with a well-known effect on movement rather
+// than a weapon buff — Restrained/Grappled zero your speed outright, Prone doesn't reduce the
+// number but makes moving cost more. These are built-in conditions (RULES_DB), not features, so
+// they can't carry an fx array of their own — this table is what lets the Speed field on the
+// Combat HUD/Overview surface them as a reminder the same way a feature's statnote would.
+const STATE_SPEED_NOTES={
+  restrained:'Restrained — speed is 0',
+  grappled:'Grappled — speed is 0',
+  prone:'Prone — crawling costs extra movement; standing costs half your speed',
+};
+function activeSpeedNotes(){
+  const out=[], seen=new Set();
+  (S.states||[]).forEach(s=>{
+    const label=s.key&&STATE_SPEED_NOTES[s.key];
+    if(!label||seen.has(label)) return;
+    seen.add(label);
+    out.push(label);
+  });
+  return out;
+}
 // New tag list for a card, or the single-value legacy field wrapped in an array if it was
 // never migrated — every card format has always stored one of these two shapes.
 function ckTypesOf(obj,legacyVal,fallback){
@@ -3427,8 +3447,10 @@ function renderCockpitExtras(){
   // "light up" (condActive) or unlock (activeLinkedBuffs): save/skill ★ reminders on their own
   // tabs, the Attacks panel's condition nudges, and the "Do Something" grid's own attack cards
   // (renderCockpitCards — its sub-line carries the same nudge and goes stale otherwise, since
-  // this function doesn't rebuild #ckCards on its own).
-  renderSaves(); renderSkills(); renderAttacks(); renderCockpitCards();
+  // this function doesn't rebuild #ckCards on its own). recalc() is what refreshes the Speed HUD's
+  // Restrained/Grappled/Prone note (activeSpeedNotes()) — without it here, that note only caught
+  // up the next time something unrelated triggered a recalc.
+  renderSaves(); renderSkills(); renderAttacks(); renderCockpitCards(); recalc();
   const concHtml = S.concentration
     ? `◉ Concentrating: <b>${esc(S.concentration.name)}</b> <button data-ckconcdrop title="Drop concentration">✕</button><span class="ck-conc-tip">CON save when you take damage — DC 10 or half the damage, whichever is higher</span>`
     : '';
@@ -4904,10 +4926,17 @@ function recalc(){
   // looking counted when it isn't. Instead its amount becomes a big "+N" beside the value itself
   // (data-fxmod — impossible to miss) and its source/condition drops to a plain line underneath.
   const alwaysText=k=>allFx().filter(x=>x.t==='stat'&&x.stat===k).map(x=>`${x.src} ${fmt(fxAmount(x.n))}`);
-  const condList=k=>fxStatRems(k).map(r=>({
-    amt: (r.n!=null&&String(r.n).trim()!=='') ? fxAmount(r.n) : null,
-    label: r.src+(r.cond?` — ${r.cond}`:'')
-  }));
+  const condList=k=>{
+    const list=fxStatRems(k).map(r=>({
+      amt: (r.n!=null&&String(r.n).trim()!=='') ? fxAmount(r.n) : null,
+      label: r.src+(r.cond?` — ${r.cond}`:'')
+    }));
+    // Built-in conditions (Prone, Restrained, Grappled...) aren't features and carry no fx array
+    // of their own — activeSpeedNotes() is what surfaces them here instead, same "reminder under
+    // the stat" treatment, flagged so it renders in ember like any other currently-active warning.
+    if(k==='speed') activeSpeedNotes().forEach(label=>list.push({amt:null,label,warn:true}));
+    return list;
+  };
   const acA=ARMORS[eq.armor]||ARMORS.none;
   const acDexB=Math.min(amod('dex'),acA.dex===99?999:acA.dex);
   const acParts=[`${acA.n.split(' (')[0]} ${acA.base}`,`Dex ${fmt(acDexB)}`];
@@ -4930,7 +4959,7 @@ function recalc(){
   const HUD_COND={ac:condList('ac'),init:condList('init'),speed:condList('speed'),passive:condList('passive'),vision:condList('vision'),hpmax:condList('hpmax')};
   Object.keys(HUD_BASE).forEach(k=>{
     const cond=HUD_COND[k]||[];
-    const condHtml=cond.length?`<span class="ckv-cond">${cond.map(c=>esc(c.label)).join('<br>')}</span>`:'';
+    const condHtml=cond.length?`<span class="ckv-cond">${cond.map(c=>`<span class="${c.warn?'ckv-cond-warn':''}">${esc(c.label)}</span>`).join('<br>')}</span>`:'';
     $$(`[data-fxform="${k}"]`).forEach(el=>el.innerHTML=esc(HUD_BASE[k])+condHtml);
     const amts=cond.map(c=>c.amt).filter(a=>a!=null);
     const modText=amts.length?amts.map(fmt).join('/'):'';
