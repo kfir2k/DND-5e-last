@@ -445,7 +445,7 @@ combat:`
     <button class="ck-tbtn" id="ckAddConditionBtn" title="Add a condition">+ Condition</button>
   </div>
   <div class="ck-duo" id="ckDuo">
-    <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
+    <div class="panel ck-actions-panel"><h2>⚡ Do Something<button class="ck-tbtn" id="ckClassResBtn" title="Maneuvers, resource dice, and special save DCs from your class/subclass">Class Resources</button></h2>
       <div id="ckUndo"></div>
       <div class="ck-toolbar">
         <div class="ck-search"><span class="ck-search-ic">🔍</span><input type="text" id="ckSearch" placeholder="Search actions…" autocomplete="off"></div>
@@ -537,19 +537,26 @@ combat:`
         </div>
         <div class="ov-spellslots-list" id="combatSlots"></div>
       </div>
-      <div class="panel" id="ckSpecialDCPanel" hidden><h2>Special DCs</h2><div id="ckSpecialDC"></div></div>
       <div class="panel" id="ckRemPanel"><h2>★ Reminders</h2><div id="ckRems"></div></div>
       <div class="panel"><h2>📖 Rules</h2><div id="ckRules"></div></div>
     </div>
   </div>
-  <div class="ck-cust-backdrop" id="conditionsBackdrop"></div>
-  <div class="ck-cust-drawer" id="conditionsDrawer">
-    <div class="ck-cust-head"><h2>Add a Condition</h2><button class="close-x" id="conditionsDrawerClose" type="button">✕</button></div>
-    <div class="ck-cond-grid" id="ckCondGrid"></div>
-    <div class="fx-addrow" style="margin-top:12px">
-      <input type="text" id="ckStateInDrawer" placeholder="Custom condition…" style="flex:1;min-width:0">
-      <button class="add-btn" id="ckStateAddDrawer">+</button>
+  <div class="modal-bg" id="conditionsModal">
+    <div class="modal cond-modal">
+      <button class="close-x" id="conditionsModalClose" type="button">✕</button>
+      <h2>Add a Condition</h2>
+      <div class="ck-cond-grid" id="ckCondGrid"></div>
+      <div class="fx-addrow" style="margin-top:12px">
+        <input type="text" id="ckStateInDrawer" placeholder="Custom condition…" style="flex:1;min-width:0">
+        <button class="add-btn" id="ckStateAddDrawer">+</button>
+      </div>
     </div>
+  </div>
+  <div class="ck-cust-backdrop" id="classResBackdrop"></div>
+  <div class="ck-cust-drawer" id="classResDrawer">
+    <div class="ck-cust-head"><h2>Class Resources</h2><button class="close-x" id="classResDrawerClose" type="button">✕</button></div>
+    <p class="prep-note" style="margin:0 0 10px">Subclass/class features with tracked uses (maneuvers, Ki, dice pools...) and any special save DC you've added on the Features tab.</p>
+    <div id="classResBody"></div>
   </div>`,
 
 skills:`
@@ -3060,42 +3067,35 @@ function renderCockpitPlan(){
   const duo=$('#ckDuo');
   if(duo) duo.classList.toggle('ck-plan-collapsed',!!ck().planCollapsed);
 }
-// The Special DCs and Spellbook panels are only worth showing when they'd have something in
-// them — everyone else's Combat tab shouldn't carry an empty card.
+// The Spellbook panel is only worth showing when the character actually has spells.
 function applyCombatPanelVisibility(){
-  const dc=$('#ckSpecialDCPanel'); if(dc) dc.hidden=!fxSaveDCs().length;
   const sb=$('#ckSpellbookPanel'); if(sb) sb.hidden=!cockpitCards().some(x=>x.zone==='spell');
 }
-// The condition-picker drawer — an off-canvas grid of one-tap preset buttons (mirrors the
-// Inventory tab's item drawer, .eq-drawer, just opening from the left instead of the right).
-// Tapping a preset toggles it on/off (same data-stpreset handler as before, now living here
-// instead of inline on the page) and the drawer stays open so several can be added in one go;
-// the custom-text row underneath still covers anything not in STATE_PRESETS.
+// The condition-picker — a small centered modal (same .modal-bg/.modal idiom as the weapon
+// picker) with one-tap preset buttons. Tapping a preset toggles it on/off; the modal stays open
+// so several can be added in one go, and the custom-text row underneath covers anything not in
+// STATE_PRESETS.
 function conditionPresetGridHTML(){
   const activeKeys=new Set(S.states.map(s=>s.key).filter(Boolean));
   return STATE_PRESETS.map(p=>
     `<button class="ck-cond-btn ${p.bad?'bad':'buff'} ${activeKeys.has(p.key)?'on':''}" data-stpreset="${p.key}" title="${esc(p.blurb)}">${esc(p.name)}</button>`).join('');
 }
-function openConditionsDrawer(){
+function openConditionsModal(){
   $('#ckCondGrid').innerHTML=conditionPresetGridHTML();
-  $('#conditionsBackdrop').classList.add('open');
-  $('#conditionsDrawer').classList.add('open');
+  $('#conditionsModal').classList.add('open');
 }
-function closeConditionsDrawer(){
-  $('#conditionsBackdrop').classList.remove('open');
-  $('#conditionsDrawer').classList.remove('open');
-}
-function wireConditionsDrawer(){
-  const backdrop=$('#conditionsBackdrop'), drawer=$('#conditionsDrawer');
-  if(!backdrop||!drawer) return;
+function closeConditionsModal(){ $('#conditionsModal').classList.remove('open'); }
+function wireConditionsModal(){
+  const modal=$('#conditionsModal');
+  if(!modal) return;
   // Moved to <body> for the same reason as the equipment drawer (see wireEquipmentDrawer): a
-  // fixed-position off-canvas panel can't be trusted to stay put inside a tab-switch animation.
-  document.body.appendChild(backdrop);
-  document.body.appendChild(drawer);
-  $('#ckAddConditionBtn').addEventListener('click',openConditionsDrawer);
-  $('#conditionsDrawerClose').addEventListener('click',closeConditionsDrawer);
-  backdrop.addEventListener('click',closeConditionsDrawer);
-  drawer.addEventListener('click',e=>{
+  // fixed-position overlay can't be trusted to stay put inside a tab-switch animation.
+  document.body.appendChild(modal);
+  $('#ckAddConditionBtn').addEventListener('click',openConditionsModal);
+  $('#conditionsModalClose').addEventListener('click',closeConditionsModal);
+  modal.addEventListener('click',e=>{ if(e.target===modal) closeConditionsModal(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&modal.classList.contains('open')) closeConditionsModal(); });
+  modal.addEventListener('click',e=>{
     const b=e.target.closest('[data-stpreset]'); if(!b) return;
     const key=b.dataset.stpreset, p=statePresetFor(key);
     const idx=S.states.findIndex(s=>s.key===key);
@@ -3103,6 +3103,53 @@ function wireConditionsDrawer(){
     $('#ckCondGrid').innerHTML=conditionPresetGridHTML();
     renderCockpitExtras(); save();
   });
+}
+// ----- Class Resources drawer -----
+// Anything a class/subclass grants beyond the generic sheet — a limited-use feature (Combat
+// Superiority's superiority dice, Ki, sorcery points...) or a special save DC (Maneuver DC,
+// Rune DC...) added via the Features tab's "+ Effect" — collected in one place instead of being
+// scattered across feature cards. Off-canvas, left side, same mechanism the equipment drawer uses.
+function classResourceFeatures(){
+  return S.features.map((f,gi)=>({f,gi})).filter(({f})=>{
+    const kind=(f.source||{}).kind;
+    return (kind==='class'||kind==='subclass') && num(f.usesMax)>0;
+  });
+}
+function hasClassResources(){ return classResourceFeatures().length>0 || fxSaveDCs().length>0; }
+function classResourceDrawerHTML(){
+  const feats=classResourceFeatures(), dcs=fxSaveDCs();
+  if(!feats.length&&!dcs.length) return '<p class="prep-note" style="margin:0">Nothing here yet.</p>';
+  const featHtml=feats.map(({f,gi})=>{
+    const max=num(f.usesMax), used=Math.min(num(f.usesUsed),max);
+    const pips=`<span class="pips ck-pips">${Array.from({length:max},(_,k)=>
+      `<button class="pip ${k<used?'used':''}" data-ckuse="${gi}.${k}"></button>`).join('')}</span>`;
+    return `<div class="ck-classres-item">
+      <div class="ck-classres-head"><b>${esc(f.title||'Feature')}</b>${pips}</div>
+      <p class="prep-note" style="margin:2px 0 0">Recharges on a ${f.usesPer==='long'?'long':'short'} rest.</p>
+      ${f.desc?`<div class="ck-desc">${esc(f.desc)}</div>`:''}
+    </div>`;
+  }).join('');
+  const dcHtml=dcs.length?`<div class="ck-classres-dcs">${dcs.map(x=>
+    `<div class="ckv ckv-sec"><span class="ckv-l">${esc(x.label||'Special DC')}</span><span class="ckv-big">${saveDCValue(x)}</span><p class="prep-note" style="margin:2px 0 0">${AB_NAMES[x.ab]||x.ab} · ${esc(x.src)}</p></div>`).join('')}</div>`:'';
+  return featHtml+dcHtml;
+}
+function openClassResDrawer(){
+  $('#classResBody').innerHTML=classResourceDrawerHTML();
+  $('#classResBackdrop').classList.add('open');
+  $('#classResDrawer').classList.add('open');
+}
+function closeClassResDrawer(){
+  $('#classResBackdrop').classList.remove('open');
+  $('#classResDrawer').classList.remove('open');
+}
+function wireClassResDrawer(){
+  const backdrop=$('#classResBackdrop'), drawer=$('#classResDrawer');
+  if(!backdrop||!drawer) return;
+  document.body.appendChild(backdrop);
+  document.body.appendChild(drawer);
+  $('#ckClassResBtn').addEventListener('click',openClassResDrawer);
+  $('#classResDrawerClose').addEventListener('click',closeClassResDrawer);
+  backdrop.addEventListener('click',closeClassResDrawer);
 }
 // Concentration banner, state chips, ★ reminders feed, rules drawer. Concentration/top-states/
 // full-states-list each render into every instance found (Combat's HUD + reference zone, and
@@ -3148,10 +3195,12 @@ function renderCockpitExtras(){
         return `<div class="ck-rem">★ ${esc(r.src)} — ${FX_STATS[r.stat]||r.stat}${amt}${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
       }).join('')
     : '<p class="prep-note" style="margin:0">★ Stat and save reminders you add on the Features tab show up here too.</p>';
-  const dcs=fxSaveDCs();
-  if($('#ckSpecialDC')) $('#ckSpecialDC').innerHTML=dcs.map(x=>
-    `<div class="ckv ckv-sec"><span class="ckv-l">${esc(x.label||'Special DC')}</span><span class="ckv-big">${saveDCValue(x)}</span><span class="prep-note" style="margin:2px 0 0">${AB_NAMES[x.ab]||x.ab} · ${esc(x.src)}</span></div>`
-  ).join('');
+  const crBtn=$('#ckClassResBtn');
+  if(crBtn) crBtn.style.display=hasClassResources()?'':'none';
+  // Keep an already-open Class Resources drawer in sync — spending a die (data-ckuse) in there
+  // is handled by the same global click handler every other pip uses, which doesn't know this
+  // drawer's content exists to refresh it.
+  if($('#classResDrawer')&&$('#classResDrawer').classList.contains('open')) $('#classResBody').innerHTML=classResourceDrawerHTML();
   applyCombatPanelVisibility();
   const rulesBox=$('#ckRules');
   if(rulesBox && typeof RULES_DB!=='undefined'){
@@ -3513,7 +3562,11 @@ function libEntryToFeature(ent,source){
   let fx=(ent.fx||[]).map(x=>({...x}));
   if(ent.n==='Tough') fx=[{t:'stat',stat:'hpmax',n:2*Math.max(1,num(S.level))}];
   const usesScale=ent.usesScale||'';
-  const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
+  let usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
+  // Superiority dice: 4 at 3rd level, 5 at 7th, 6 at 15th — a level-breakpoint table, not a
+  // formula usesScale can express. Same one-time-at-pick convenience as Tough/Dwarven Toughness
+  // above; bump the uses count by hand on the Features tab after a level-up past 7th/15th.
+  if(ent.n==='Combat Superiority') usesMax = num(S.level)>=15?6:num(S.level)>=7?5:4;
   // Feats carry no real level in the library (every entry is l:0, just a placeholder) — the level
   // actually taken lives on source.asiLevel instead, set by the level-up flow that called us.
   // Class/subclass entries DO carry a real level (when this feature unlocks), so use that.
@@ -7038,7 +7091,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsDrawer(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireClassResDrawer(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab(lastTab());
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
