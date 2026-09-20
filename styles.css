@@ -1414,6 +1414,23 @@ label.fld span{
 .qr-skills .ck-qr-sec-title{color:#a58ce0}
 .ck-qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:2px}
 .ck-qr-skills{grid-template-columns:repeat(2,1fr)}
+/* Skills are broken into one ability-labeled group per ability score, same grouping the Skills
+   tab itself uses, so this narrow side panel doesn't read as one flat 18-row list. */
+.ck-qr-abgroup+.ck-qr-abgroup{margin-top:10px}
+.ck-qr-abgroup-title{
+  display:block;font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:1.1px;text-transform:uppercase;
+  color:var(--ab-color);opacity:.9;margin-bottom:4px;
+}
+/* Small proficiency dot on each skill cell — same on/exp/grant language as the Skills tab's own
+   .dot, just scaled down to fit this compact card. */
+.ck-qr-prof{
+  position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;
+  border:1.5px solid var(--border-lt);background:transparent;
+}
+.ck-qr-prof.on{background:var(--ab-color);border-color:var(--ab-color)}
+.ck-qr-prof.exp{background:var(--ab-color);border-color:var(--ab-color);box-shadow:0 0 0 2px var(--panel3),0 0 0 3.5px var(--ab-color)}
+.ck-qr-prof.grant{background:var(--green);border-color:var(--green)}
+.ck-qr-prof.grant.exp{box-shadow:0 0 0 2px var(--panel3),0 0 0 3.5px var(--green)}
 /* Each cell borrows the ability's own accent color (--ab-color, same palette as the Saves/Skills
    tabs) via a lit top edge, so Strength/Dexterity/etc. read consistently everywhere in the app. */
 .ck-qr-cell{

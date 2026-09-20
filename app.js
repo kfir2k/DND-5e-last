@@ -3306,15 +3306,31 @@ function ckQuickSavesHTML(){
   }).join('')}</div>`;
 }
 function ckQuickSkillsHTML(){
-  return `<div class="ck-qr-grid ck-qr-skills">${SKILLS.map(([k,label,ab])=>{
-    const b=amod(ab)+effSkill(k)*num(S.profBonus);
-    const notes=fxNotes(k), hot=notes.filter(n=>condActive(n.cond));
-    const tip=hot.length?hot.map(n=>`${n.src}: ${noteBadge(k,ab,n)}${n.cond?` (${n.cond})`:''}`).join('; '):'';
-    return `<div class="ck-qr-cell${hot.length?' active':''}" style="--ab-color:${AB_COLOR[ab]}" title="${esc(tip)}">
-      <span class="ck-qr-l">${esc(label)}</span><span class="ck-qr-v">${fmt(b)}</span>
-      ${hot.length?'<span class="ck-qr-badge">★</span>':''}
+  // Grouped by ability (same layout the Skills tab itself uses) so a player scanning this
+  // side panel mid-fight can jump straight to "all WIS skills" etc. instead of one flat A-Z
+  // list. Each cell also gets a small proficiency dot (same on/exp/grant language as the
+  // Skills tab's own .dot) so proficiency is visible here without opening that tab.
+  return ABILITIES.filter(([abKey])=>SKILLS.some(([,,ab])=>ab===abKey)).map(([abKey,abLabel])=>{
+    const cells=SKILLS.filter(([,,ab])=>ab===abKey).map(([k,label])=>{
+      const man=S.skills[k]||0, g=fxSkillGrant(k), eff=Math.max(man,g);
+      const b=amod(abKey)+eff*num(S.profBonus);
+      const notes=fxNotes(k), hot=notes.filter(n=>condActive(n.cond));
+      const tip=hot.length?hot.map(n=>`${n.src}: ${noteBadge(k,abKey,n)}${n.cond?` (${n.cond})`:''}`).join('; '):'';
+      const granted=g>man;
+      let profCls=eff===2?'exp':eff===1?'on':'';
+      if(granted) profCls+=' grant';
+      const profTitle=(eff===2?'Expertise':eff===1?'Proficient':'Not proficient')+(granted?' (granted by a feature)':'');
+      return `<div class="ck-qr-cell${hot.length?' active':''}" style="--ab-color:${AB_COLOR[abKey]}" title="${esc(tip)}">
+        <span class="ck-qr-prof ${profCls}" title="${esc(profTitle)}"></span>
+        <span class="ck-qr-l">${esc(label)}</span><span class="ck-qr-v">${fmt(b)}</span>
+        ${hot.length?'<span class="ck-qr-badge">★</span>':''}
+      </div>`;
+    }).join('');
+    return `<div class="ck-qr-abgroup">
+      <span class="ck-qr-abgroup-title" style="--ab-color:${AB_COLOR[abKey]}">${AB_ICON[abKey]||''} ${esc(abLabel)}</span>
+      <div class="ck-qr-grid ck-qr-skills">${cells}</div>
     </div>`;
-  }).join('')}</div>`;
+  }).join('');
 }
 function ckQuickItemsHTML(){
   const items=(S.equipment||[]).map((e,i)=>({e,i})).filter(x=>x.e.combat&&(x.e.name||'').trim());
