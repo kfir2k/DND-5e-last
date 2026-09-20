@@ -548,6 +548,12 @@ label.fld span{
 .sk-fx.perm:hover,.sk-fx.perm.open{border-color:var(--green)}
 .sk-fx.warn{border-color:var(--red);color:#e08a80}
 .sk-fx.warn:hover,.sk-fx.warn.open{border-color:var(--red)}
+/* "This condition is active on you right now" (condActive) — an ember glow instead of the default
+   static gold, so a reminder like Rage's advantage-on-STR-saves visibly lights up the moment the
+   Raging condition is toggled on in Combat, instead of always looking the same either way. */
+.sk-fx.active{border-color:var(--ember);color:var(--ember-lt);background:rgba(255,138,61,.14);box-shadow:0 0 8px rgba(255,138,61,.35)}
+.sk-fx.active:hover,.sk-fx.active.open{border-color:var(--ember)}
+.sk-fx.active b{background:var(--ember);color:var(--ink)}
 /* The "when" condition — tapping the badge unfolds it on its own line, fully wrapped (never
    clipped, however long the text is), instead of stretching sideways past the card's edge. */
 .sk-tip{
@@ -1034,6 +1040,10 @@ label.fld span{
    same sub-line markup, same two numbers, same reason to make them pop. */
 .ck-card-sub .ck-atkhit,.ck-ps-sub .ck-atkhit{color:var(--gold-lt);font-weight:700}
 .ck-card-sub .ck-atkdmg,.ck-ps-sub .ck-atkdmg{color:var(--red);font-weight:700}
+/* Damage + its condition badge as one atomic inline unit — inline-flex so, inside .ck-card-sub's
+   own flex-wrap:wrap line, this pair either fits or wraps to the next line together; it can never
+   split with the badge stranded on its own below the formula. */
+.ck-atkdmg-wrap{display:inline-flex;align-items:center;gap:5px}
 .ck-card-cond{color:#e8c25b;font-size:.76rem;margin-top:3px;font-style:italic}
 .ck-pips{display:inline-flex;gap:3px;vertical-align:middle}
 /* Unfolding a card breathes instead of snapping */
@@ -1234,10 +1244,15 @@ label.fld span{
 .ck-state.bad{border-color:rgba(224,117,102,.5);color:var(--red)}
 .ck-state.buff{border-color:rgba(201,162,39,.5);color:var(--gold-lt)}
 /* reminders + rules */
-.ck-rem{color:var(--gold-lt);font-size:.8rem;padding:4px 0;border-bottom:1px solid var(--border)}
+.ck-rem{color:var(--gold-lt);font-size:.8rem;padding:4px 6px;border-bottom:1px solid var(--border)}
 .ck-rem:last-child{border-bottom:none}
 .ck-rem b{color:var(--text)}
 .ck-rem-cond{display:block;color:var(--muted);font-size:.74rem;font-style:italic}
+/* A reminder whose "when" condition matches something in the Active Conditions list right now —
+   same ember highlight as .sk-fx.active, so "this applies to you at this moment" reads the same
+   language everywhere a ★ reminder shows up. */
+.ck-rem.active{color:var(--ember-lt);background:rgba(255,138,61,.1);border-radius:6px;border-bottom-color:transparent}
+.ck-rem.active .ck-rem-cond{color:var(--ember-lt);opacity:.85;font-style:normal}
 
 /* ===== Active conditions — a slim inline row, not a bordered panel: just the chip list (when
    there's anything active) and a small trigger for the condition-picker drawer. ===== */
@@ -1368,7 +1383,8 @@ label.fld span{
 @media(max-width:700px){.ck-quickref-handle.open{right:0}}
 .ck-quickref-panel{
   position:fixed;right:0;left:auto;top:0;bottom:0;z-index:55;width:min(280px,80vw);
-  background:var(--panel);border-left:1px solid var(--gold-dim);box-shadow:-6px 0 24px rgba(0,0,0,.45);
+  background:linear-gradient(165deg,var(--panel) 0%,var(--panel2) 100%);
+  border-left:1px solid var(--gold-dim);box-shadow:-6px 0 24px rgba(0,0,0,.45);
   transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);
   padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;
 }
@@ -1382,21 +1398,61 @@ label.fld span{
 }
 .ck-qr-toggles button:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
 .ck-qr-toggles button.on{background:var(--gold-dim);border-color:var(--gold-dim);color:var(--ink)}
-#quickRefBody{display:flex;flex-direction:column;gap:12px}
-.ck-qr-sec{display:flex;flex-direction:column;gap:6px}
+#quickRefBody{display:flex;flex-direction:column;gap:14px}
+.ck-qr-sec{display:flex;flex-direction:column;gap:6px;border-radius:12px;padding:8px 8px 9px;}
+/* Each pinned section washes its own accent color behind its content — Items/Attacks/Saves/
+   Skills read as distinct zones at a glance instead of one flat grey list, the same idea as the
+   Features tab's per-source color wash (.fv-group-cards). */
+.ck-qr-sec.qr-items{background:linear-gradient(180deg,rgba(201,162,39,.14) 0%,rgba(201,162,39,.04) 100%)}
+.ck-qr-sec.qr-attacks{background:linear-gradient(180deg,rgba(224,112,90,.14) 0%,rgba(224,112,90,.04) 100%)}
+.ck-qr-sec.qr-saves{background:linear-gradient(180deg,rgba(90,169,224,.12) 0%,rgba(90,169,224,.03) 100%)}
+.ck-qr-sec.qr-skills{background:linear-gradient(180deg,rgba(165,140,224,.12) 0%,rgba(165,140,224,.03) 100%)}
 .ck-qr-sec-title{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint)}
-.ck-qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.qr-items .ck-qr-sec-title{color:var(--gold-lt)}
+.qr-attacks .ck-qr-sec-title{color:#e0705a}
+.qr-saves .ck-qr-sec-title{color:#5aa9e0}
+.qr-skills .ck-qr-sec-title{color:#a58ce0}
+.ck-qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:2px}
 .ck-qr-skills{grid-template-columns:repeat(2,1fr)}
-.ck-qr-cell{background:var(--panel3);border:1px solid var(--border-lt);border-radius:7px;padding:5px 4px;text-align:center}
-.ck-qr-l{display:block;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+/* Each cell borrows the ability's own accent color (--ab-color, same palette as the Saves/Skills
+   tabs) via a lit top edge, so Strength/Dexterity/etc. read consistently everywhere in the app. */
+.ck-qr-cell{
+  position:relative;background:var(--panel3);border:1px solid var(--border-lt);
+  border-top:2px solid var(--ab-color,var(--border-lt));border-radius:7px;padding:6px 4px 5px;text-align:center;
+}
+.ck-qr-ic{display:block;font-size:.8rem;color:var(--ab-color);opacity:.75;line-height:1}
+.ck-qr-l{display:block;font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
 .ck-qr-v{display:block;font-family:'Cinzel',serif;font-weight:700;font-size:.95rem;color:var(--gold-lt)}
+/* A condition making this save/skill matter right now (condActive) — same ember "live" language
+   as .sk-fx.active and .ck-rem.active elsewhere, so it reads the same everywhere it shows up. */
+.ck-qr-cell.active{border-color:var(--ember);background:rgba(255,138,61,.16);box-shadow:0 0 8px rgba(255,138,61,.3)}
+.ck-qr-cell.active .ck-qr-v,.ck-qr-cell.active .ck-qr-ic{color:var(--ember-lt)}
+.ck-qr-badge{
+  display:inline-block;margin-top:2px;font-size:.56rem;font-weight:700;letter-spacing:.5px;
+  color:var(--ember-lt);background:rgba(255,138,61,.22);border-radius:999px;padding:0 6px;
+}
+.ck-qr-badge.dim{color:var(--gold-lt);background:rgba(201,162,39,.18)}
 .ck-qr-item{
   display:flex;align-items:center;gap:6px;background:var(--panel3);border:1px solid var(--border-lt);
-  border-radius:7px;padding:5px 8px;font-size:.82rem;
+  border-left:3px solid var(--gold-dim);border-radius:7px;padding:5px 8px;font-size:.82rem;
 }
-.ck-qr-item.out{opacity:.5}
+.ck-qr-item.out{opacity:.5;border-left-color:var(--border-lt)}
 .ck-qr-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ck-qr-item-qty{color:var(--muted);font-size:.78rem;flex-shrink:0}
+/* Melee/ranged accent matches the same red/green language a weapon's own icon+ability uses
+   elsewhere on the sheet (AB_COLOR str/dex), not a new color vocabulary just for this panel. */
+.ck-qr-atk{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--panel3);border:1px solid var(--border-lt);
+  border-left:3px solid #e0705a;border-radius:7px;padding:5px 8px;font-size:.8rem;
+}
+.ck-qr-atk.ranged{border-left-color:#7dc26a}
+.ck-qr-atk-name{flex:1 1 auto;min-width:56px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ck-qr-atk-hit{color:var(--gold-lt);font-weight:700;font-size:.8rem}
+.ck-qr-atk-hit::before{content:'Hit ';color:var(--faint);font-weight:400;font-size:.66rem}
+/* Damage and its condition badge travel together as one unit — if the row wraps at all on this
+   panel's narrow width, it wraps before this pair, never between the number and its own badge. */
+.ck-qr-atk-dmgwrap{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.ck-qr-atk-dmg{color:var(--ember-lt);font-size:.78rem;white-space:nowrap}
 .ck-rsec-head{
   display:block;width:100%;text-align:left;background:transparent;border:none;
   color:var(--muted);font-size:.84rem;padding:7px 0;cursor:pointer;border-bottom:1px solid var(--border);
@@ -2127,7 +2183,25 @@ input.chud-customin{width:42px;font-size:.95rem}
   color:var(--text);font-weight:600;font-size:.95rem;
 }
 .atk-mini-hit,.atk-mini-dmg{display:flex;flex-direction:column;align-items:center;flex:0 0 auto}
+/* The formula and its condition badge sit side by side on ONE row under the "Damage" label —
+   not stacked — so "+2" reads as "1d6+4 slashing, plus this" instead of a second, disconnected
+   line under the number. */
+.atk-mini-dmg-row{display:flex;align-items:center;gap:5px}
+/* A currently-active linked condition (e.g. Raging) whose buff isn't switched on for this weapon
+   yet — shows the REAL number it would add ("+2", not a dot), right beside Damage, so what the
+   condition actually does is visible without opening the card. Read-only: not a button — tapping
+   it does nothing, the same as every other ★ reminder in this app (statnote/savenote/note). The
+   buff itself still goes on through "+ Add buff… → Presets", same as any other buff. */
+.atk-condbonus{
+  display:inline-block;background:rgba(255,138,61,.16);border:1px solid var(--ember);color:var(--ember-lt);
+  border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:700;flex-shrink:0;cursor:default;
+  animation:atkNudgePulse 1.8s ease-in-out infinite;
+}
+@keyframes atkNudgePulse{0%,100%{box-shadow:0 0 0 rgba(255,138,61,0)}50%{box-shadow:0 0 6px rgba(255,138,61,.55)}}
 .atk-mini-dmg .atk-formula{white-space:nowrap}
+/* The open card's Damage line: formula + badge as one flex row, same idea as .atk-mini-dmg-row
+   above — .atk-formula's own block display used to force anything after it onto a new line. */
+.atk-formula-row{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
 .atk-chevron{color:var(--faint);flex:0 0 auto;font-size:.85rem}
 .atk-collapsed .atk-roll{margin-top:0}
 /* The collapse toggle lives inside the open card's own header row instead of floating loose,

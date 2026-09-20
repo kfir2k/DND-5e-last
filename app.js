@@ -47,7 +47,7 @@ function defaultState(){
     // Combat cockpit
     customCards:[], states:[], concentration:null,
     turnPlans:[{name:'Default',steps:[]}], turnPlanIdx:0,
-    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false,spellbookOpen:false,hiddenZones:[],planCollapsed:false,quickRef:{items:false,saves:false,skills:false}},
+    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false,spellbookOpen:false,hiddenZones:[],planCollapsed:false,quickRef:{items:false,attacks:false,saves:false,skills:false}},
     // Page 2
     portrait:'',
     age:'',height:'',weight:'',eyes:'',skin:'',hair:'',
@@ -563,6 +563,7 @@ combat:`
     <p class="prep-note" style="margin:0 0 4px">Pick what to keep in view while you fight.</p>
     <div class="ck-qr-toggles" id="quickRefToggles">
       <button type="button" data-qrtoggle="items">Items</button>
+      <button type="button" data-qrtoggle="attacks">Attacks</button>
       <button type="button" data-qrtoggle="saves">Saves</button>
       <button type="button" data-qrtoggle="skills">Skills</button>
     </div>
@@ -1260,7 +1261,8 @@ function renderAbilityCards(){
 function saveBadgesHTML(k){
   return fxSaveNotes(k).map(n=>{
     const tip=n.cond?`<span class="sk-tip">${esc(n.cond)}</span>`:'';
-    return `<span class="sk-fx">★ ${esc(n.src)} <b>adv</b>${tip}</span>`;
+    const active=condActive(n.cond);
+    return `<span class="sk-fx${active?' active':''}" title="${active?'This condition is active right now':''}">★ ${esc(n.src)} <b>adv</b>${tip}</span>`;
   }).join('');
 }
 function renderSaves(){
@@ -1311,7 +1313,8 @@ function skillBadgesHTML(k,ab){
     const b=noteBadge(k,ab,n);
     if(b==null) return; // effect makes no difference here (e.g. already at expertise) — nothing to show
     const tip=n.cond?`<span class="sk-tip">${esc(n.cond)}</span>`:'';
-    badges.push(`<span class="sk-fx" data-notemath="${k}">★ ${esc(n.src)} <b>${esc(b)}</b>${tip}</span>`);
+    const active=condActive(n.cond);
+    badges.push(`<span class="sk-fx${active?' active':''}" data-notemath="${k}" title="${active?'This condition is active right now':''}">★ ${esc(n.src)} <b>${esc(b)}</b>${tip}</span>`);
   });
   return badges.join('');
 }
@@ -1517,6 +1520,33 @@ function renderDeathSaves(){
   }));
 }
 
+// If a Condition linked to a buff preset (STATE_BUFF_LINKS — e.g. Raging → the Rage buff) is
+// active right now but this weapon doesn't have that buff switched on yet, this is what's missing.
+// Without surfacing it somewhere, toggling a condition on doesn't touch any weapon's math at all —
+// the player has to remember to also flip the buff by hand on every attack it applies to.
+function atkMissingLinkedBuffs(a){
+  const links=activeLinkedBuffs(); if(!links.length) return [];
+  const have=new Set((a.buffs||[]).filter(b=>b.on).map(b=>(b.name||b.n||'').toLowerCase()));
+  return links.filter(l=>!have.has(l.buffName.toLowerCase()));
+}
+// The actual number a missing linked buff would add — "+2", "1d6", or both — so a player unsure
+// what Rage even does can see the effect on the weapon itself instead of decoding a plain dot.
+function atkNudgeAmountText(p){
+  const bits=[]; if(p.flat) bits.push(fmt(p.flat)); if((p.dice||'').trim()) bits.push(p.dice);
+  return bits.join(' ')||'+0';
+}
+// A read-only badge, not a button — it only shows what's available, the same way every other ★
+// reminder in this app (statnote/savenote) displays a number without silently mutating anything
+// on a tap. Adding the buff for real still goes through "+ Add buff… → Presets" below, same as
+// any other buff; this just tells you it's there. Sits right beside the damage value everywhere
+// a weapon's numbers show up (the collapsed row, the open card, the "Do Something" grid, Quick
+// View), instead of only appearing in one of those places.
+function atkCondBonusHTML(a){
+  return atkMissingLinkedBuffs(a).map(l=>{
+    const p=BUFF_PRESETS[l.idx];
+    return `<span class="atk-condbonus" title="You're ${esc(l.stateName)} — add the ${esc(l.buffName)} buff below to count it">${esc(atkNudgeAmountText(p))}</span>`;
+  }).join('');
+}
 // ---------- Dynamic list renderers ----------
 function buffPill(a,i,b,j){
   const c=DMG_COLOR[b.type]||'';
@@ -1604,13 +1634,16 @@ function attackRowHTML(a,i){
       <span class="atk-final" data-atkfinal="${i}">${c.finalDamage!=null?c.finalDamage:'—'}</span>
     </div>`;
   if(!open){
+    // A collapsed card hides the buff row entirely, so a missing linked buff (see
+    // atkMissingLinkedBuffs) would otherwise go unnoticed until the card happens to be opened —
+    // show the actual number it would add right beside Damage instead.
     return `
     <div class="atk-card atk-collapsed">
       <div class="atk-mini-head" data-atkopen="${i}" title="Tap for full editing">
         <span class="atk-icon">${icon}</span>
         <span class="atk-mini-name">${esc(a.name)}</span>
         <span class="atk-mini-hit"><span class="atk-label">Hit</span><span class="big" data-atkview="${i}">${c.bonus}</span></span>
-        <span class="atk-mini-dmg"><span class="atk-label">Damage</span><span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span></span>
+        <span class="atk-mini-dmg"><span class="atk-label">Damage</span><span class="atk-mini-dmg-row"><span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span>${atkCondBonusHTML(a)}</span></span>
         <span class="atk-chevron">▸</span>
       </div>
       ${roll}
@@ -1665,7 +1698,7 @@ function attackRowHTML(a,i){
     </div>
     <div class="atk-dmg">
       <span class="atk-label">Damage</span>
-      <span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span>
+      <span class="atk-formula-row"><span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span>${atkCondBonusHTML(a)}</span>
       <span class="atk-breakdown" data-atkdmgbreak="${i}">${c.dmgBreakdown}</span>
       ${roll}
     </div>
@@ -1693,7 +1726,13 @@ function attackRowHTML(a,i){
 }
 function renderAttacks(){
   $('#attackList').innerHTML = S.attacks.map((a,i)=>attackRowHTML(a,i)).join('');
-  wireList('#attackList');
+  // A weapon can carry real setup (buffs, misc bonuses, a note) — an accidental tap on its small
+  // ✕ shouldn't erase all of that with no way back, so this is the one list that confirms first.
+  wireList('#attackList',{confirmDel:b=>{
+    const i=+b.dataset.del.split('.').pop();
+    const name=(S.attacks[i]&&S.attacks[i].name.trim())||'this attack';
+    return `Delete "${name}"? This can't be undone.`;
+  }});
   $$('[data-atkopen]').forEach(el=>el.addEventListener('click',()=>{
     const i=+el.dataset.atkopen;
     ATK_OPEN.has(i)?ATK_OPEN.delete(i):ATK_OPEN.add(i);
@@ -1807,7 +1846,10 @@ function renderAttacks(){
     const buff = magic ? {name:`Magic Weapon +${magic[1]}`,dice:'',flat:+magic[1],type:'',on:true,rolled:''}
       : dmg ? {name:DMG_TYPES.find(([v])=>v===dmg[1])[1],dice:'1d6',flat:0,type:dmg[1],on:true,rolled:''}
       : s.value==='custom' ? {name:'',dice:'',flat:0,type:'',on:true,rolled:''}
-      : {...BUFF_PRESETS[+s.value],on:true,rolled:''};
+      // BUFF_PRESETS entries key their label as `n` (list-item shape, matched against elsewhere by
+      // name), but a buff instance on an attack displays/edits it as `name` (buffPill) — map it
+      // over here or a Presets pick renders with a blank name field despite the bonus applying fine.
+      : {...BUFF_PRESETS[+s.value],name:BUFF_PRESETS[+s.value].n,on:true,rolled:''};
     (S.attacks[i].buffs=S.attacks[i].buffs||[]).push(buff);
     renderAttacks(); save();
   }));
@@ -2606,6 +2648,35 @@ const STATE_PRESETS=(()=>{
   return list;
 })();
 function statePresetFor(key){ return STATE_PRESETS.find(p=>p.key===key); }
+// Whether a reminder's free-text "when" condition matches a state the character currently has
+// active (Combat's Conditions list) — a loose case-insensitive substring match either direction,
+// since the condition text is hand-written ("while raging") and the state name is a short label
+// ("Raging"). Lets an existing ★ reminder (savenote/note) light up when it actually applies right
+// now instead of always looking the same whether the condition is live or not.
+function condActive(cond){
+  if(!cond) return false;
+  const c=cond.trim().toLowerCase(); if(!c) return false;
+  return (S.states||[]).some(s=>{
+    const n=(s.name||'').trim().toLowerCase();
+    return n && (c.includes(n)||n.includes(c));
+  });
+}
+// Links a Combat condition preset key to a matching BUFF_PRESETS entry by name — lets the Attacks
+// tab nudge "you're Raging, add the Rage buff to this weapon?" instead of leaving the player to
+// remember it by hand. Extend this table (not the fx system) for any other condition ↔ buff pair.
+const STATE_BUFF_LINKS={raging:'Rage'};
+function activeLinkedBuffs(){
+  const out=[], seen=new Set();
+  (S.states||[]).forEach(s=>{
+    const buffName=s.key&&STATE_BUFF_LINKS[s.key];
+    if(!buffName||seen.has(buffName)) return;
+    const idx=BUFF_PRESETS.findIndex(p=>p.n===buffName);
+    if(idx<0) return;
+    seen.add(buffName);
+    out.push({stateName:s.name||buffName,buffName,idx});
+  });
+  return out;
+}
 // New tag list for a card, or the single-value legacy field wrapped in an array if it was
 // never migrated — every card format has always stored one of these two shapes.
 function ckTypesOf(obj,legacyVal,fallback){
@@ -2626,7 +2697,7 @@ function ck(){
   S.cockpit=S.cockpit||{};
   const c=S.cockpit;
   c.hidden=c.hidden||[]; c.pins=c.pins||[]; c.hiddenZones=c.hiddenZones||[];
-  c.quickRef=c.quickRef||{items:false,saves:false,skills:false};
+  c.quickRef=c.quickRef||{items:false,attacks:false,saves:false,skills:false};
   S.customCards=S.customCards||[]; S.states=S.states||[];
   // Plan templates: named step lists for different situations (boss fight, defensive...).
   // Saves from the single-plan era get their old steps folded into a "Default" template.
@@ -2870,7 +2941,11 @@ function ckSubHTML(card,withRoll){
     // withRoll (plan steps): type what the damage dice showed, the total auto-calcs live —
     // same S.attacks[i].rolled the attack editor uses, so the two stay in sync.
     const roll=withRoll?` <span class="ck-roll">🎲<input type="number" value="${esc(a.rolled)}" data-ckroll="${i}" placeholder="${esc(cSum.die||'roll')}" title="What the damage dice showed — total adds your modifiers and active buffs">= <b data-atkfinal="${i}">${cSum.finalDamage!=null?cSum.finalDamage:'—'}</b></span>`:'';
-    return `Hit <b class="ck-atkhit" data-atkview="${i}">${esc(cSum.bonus)}</b> · <span class="ck-atkdmg" data-atkdmg="${i}">${esc(cSum.dmg)}</span>${roll}`;
+    // Damage and its condition-bonus badge (Rage etc.) travel together in one inline-flex group
+    // (ck-atkdmg-wrap) — an atomic unit that wraps as a whole onto this line's next row if it has
+    // to, rather than a bare badge splitting away from "1d10+8 bludgeoning" mid-formula.
+    const condBonus=atkCondBonusHTML(a);
+    return `Hit <b class="ck-atkhit" data-atkview="${i}">${esc(cSum.bonus)}</b> · <span class="ck-atkdmg-wrap"><span class="ck-atkdmg" data-atkdmg="${i}">${esc(cSum.dmg)}</span>${condBonus}</span>${roll}`;
   }
   if(card.kind==='sp'){
     // Same "what you need to know without opening the card" bar the weapon-attack branch above
@@ -3210,22 +3285,35 @@ function wireCustomStatsPanel(){
 }
 // ----- Quick View panel (right edge) -----
 // Mirrors the Custom Stats handle+panel on the opposite edge, but its content is player-picked
-// rather than data-driven: three optional sections (Items/Saves/Skills), each toggled from the
-// panel's own header and persisted in S.cockpit.quickRef, so a player can pin whichever compact
-// reference they actually want at the table without leaving Combat or hunting through a zone
-// filter mid-fight. Items = the same "Show in Combat" equipment the item zone already uses (reuse
-// data-ckituse — it's delegated on document, so it works here with no new wiring); Saves/Skills
-// are computed fresh each render, the same formulas recalc() uses for their tab-native tiles.
+// rather than data-driven: four optional sections (Items/Saves/Skills/Attacks), each toggled from
+// the panel's own header and persisted in S.cockpit.quickRef, so a player can pin whichever
+// compact reference they actually want at the table without leaving Combat or hunting through a
+// zone filter mid-fight. Items = the same "Show in Combat" equipment the item zone already uses
+// (reuse data-ckituse — it's delegated on document, so it works here with no new wiring); Saves/
+// Skills/Attacks are computed fresh each render, the same formulas their own tabs use, and carry
+// the same ability color-coding (AB_COLOR) and condition-active glow (condActive/atknudge) those
+// tabs have, so this panel isn't a flatter, greyer copy of them.
 function ckQuickSavesHTML(){
   return `<div class="ck-qr-grid">${ABILITIES.map(([k,label])=>{
     const b=amod(k)+((S.saveProf[k]||fxSaveProf(k))?num(S.profBonus):0);
-    return `<div class="ck-qr-cell"><span class="ck-qr-l">${esc(label)}</span><span class="ck-qr-v">${fmt(b)}</span></div>`;
+    const notes=fxSaveNotes(k), hot=notes.filter(n=>condActive(n.cond));
+    const tip=hot.length?hot.map(n=>`${n.src}: advantage${n.cond?` (${n.cond})`:''}`).join('; '):(notes.length?notes.map(n=>`${n.src}: advantage${n.cond?` (${n.cond})`:''}`).join('; '):'');
+    return `<div class="ck-qr-cell${hot.length?' active':''}" style="--ab-color:${AB_COLOR[k]}" title="${esc(tip)}">
+      <span class="ck-qr-ic">${AB_ICON[k]||''}</span>
+      <span class="ck-qr-l">${esc(label)}</span><span class="ck-qr-v">${fmt(b)}</span>
+      ${hot.length?'<span class="ck-qr-badge">ADV</span>':(notes.length?'<span class="ck-qr-badge dim">★</span>':'')}
+    </div>`;
   }).join('')}</div>`;
 }
 function ckQuickSkillsHTML(){
   return `<div class="ck-qr-grid ck-qr-skills">${SKILLS.map(([k,label,ab])=>{
     const b=amod(ab)+effSkill(k)*num(S.profBonus);
-    return `<div class="ck-qr-cell"><span class="ck-qr-l">${esc(label)}</span><span class="ck-qr-v">${fmt(b)}</span></div>`;
+    const notes=fxNotes(k), hot=notes.filter(n=>condActive(n.cond));
+    const tip=hot.length?hot.map(n=>`${n.src}: ${noteBadge(k,ab,n)}${n.cond?` (${n.cond})`:''}`).join('; '):'';
+    return `<div class="ck-qr-cell${hot.length?' active':''}" style="--ab-color:${AB_COLOR[ab]}" title="${esc(tip)}">
+      <span class="ck-qr-l">${esc(label)}</span><span class="ck-qr-v">${fmt(b)}</span>
+      ${hot.length?'<span class="ck-qr-badge">★</span>':''}
+    </div>`;
   }).join('')}</div>`;
 }
 function ckQuickItemsHTML(){
@@ -3241,12 +3329,28 @@ function ckQuickItemsHTML(){
     </div>`;
   }).join('');
 }
+// Same Hit/Damage a weapon's own card shows, plus the identical read-only condition-bonus badge
+// — the point of pinning Attacks here is not having to flip back to the main panel just to see it.
+function ckQuickAttacksHTML(){
+  const list=(S.attacks||[]).filter(a=>(a.name||'').trim());
+  if(!list.length) return '<p class="prep-note" style="margin:0">No attacks yet — add one in the Attacks panel.</p>';
+  return list.map(a=>{
+    const c=atkSummary(a);
+    const ranged=!!(c.w&&c.w.rng);
+    return `<div class="ck-qr-atk ${ranged?'ranged':'melee'}">
+      <span class="ck-qr-atk-name">${esc(a.name)}</span>
+      <span class="ck-qr-atk-hit">${c.bonus}</span>
+      <span class="ck-qr-atk-dmgwrap"><span class="ck-qr-atk-dmg">${esc(c.dmg)}</span>${atkCondBonusHTML(a)}</span>
+    </div>`;
+  }).join('');
+}
 function quickRefPanelHTML(){
   const c=ck().quickRef, secs=[];
-  if(c.items) secs.push(`<div class="ck-qr-sec"><span class="ck-qr-sec-title">Items</span>${ckQuickItemsHTML()}</div>`);
-  if(c.saves) secs.push(`<div class="ck-qr-sec"><span class="ck-qr-sec-title">Saves</span>${ckQuickSavesHTML()}</div>`);
-  if(c.skills) secs.push(`<div class="ck-qr-sec"><span class="ck-qr-sec-title">Skills</span>${ckQuickSkillsHTML()}</div>`);
-  return secs.length ? secs.join('') : '<p class="prep-note" style="margin:0">Nothing shown — tap Items, Saves, or Skills above to pin them here.</p>';
+  if(c.items) secs.push(`<div class="ck-qr-sec qr-items"><span class="ck-qr-sec-title">Items</span>${ckQuickItemsHTML()}</div>`);
+  if(c.attacks) secs.push(`<div class="ck-qr-sec qr-attacks"><span class="ck-qr-sec-title">Attacks</span>${ckQuickAttacksHTML()}</div>`);
+  if(c.saves) secs.push(`<div class="ck-qr-sec qr-saves"><span class="ck-qr-sec-title">Saves</span>${ckQuickSavesHTML()}</div>`);
+  if(c.skills) secs.push(`<div class="ck-qr-sec qr-skills"><span class="ck-qr-sec-title">Skills</span>${ckQuickSkillsHTML()}</div>`);
+  return secs.length ? secs.join('') : '<p class="prep-note" style="margin:0">Nothing shown — tap Items, Attacks, Saves, or Skills above to pin them here.</p>';
 }
 function syncQuickRefToggles(){
   const c=ck().quickRef;
@@ -3294,6 +3398,12 @@ function wireQuickRefPanel(){
 function renderCockpitExtras(){
   if(!$('#ckCards')) return;
   ck();
+  // Active Conditions changed (add/remove any state) — refresh everything a condition can make
+  // "light up" (condActive) or unlock (activeLinkedBuffs): save/skill ★ reminders on their own
+  // tabs, the Attacks panel's condition nudges, and the "Do Something" grid's own attack cards
+  // (renderCockpitCards — its sub-line carries the same nudge and goes stale otherwise, since
+  // this function doesn't rebuild #ckCards on its own).
+  renderSaves(); renderSkills(); renderAttacks(); renderCockpitCards();
   const concHtml = S.concentration
     ? `◉ Concentrating: <b>${esc(S.concentration.name)}</b> <button data-ckconcdrop title="Drop concentration">✕</button><span class="ck-conc-tip">CON save when you take damage — DC 10 or half the damage, whichever is higher</span>`
     : '';
@@ -3324,12 +3434,16 @@ function renderCockpitExtras(){
       }).join('')
     : '<p class="prep-note" style="margin:0">Nothing active — tap + Add to pick a condition.</p>';
   $$('.ck-states-list').forEach(el=>el.innerHTML=listHtml);
-  const rems=allFx().filter(x=>x.t==='statnote'||x.t==='savenote');
+  // Active-condition reminders float to the top and glow (condActive) — the whole point of this
+  // feed during a fight is "what applies to me right now", not just "what could ever apply".
+  const rems=allFx().filter(x=>x.t==='statnote'||x.t==='savenote')
+    .sort((a,b)=>condActive(b.cond)-condActive(a.cond));
   $('#ckRems').innerHTML = rems.length
     ? rems.map(r=>{
-        if(r.t==='savenote') return `<div class="ck-rem">★ ${esc(r.src)} — ${AB_NAMES[r.ab]||r.ab} save <b>advantage</b>${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
+        const active=condActive(r.cond), cls=active?' active':'';
+        if(r.t==='savenote') return `<div class="ck-rem${cls}">★ ${esc(r.src)} — ${AB_NAMES[r.ab]||r.ab} save <b>advantage</b>${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
         const amt=(r.n!=null&&String(r.n).trim()!=='')?` <b>${fmt(fxAmount(r.n))}</b>`:'';
-        return `<div class="ck-rem">★ ${esc(r.src)} — ${FX_STATS[r.stat]||r.stat}${amt}${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
+        return `<div class="ck-rem${cls}">★ ${esc(r.src)} — ${FX_STATS[r.stat]||r.stat}${amt}${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
       }).join('')
     : '<p class="prep-note" style="margin:0">★ Stat and save reminders you add on the Features tab show up here too.</p>';
   updateCustomStatsHandle();
@@ -4641,7 +4755,10 @@ function autoGrow(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'
 // Shared wiring for list inputs and delete buttons
 const RERENDER = {attacks:renderAttacks,features:fxRefresh,
                   notes:renderNotes,spellLevels:renderSpellLevels};
-function wireList(container){
+// opts.confirmDel(el): when given, returning a truthy message pops the app's own themed
+// "Are you sure?" dialog (uiConfirm) before deleting that row — returning falsy skips the prompt
+// for that particular row. Callers that don't pass it keep the old immediate-delete behavior.
+function wireList(container,opts={}){
   $$(container+' [data-li]').forEach(el=>{
     if(el.tagName==='TEXTAREA') autoGrow(el);
     el.addEventListener('input',()=>{
@@ -4652,11 +4769,16 @@ function wireList(container){
   });
   $$(container+' [data-del]').forEach(b=>{
     b.addEventListener('click',()=>{
-      const parts=b.dataset.del.split('.');
-      const idx=+parts.pop();
-      const arr=getPath(S,parts.join('.'));
-      arr.splice(idx,1);
-      RERENDER[parts[0]](); save();
+      const doDelete=()=>{
+        const parts=b.dataset.del.split('.');
+        const idx=+parts.pop();
+        const arr=getPath(S,parts.join('.'));
+        arr.splice(idx,1);
+        RERENDER[parts[0]](); save();
+      };
+      const msg=opts.confirmDel&&opts.confirmDel(b);
+      if(msg) uiConfirm(msg,{title:'Delete?',ok:'Delete',danger:true}).then(ok=>{ if(ok) doDelete(); });
+      else doDelete();
     });
   });
 }
