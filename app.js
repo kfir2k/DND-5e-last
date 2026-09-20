@@ -47,7 +47,7 @@ function defaultState(){
     // Combat cockpit
     customCards:[], states:[], concentration:null,
     turnPlans:[{name:'Default',steps:[]}], turnPlanIdx:0,
-    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false,spellbookOpen:false,hiddenZones:[],planCollapsed:false},
+    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false,spellbookOpen:false,hiddenZones:[],planCollapsed:false,quickRef:{items:false,saves:false,skills:false}},
     // Page 2
     portrait:'',
     age:'',height:'',weight:'',eyes:'',skin:'',hair:'',
@@ -554,8 +554,19 @@ combat:`
   <button class="ck-customstats-handle" id="customStatsHandle" title="Custom stats" hidden><span>Custom Stats</span></button>
   <div class="ck-customstats-panel" id="customStatsPanel">
     <div class="ck-cust-head"><h2>Custom Stats</h2><button class="close-x" id="customStatsClose" type="button">✕</button></div>
-    <p class="prep-note" style="margin:0 0 4px">Any formula you add on the Features tab (e.g. 8+PROF+STR, or 4+LVL) shows up here as its own tile.</p>
+    <p class="prep-note" style="margin:0 0 4px">Any formula you add on the Features tab (e.g. 8+PROF+STR, or 4+LVL) shows up here as its own tile — or flag a whole feature with its "Stats" button to park its full text here too.</p>
     <div id="customStatsBody"></div>
+  </div>
+  <button class="ck-quickref-handle" id="quickRefHandle" title="Quick view"><span>Quick View</span></button>
+  <div class="ck-quickref-panel" id="quickRefPanel">
+    <div class="ck-cust-head"><h2>Quick View</h2><button class="close-x" id="quickRefClose" type="button">✕</button></div>
+    <p class="prep-note" style="margin:0 0 4px">Pick what to keep in view while you fight.</p>
+    <div class="ck-qr-toggles" id="quickRefToggles">
+      <button type="button" data-qrtoggle="items">Items</button>
+      <button type="button" data-qrtoggle="saves">Saves</button>
+      <button type="button" data-qrtoggle="skills">Skills</button>
+    </div>
+    <div id="quickRefBody"></div>
   </div>`,
 
 skills:`
@@ -1165,11 +1176,12 @@ function showTab(id){
   // yank focus mid-keystroke), so re-render it fresh whenever the Combat tab is opened — otherwise
   // a feature edited after its "Show in Combat" flag was set could show a stale row with no chevron.
   if(id==='combat') renderCombatFeatures();
-  // The Custom Stats handle/panel are fixed to the viewport edge (so they can use the empty
-  // margin beside a wide `main` column), which means they're outside any one tab's own DOM and
-  // would otherwise stay visible/open while browsing a different tab entirely.
+  // The Custom Stats / Quick View handles+panels are fixed to the viewport edges (so they can use
+  // the empty margin beside a wide `main` column), which means they're outside any one tab's own
+  // DOM and would otherwise stay visible/open while browsing a different tab entirely.
   updateCustomStatsHandle();
-  if(id!=='combat') closeCustomStatsPanel();
+  updateQuickRefHandle();
+  if(id!=='combat'){ closeCustomStatsPanel(); closeQuickRefPanel(); }
 }
 
 // ---------- Data binding ----------
@@ -2294,6 +2306,20 @@ function featureGroupKind(f){
   return FEAT_GROUP_DEFS.some(g=>g.key===k) ? k : 'custom';
 }
 function featureSortOrder(f){ return FEAT_ORDER_MAP[featureGroupKind(f)] ?? 5; }
+// Lets a hand-typed feature be filed under the same bucket/byline a library-granted one would get
+// (Class/Subclass/Race/Background), instead of every manual entry defaulting to "Custom" forever.
+// `field` is which S.features[i].source property the byline text is stored under — matches what
+// featureSourceMeta()/FEAT_GROUP_DEFS' subclass label already read, so typing a name here is
+// enough to move the card into the right "By Source" section with the right heading.
+const SRC_KIND_META={
+  class:{label:'Class',field:'className',ph:'e.g. Fighter'},
+  subclass:{label:'Subclass',field:'subclassName',ph:'e.g. Battle Master'},
+  race:{label:'Race',field:'raceName',ph:'e.g. Dwarf'},
+  background:{label:'Background',field:'backgroundName',ph:'e.g. Acolyte'},
+  feat:{label:'Feat',field:null,ph:''},
+  custom:{label:'Custom',field:null,ph:''},
+};
+function srcKindMeta(kind){ return SRC_KIND_META[kind]||SRC_KIND_META.custom; }
 // Which "By Source" sections are collapsed — session-only, like the cockpit's open/pinned sets,
 // so it doesn't need a migration and resets to "everything open" on a fresh load.
 const FEAT_SECTION_COLLAPSED=new Set();
@@ -2371,6 +2397,18 @@ function featureCardEditHTML(f,i){
     <span class="prep-note" style="flex-basis:100%;margin:0">Shows as a ★ badge on the Overview — the bonus is a reminder only, not added to the stat. Formulas: PROF, LVL, STR…CHA (e.g. DEX+1, 2*PROF).</span>`;
   if(stage) stage=editHint+stage;
   const src=featureSourceMeta(f);
+  const curKind=featureGroupKind(f);
+  const km=srcKindMeta(curKind);
+  // Which bucket/byline this feature files under is editable right here instead of being locked
+  // to whatever the library grant set — a hand-typed "Combat Superiority" can be told it's a
+  // Subclass feature (and named "Battle Master") so it lands in the right "By Source" section.
+  const srcRow=`
+    <div class="feature-srcrow">
+      <select data-srckind="${i}" title="Which category this feature is filed under">
+        ${FEAT_GROUP_DEFS.map(g=>`<option value="${g.key}" ${curKind===g.key?'selected':''}>${srcKindMeta(g.key).label}</option>`).join('')}
+      </select>
+      ${km.field?`<input type="text" class="feature-srcname" data-srcname="${i}" value="${esc((f.source||{})[km.field]||'')}" placeholder="${km.ph}">`:''}
+    </div>`;
   // The level input lives on every card regardless of view — editing it here is what moves a
   // card between timeline nodes in "By Level" (blank = "Along the Way"), and it's just as valid
   // to correct in "By Source" view without switching over first.
@@ -2380,13 +2418,17 @@ function featureCardEditHTML(f,i){
     <div class="feature-cap">${esc((f.title||'?').trim().charAt(0).toUpperCase()||'?')}</div>
     <div class="feature-body">
       <div class="feature-head">
-        <div class="feature-headtext">
-          ${src.byline?`<span class="feature-byline">${esc(src.byline)}</span>`:''}
-          <input type="text" class="feature-title" value="${esc(f.title)}" data-li="features.${i}.title" placeholder="Feature name (e.g. Natural Explorer)">
-        </div>
-        ${lvlIn}
-        <button class="combat-flag ${f.combat?'on':''}" data-combat="${i}" title="${f.combat?'Shown in Combat tab — tap to remove':'Tap to show in Combat tab'}">⚔</button>
+        <input type="text" class="feature-title" value="${esc(f.title)}" data-li="features.${i}.title" placeholder="Feature name (e.g. Natural Explorer)">
         <button class="del-btn" data-del="features.${i}">✕</button>
+      </div>
+      <div class="feature-meta">
+        ${srcRow}
+        <span class="feature-meta-spacer"></span>
+        <div class="feature-flags">
+          ${lvlIn}
+          <button class="combat-flag ${f.combat?'on':''}" data-combat="${i}" title="${f.combat?'Shown in Combat tab — tap to remove':'Tap to show in Combat tab'}">⚔</button>
+          <button class="combat-flag cs-flag ${f.csShow?'on':''}" data-csflag="${i}" title="${f.csShow?'Shown in the Custom Stats panel — tap to remove':'Tap to also show this feature’s text in the Custom Stats panel'}">Stats</button>
+        </div>
       </div>
       <textarea class="desc-ta" data-li="features.${i}.desc" placeholder="What it does...">${esc(f.desc)}</textarea>
       ${f.combat?`
@@ -2409,7 +2451,7 @@ function featureCardEditHTML(f,i){
       ${chips?`<div style="margin-top:6px">${chips}</div>`:''}
       ${d.t||d._pickerOpen?`
       <div class="fx-addrow" style="margin-top:6px">
-        <select data-fxtype="${i}" style="flex:0 0 230px">
+        <select data-fxtype="${i}" style="flex:1 1 160px;min-width:0;max-width:100%">
           <option value="">+ add effect…</option>
           <option value="stat" ${d.t==='stat'?'selected':''}>Stat bonus (AC, speed, HP…)</option>
           <option value="skill" ${d.t==='skill'?'selected':''}>Skill proficiency / expertise</option>
@@ -2584,6 +2626,7 @@ function ck(){
   S.cockpit=S.cockpit||{};
   const c=S.cockpit;
   c.hidden=c.hidden||[]; c.pins=c.pins||[]; c.hiddenZones=c.hiddenZones||[];
+  c.quickRef=c.quickRef||{items:false,saves:false,skills:false};
   S.customCards=S.customCards||[]; S.states=S.states||[];
   // Plan templates: named step lists for different situations (boss fight, defensive...).
   // Saves from the single-plan era get their old steps folded into a "Default" template.
@@ -3116,27 +3159,44 @@ function wireConditionsModal(){
 // an overlay: on a wide window that's empty margin outside the centered `main` column, so opening
 // it doesn't cover anything; on a narrow one it necessarily overlaps, same trade-off any edge
 // panel makes. No dimming backdrop — this isn't modal, so closing is the handle or the ✕ only.
+// Alongside formula tiles, any feature with its own "Stats" flag on (Features tab, next to the
+// ⚔ combat flag) shows up here too — its full text, not a computed number. That's the original
+// "subclass mechanics side menu" idea (e.g. Battle Master's Combat Superiority full rules text)
+// for characters who just want the reference text parked somewhere, no formula required.
+function csFeatures(){ return (S.features||[]).filter(f=>f.csShow); }
 function customStatsPanelHTML(){
-  const list=fxStatFormulas();
-  if(!list.length) return '<p class="prep-note" style="margin:0">Nothing here yet.</p>';
-  return list.map(x=>`<div class="ck-customstats-tile">
+  const formulas=fxStatFormulas(), feats=csFeatures();
+  if(!formulas.length && !feats.length) return '<p class="prep-note" style="margin:0">Nothing here yet.</p>';
+  const formulaHTML=formulas.map(x=>`<div class="ck-customstats-tile">
     <span class="ckv-l">${esc(x.label||'Custom Stat')}</span>
     <span class="ckv-big">${fmt(fxAmount(x.n))}</span>
     <p class="prep-note" style="margin:2px 0 0">${esc(String(x.n).toUpperCase())} · ${esc(x.src)}</p>
   </div>`).join('');
+  const featHTML=feats.map(f=>`<div class="ck-customstats-feat">
+    <span class="ckv-l">${esc(f.title||'Feature')}</span>
+    ${f.desc?`<p class="prep-note" style="margin:3px 0 0;white-space:pre-wrap">${esc(f.desc)}</p>`:''}
+  </div>`).join('');
+  return formulaHTML+featHTML;
 }
+// The handle itself gets the .open class too (not just the panel) — it slides along to the
+// panel's edge and stays above it in z-index, so it's still visible and clickable as the close
+// toggle instead of being covered by the now-open panel sharing its left:0 position.
 function openCustomStatsPanel(){
   $('#customStatsBody').innerHTML=customStatsPanelHTML();
   $('#customStatsPanel').classList.add('open');
+  $('#customStatsHandle').classList.add('open');
 }
-function closeCustomStatsPanel(){ $('#customStatsPanel').classList.remove('open'); }
+function closeCustomStatsPanel(){
+  $('#customStatsPanel').classList.remove('open');
+  $('#customStatsHandle').classList.remove('open');
+}
 // Combat-only (the handle is fixed to the viewport edge, outside any tab's own DOM, so it needs
 // its own visibility rule instead of just living inside the hidden Combat tab-page) and only
-// when there's actually a formula to show.
+// when there's actually a formula or a flagged feature to show.
 function updateCustomStatsHandle(){
   const h=$('#customStatsHandle'); if(!h) return;
   const onCombat=!!($('#page-combat')&&$('#page-combat').classList.contains('active'));
-  h.hidden=!onCombat||!fxStatFormulas().length;
+  h.hidden=!onCombat||(!fxStatFormulas().length&&!csFeatures().length);
 }
 function wireCustomStatsPanel(){
   const handle=$('#customStatsHandle'), panel=$('#customStatsPanel');
@@ -3147,6 +3207,86 @@ function wireCustomStatsPanel(){
     panel.classList.contains('open') ? closeCustomStatsPanel() : openCustomStatsPanel();
   });
   $('#customStatsClose').addEventListener('click',closeCustomStatsPanel);
+}
+// ----- Quick View panel (right edge) -----
+// Mirrors the Custom Stats handle+panel on the opposite edge, but its content is player-picked
+// rather than data-driven: three optional sections (Items/Saves/Skills), each toggled from the
+// panel's own header and persisted in S.cockpit.quickRef, so a player can pin whichever compact
+// reference they actually want at the table without leaving Combat or hunting through a zone
+// filter mid-fight. Items = the same "Show in Combat" equipment the item zone already uses (reuse
+// data-ckituse — it's delegated on document, so it works here with no new wiring); Saves/Skills
+// are computed fresh each render, the same formulas recalc() uses for their tab-native tiles.
+function ckQuickSavesHTML(){
+  return `<div class="ck-qr-grid">${ABILITIES.map(([k,label])=>{
+    const b=amod(k)+((S.saveProf[k]||fxSaveProf(k))?num(S.profBonus):0);
+    return `<div class="ck-qr-cell"><span class="ck-qr-l">${esc(label)}</span><span class="ck-qr-v">${fmt(b)}</span></div>`;
+  }).join('')}</div>`;
+}
+function ckQuickSkillsHTML(){
+  return `<div class="ck-qr-grid ck-qr-skills">${SKILLS.map(([k,label,ab])=>{
+    const b=amod(ab)+effSkill(k)*num(S.profBonus);
+    return `<div class="ck-qr-cell"><span class="ck-qr-l">${esc(label)}</span><span class="ck-qr-v">${fmt(b)}</span></div>`;
+  }).join('')}</div>`;
+}
+function ckQuickItemsHTML(){
+  const items=(S.equipment||[]).map((e,i)=>({e,i})).filter(x=>x.e.combat&&(x.e.name||'').trim());
+  if(!items.length) return '<p class="prep-note" style="margin:0">No items flagged "Show in Combat" yet — flag one on the Inventory tab.</p>';
+  return items.map(({e,i})=>{
+    const tracked=String(e.qty??'').trim()!=='';
+    const out=tracked&&num(e.qty)<=0;
+    return `<div class="ck-qr-item ${out?'out':''}">
+      <span class="ck-qr-item-name">${esc(e.name)}</span>
+      ${tracked?`<span class="ck-qr-item-qty">×${num(e.qty)}</span>`:''}
+      ${!out?`<button class="ck-quickuse" data-ckituse="${i}" title="Use one — no need to open the card">Use</button>`:''}
+    </div>`;
+  }).join('');
+}
+function quickRefPanelHTML(){
+  const c=ck().quickRef, secs=[];
+  if(c.items) secs.push(`<div class="ck-qr-sec"><span class="ck-qr-sec-title">Items</span>${ckQuickItemsHTML()}</div>`);
+  if(c.saves) secs.push(`<div class="ck-qr-sec"><span class="ck-qr-sec-title">Saves</span>${ckQuickSavesHTML()}</div>`);
+  if(c.skills) secs.push(`<div class="ck-qr-sec"><span class="ck-qr-sec-title">Skills</span>${ckQuickSkillsHTML()}</div>`);
+  return secs.length ? secs.join('') : '<p class="prep-note" style="margin:0">Nothing shown — tap Items, Saves, or Skills above to pin them here.</p>';
+}
+function syncQuickRefToggles(){
+  const c=ck().quickRef;
+  $$('#quickRefToggles [data-qrtoggle]').forEach(b=>b.classList.toggle('on',!!c[b.dataset.qrtoggle]));
+}
+function openQuickRefPanel(){
+  syncQuickRefToggles();
+  $('#quickRefBody').innerHTML=quickRefPanelHTML();
+  $('#quickRefPanel').classList.add('open');
+  $('#quickRefHandle').classList.add('open');
+}
+function closeQuickRefPanel(){
+  $('#quickRefPanel').classList.remove('open');
+  $('#quickRefHandle').classList.remove('open');
+}
+// Combat-only, same as the Custom Stats handle — but always shown there (not data-gated), since
+// this panel is a general-purpose utility the player opts into rather than something that only
+// makes sense once specific data exists.
+function updateQuickRefHandle(){
+  const h=$('#quickRefHandle'); if(!h) return;
+  const onCombat=!!($('#page-combat')&&$('#page-combat').classList.contains('active'));
+  h.hidden=!onCombat;
+}
+function wireQuickRefPanel(){
+  const handle=$('#quickRefHandle'), panel=$('#quickRefPanel');
+  if(!handle||!panel) return;
+  document.body.appendChild(handle);
+  document.body.appendChild(panel);
+  handle.addEventListener('click',()=>{
+    panel.classList.contains('open') ? closeQuickRefPanel() : openQuickRefPanel();
+  });
+  $('#quickRefClose').addEventListener('click',closeQuickRefPanel);
+  $('#quickRefToggles').addEventListener('click',e=>{
+    const b=e.target.closest('[data-qrtoggle]'); if(!b) return;
+    const c=ck().quickRef;
+    c[b.dataset.qrtoggle]=!c[b.dataset.qrtoggle];
+    syncQuickRefToggles();
+    $('#quickRefBody').innerHTML=quickRefPanelHTML();
+    save();
+  });
 }
 // Concentration banner, state chips, ★ reminders feed, rules drawer. Concentration/top-states/
 // full-states-list each render into every instance found (Combat's HUD + reference zone, and
@@ -3195,6 +3335,9 @@ function renderCockpitExtras(){
   updateCustomStatsHandle();
   const csPanel=$('#customStatsPanel');
   if(csPanel&&csPanel.classList.contains('open')) $('#customStatsBody').innerHTML=customStatsPanelHTML();
+  updateQuickRefHandle();
+  const qrPanel=$('#quickRefPanel');
+  if(qrPanel&&qrPanel.classList.contains('open')) $('#quickRefBody').innerHTML=quickRefPanelHTML();
   applyCombatPanelVisibility();
   const rulesBox=$('#ckRules');
   if(rulesBox && typeof RULES_DB!=='undefined'){
@@ -3855,6 +3998,34 @@ function wireFx(){
     if(f.usesUsed==null) f.usesUsed=0;
     fxRefresh();
   }));
+  // "Stats" toggle — shows this feature's own title+text as a plain tile in Combat's Custom Stats
+  // panel (alongside any {t:'statformula'} tiles), the same opt-in idiom as the ⚔ combat flag.
+  $$('[data-csflag]').forEach(el=>el.addEventListener('click',()=>{
+    const f=S.features[+el.dataset.csflag];
+    f.csShow=!f.csShow;
+    fxRefresh();
+  }));
+  // Which bucket a feature files under (Class/Subclass/Race/Background/Feat/Custom) — changing it
+  // re-renders since it can move the card to a different "By Source" section right away.
+  $$('[data-srckind]').forEach(el=>el.addEventListener('change',()=>{
+    const f=S.features[+el.dataset.srckind];
+    f.source={...(f.source||{}),kind:el.value};
+    renderFeatures(); save();
+  }));
+  // The byline text for that bucket (which class/subclass/race/background) — typed freely, no
+  // re-render on every keystroke so the input keeps focus; re-renders on blur (data-change) once
+  // typing is done, since that's what moves/renames the "By Source" section this card sits in.
+  $$('[data-srcname]').forEach(el=>{
+    const apply=()=>{
+      const f=S.features[+el.dataset.srcname];
+      const field=srcKindMeta(featureGroupKind(f)).field;
+      if(!field) return;
+      f.source={...(f.source||{})};
+      f.source[field]=el.value;
+    };
+    el.addEventListener('input',()=>{ apply(); save(); });
+    el.addEventListener('change',()=>{ apply(); renderFeatures(); save(); });
+  });
   $$('[data-uses]').forEach(el=>el.addEventListener('input',()=>{
     const f=S.features[+el.dataset.uses];
     f.usesMax=num(el.value);
@@ -7085,7 +7256,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireQuickRefPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab(lastTab());
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();
