@@ -47,7 +47,7 @@ function defaultState(){
     // Combat cockpit
     customCards:[], states:[], concentration:null,
     turnPlans:[{name:'Default',steps:[]}], turnPlanIdx:0,
-    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false,hiddenZones:[],planCollapsed:false},
+    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false,spellbookOpen:false,hiddenZones:[],planCollapsed:false},
     // Page 2
     portrait:'',
     age:'',height:'',weight:'',eyes:'',skin:'',hair:'',
@@ -151,6 +151,9 @@ function usesScaleLabel(scale){
 // {t:'savenote',ab,cond} = ★ conditional advantage-on-save reminder shown on that save's tile
 //   (Skills tab & Overview, which share the same tiles) — same idea as {t:'note'} below, but for
 //   saving throws (e.g. Rage: advantage on STR saves while raging).
+// {t:'savedc',ab,label} = a computed 8+proficiency+ability save DC, shown as its own tile in
+//   Combat's ★ Special DCs panel (e.g. a Battle Master's Maneuver DC, a Rune Knight's Rune DC) —
+//   for anything with a save DC that isn't the character's one spellcasting DC.
 // {t:'note',skills:[...],kind,cond} = ★ conditional reminder shown on each affected skill's row,
 // {t:'statnote',stat,n?,cond} = ★ conditional reminder shown next to that stat on the Overview.
 // (skills:[...] is the current format; skill:'x' — a single string — is still read for old saved data.)
@@ -192,6 +195,9 @@ function fxSkillGrant(k){
 function effSkill(k){ return Math.max(S.skills[k]||0,fxSkillGrant(k)); }
 function fxSaveProf(k){ return allFx().some(x=>x.t==='save'&&x.ab===k); }
 function fxSaveNotes(k){ return allFx().filter(x=>x.t==='savenote'&&x.ab===k); }
+function fxSaveDCs(){ return allFx().filter(x=>x.t==='savedc'); }
+// Mirrors spellDCAtk()'s formula, for a non-spell save DC (maneuvers, Ki, runes...).
+function saveDCValue(x){ return 8+num(S.profBonus)+amod(x.ab); }
 function fxNotes(k){ return allFx().filter(x=>x.t==='note'&&xSkills(x).includes(k)); }
 // Compute what a conditional reminder means in actual numbers for this skill.
 // 'dprof' (and the older 'prof' alias) is a single adaptive rule: it grants proficiency
@@ -434,6 +440,10 @@ build:`
 
 combat:`
   ${combatHudHTML()}
+  <div class="ck-cond-row" id="ckCondRow">
+    <div class="ck-states-list" id="ckStates"></div>
+    <button class="ck-tbtn" id="ckAddConditionBtn" title="Add a condition">+ Condition</button>
+  </div>
   <div class="ck-duo" id="ckDuo">
     <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
       <div id="ckUndo"></div>
@@ -467,6 +477,10 @@ combat:`
       </div>
     </div>
   </div>
+  <div class="panel ck-spellbook-panel ck-collapsible" id="ckSpellbookPanel" hidden>
+    <h2 id="ckSpellbookHead">Spellbook</h2>
+    <div class="ck-collapsible-body" id="ckSpellbook"></div>
+  </div>
   <div class="ck-pop" id="ckPop"></div>
   <div class="ck-grid">
     <div class="ck-col ck-left">
@@ -490,8 +504,8 @@ combat:`
       </div>
     </div>
     <div class="ck-col ck-center">
-      <div class="panel ck-atk-panel" id="ckAtkPanel"><h2 id="ckAtkHead">⚔ Attacks</h2>
-        <div class="ck-atk-body">
+      <div class="panel ck-atk-panel ck-collapsible" id="ckAtkPanel"><h2 id="ckAtkHead">⚔ Attacks</h2>
+        <div class="ck-atk-body ck-collapsible-body">
           <button type="button" class="atk-legend-btn" id="atkLegendBtn">ⓘ How to read this</button>
           <div class="atk-legend" id="atkLegend" hidden>
             <p><b>Hit</b> is your attack roll bonus; <b>Damage</b> is the formula you roll if it lands.</p>
@@ -523,16 +537,18 @@ combat:`
         </div>
         <div class="ov-spellslots-list" id="combatSlots"></div>
       </div>
-      <div class="panel"><h2>🏷 States</h2>
-        <div class="ck-states-list" id="ckStates"></div>
-        <div class="fx-addrow" style="margin-top:6px">
-          <input type="text" id="ckStateIn" placeholder="e.g. Raging, Hidden, Blessed" style="flex:1;min-width:0">
-          <button class="add-btn" id="ckStateAdd">+</button>
-        </div>
-        <p class="prep-note" style="margin:6px 0 0">Free-form markers for anything active on you — pure paper, no rules attached.</p>
-      </div>
+      <div class="panel" id="ckSpecialDCPanel" hidden><h2>Special DCs</h2><div id="ckSpecialDC"></div></div>
       <div class="panel" id="ckRemPanel"><h2>★ Reminders</h2><div id="ckRems"></div></div>
       <div class="panel"><h2>📖 Rules</h2><div id="ckRules"></div></div>
+    </div>
+  </div>
+  <div class="ck-cust-backdrop" id="conditionsBackdrop"></div>
+  <div class="ck-cust-drawer" id="conditionsDrawer">
+    <div class="ck-cust-head"><h2>Add a Condition</h2><button class="close-x" id="conditionsDrawerClose" type="button">✕</button></div>
+    <div class="ck-cond-grid" id="ckCondGrid"></div>
+    <div class="fx-addrow" style="margin-top:12px">
+      <input type="text" id="ckStateInDrawer" placeholder="Custom condition…" style="flex:1;min-width:0">
+      <button class="add-btn" id="ckStateAddDrawer">+</button>
     </div>
   </div>`,
 
@@ -911,6 +927,7 @@ const CHAR_PREFIX='dnd5e-binder-char-';
 let ROSTER={list:[],active:null,meta:{}};
 const charKey=id=>CHAR_PREFIX+id;
 const newCharId=()=>'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const genId=(prefix)=>(prefix||'id')+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function saveRoster(){ try{ localStorage.setItem(ROSTER_KEY,JSON.stringify(ROSTER)); }catch(e){} }
 function initRoster(){
   try{ const raw=localStorage.getItem(ROSTER_KEY); if(raw) ROSTER=Object.assign({list:[],active:null,meta:{}},JSON.parse(raw)); }
@@ -962,6 +979,19 @@ function load(){
   migrateClassSkillPicks();
   migrateRaceSkillPicks();
   migrateFeatureLevels();
+  migrateStates();
+}
+// S.states used to be a flat array of free-text strings ("Raging", "Hidden"...); it's now an
+// array of {id,name,key,dur} so conditions can carry an icon/blurb (via STATE_PRESETS) and an
+// optional round-countdown. A string entry becomes an object here, matched case-insensitively
+// against STATE_PRESETS so an old "Frightened" typed by hand quietly picks up its icon.
+function migrateStates(){
+  if(!Array.isArray(S.states)){ S.states=[]; return; }
+  S.states=S.states.map(s=>{
+    if(typeof s!=='string') return s;
+    const preset=STATE_PRESETS.find(p=>p.name.toLowerCase()===s.trim().toLowerCase());
+    return {id:genId('st'),name:s,key:preset?preset.key:'',dur:null};
+  });
 }
 // Build overrides and feature auto-granting arrived after these characters were already written.
 // A subclass typed before subclassClassId existed is adopted by the current class every load,
@@ -2190,6 +2220,7 @@ function fxChipLabel(x){
   if(x.t==='skill') return `${xSkills(x).map(s=>SKILL_NAMES[s]).join(', ')}: ${x.grant==='exp'?'Expertise':'Proficiency'}`;
   if(x.t==='save')  return `${AB_NAMES[x.ab]} save proficiency`;
   if(x.t==='savenote') return `★ ${AB_NAMES[x.ab]} save: advantage${x.cond?' ('+x.cond+')':''}`;
+  if(x.t==='savedc') return `${x.label||'Special DC'} (${AB_NAMES[x.ab]}) = 8+prof+mod`;
   if(x.t==='note'){
     const kind=x.kind==='prof'?'dprof':x.kind;
     const what=kind==='adv'?'advantage':kind==='dprof'?'proficiency boost':kind==='flat'?fmtAmount(x.n):'note';
@@ -2305,6 +2336,11 @@ function featureCardEditHTML(f,i){
     <input type="text" style="min-width:180px;flex:1" placeholder="When? e.g. while raging" value="${esc(d.text||d.cond||'')}" data-fxt="${i}">
     <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}
     <span class="prep-note" style="flex-basis:100%;margin:0">Shows as a ★ badge on that save's tile (Skills tab &amp; Overview) — a reminder only; roll with advantage yourself when the condition applies.</span>`;
+  else if(d.t==='savedc') stage=`
+    <select data-fxa="${i}">${ABILITIES.map(([v,l])=>`<option value="${v}" ${d.ab===v?'selected':''}>${l}</option>`).join('')}</select>
+    <input type="text" style="min-width:180px;flex:1" placeholder="Label, e.g. Maneuver DC" value="${esc(d.text||d.label||'')}" data-fxt="${i}">
+    <button class="add-btn" data-fxok="${i}">${addLabel}</button>${cancelBtn}
+    <span class="prep-note" style="flex-basis:100%;margin:0">Shows as its own 8+prof+mod tile in Combat's ★ Special DCs panel — for a maneuver, Ki, or rune DC that isn't your one spellcasting DC.</span>`;
   else if(d.t==='note') stage=`
     ${skillPickHTML(i,draftSkills)}
     <select data-fxk="${i}">
@@ -2367,6 +2403,7 @@ function featureCardEditHTML(f,i){
           <option value="skill" ${d.t==='skill'?'selected':''}>Skill proficiency / expertise</option>
           <option value="save" ${d.t==='save'?'selected':''}>Saving throw proficiency</option>
           <option value="savenote" ${d.t==='savenote'?'selected':''}>★ Save reminder (advantage, conditional)</option>
+          <option value="savedc" ${d.t==='savedc'?'selected':''}>Special save DC (maneuver, Ki, rune…)</option>
           <option value="note" ${d.t==='note'?'selected':''}>★ Skill reminder (conditional)</option>
           <option value="statnote" ${d.t==='statnote'?'selected':''}>★ Stat reminder (shown on Overview)</option>
         </select>
@@ -2502,6 +2539,19 @@ const CK_PILL={action:'pill-action',bonus:'pill-bonus',reaction:'pill-react',ite
 // zone can be shown/hidden independently via the rail (S.cockpit.hiddenZones) so a player who
 // only cares about spells this fight can tuck the others out of the way without losing them.
 const CK_ZONES=[['weap','⚔','Weapons'],['spell','🔮','Spells'],['feat','🎖','Features & Feats'],['item','🎒','Items & Notes']];
+// Quick-add condition presets for the condition drawer — one tap instead of typing. Text is
+// never invented here: the 15 official conditions are pulled straight from RULES_DB's own
+// "Conditions" section (data-rules.js), and the one narrative preset (Raging) reuses Rage's own
+// description text from FEATURE_LIB (data-libraries.js). No icons — bad/buff color-coding (see
+// .ck-cond-btn/.ck-cond-chip) carries the distinction instead.
+const STATE_PRESETS=(()=>{
+  const sec=RULES_DB.find(s=>s.s==='Conditions');
+  const list=(sec?sec.items:[]).map(([name,blurb])=>({key:name.toLowerCase(),name,blurb,bad:true}));
+  const rage=FEATURE_LIB.find(f=>f.n==='Rage'&&f.g==='Barbarian');
+  list.push({key:'raging',name:'Raging',blurb:rage?rage.d:'',bad:false});
+  return list;
+})();
+function statePresetFor(key){ return STATE_PRESETS.find(p=>p.key===key); }
 // New tag list for a card, or the single-value legacy field wrapped in an array if it was
 // never migrated — every card format has always stored one of these two shapes.
 function ckTypesOf(obj,legacyVal,fallback){
@@ -2515,6 +2565,8 @@ let CK_FILTER='all', CK_UNDO=null, CK_SEARCH='';
 // ordinary accordion, not the "grid card grows and shoves its neighbors down" problem this fixes.
 let CK_OPEN_KEY=null;
 const CK_RULES_OPEN=new Set();
+// Which Active Conditions chips have their rule blurb unfolded — same session-only Set pattern.
+const CK_STATE_OPEN=new Set();
 // Older saves may lack the cockpit fields entirely — normalize on every access.
 function ck(){
   S.cockpit=S.cockpit||{};
@@ -2607,6 +2659,82 @@ function ckSlotPips(L){
   return `<span class="pips ck-pips">${Array.from({length:lv.total},(_,k)=>
     `<button class="pip ${k<lv.used?'used':''}" data-ckslot="${L}.${k}"></button>`).join('')}</span>`;
 }
+// The "cast with a free slot" row — shared by the popover's full card body (ckCardOpenHTML) and
+// the dense spell table (spellZoneTableHTML) below, so casting works identically from either view.
+function ckSpellCastRowHTML(card){
+  const L=card.L, castable=[];
+  if(L>0) S.spellLevels.forEach((lv,k)=>{ if(k>=L&&lv.total>lv.used) castable.push(k); });
+  return L===0
+    ? `<span class="cf-tag">at will</span>`
+    : castable.length
+      ? `<span class="ck-castlbl">Cast with slot:</span>`+castable.map(k=>`<button class="ck-cast" data-ckcast="${card.key}:${k}">${ordinalLevel(k)}</button>`).join('')
+      : `<span class="prep-note" style="margin:0">No free slots of ${ordinalLevel(L)}+</span>`;
+}
+// Structured pieces of a spell's "what you need to know" line — same underlying data ckSubHTML's
+// 'sp' branch shows joined into one string, split apart here so the Spellbook table (below) can
+// lay them out in their own columns instead of one crowded, wrapping cell.
+function ckSpellMetaParts(card){
+  const sp=ckRef(card.key);
+  const resolve=spellRulesCallout(sp.desc).resolve;
+  const sca=spellDCAtk();
+  let resolveTxt='';
+  if(resolve) resolveTxt=`${resolve.glyph} ${esc(resolve.label)}${sca.dc!=null?' DC '+sca.dc:''}`;
+  else if(sp.dmg&&!sp.heal&&sca.atk!=null) resolveTxt=`✨ Attack ${fmt(sca.atk)}`;
+  return {
+    meta: sp.meta?esc(sp.meta):'',
+    resolve: resolveTxt,
+    dmg: sp.dmg?`${sp.heal?'✨':'🔥'} ${esc(sp.dmg)}`:'',
+  };
+}
+// A single-button cast control for the Spellbook table — one row shouldn't repeat a full
+// "Cast with slot: 1st / 2nd / 3rd..." button row (that's what made the table feel bulky and
+// inconsistent height); the table casts at the lowest free slot of the spell's own level or
+// higher, the common case. Tapping the row itself still opens the full card (ckCardOpenHTML),
+// which keeps the complete per-level slot buttons for the rarer deliberate-upcast case.
+function ckSpellTableCastHTML(card){
+  const L=card.L;
+  if(L===0) return `<span class="cf-tag">at will</span>`;
+  let castK=null;
+  S.spellLevels.forEach((lv,k)=>{ if(castK==null&&k>=L&&lv.total>lv.used) castK=k; });
+  return `${ckSlotPips(L)}${castK!=null
+    ? `<button class="ck-cast" data-ckcast="${card.key}:${castK}" title="Cast with a ${ordinalLevel(castK)}-level slot">Cast</button>`
+    : `<span class="prep-note" style="margin:0">No slots</span>`}`;
+}
+// Dense Spellbook table — every known/prepared spell at a glance (Lv, name, casting time/range/
+// duration, save DC or attack bonus, damage/healing, cast-with-slot), for players who'd rather
+// scan one table than open cards one at a time. Lives in its own panel (see renderSpellbookPanel),
+// separate from the "Do Something" card grid — this is an additional reference view, not a
+// replacement, so a spell's normal card (pin, drag into a turn plan) is still right there too.
+// Tapping a row opens the same popover a card would (same data-ckopen anchor).
+function spellZoneTableHTML(list){
+  const rows=list.map(card=>{
+    const active=CK_OPEN_KEY===card.key;
+    const lvl=card.L===0?'Cantrip':ordinalLevel(card.L);
+    const p=ckSpellMetaParts(card);
+    return `<tr class="ck-strow ${active?'ck-active':''}" data-ckopen="${card.key}">
+      <td class="ck-st-lvl">${esc(lvl)}</td>
+      <td class="ck-st-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</td>
+      <td class="ck-st-meta">${p.meta||'—'}${card.cond?`<span class="ck-rem-cond">⏱ ${esc(card.cond)}</span>`:''}</td>
+      <td class="ck-st-resolve">${p.resolve||'—'}</td>
+      <td class="ck-st-dmg">${p.dmg||'—'}</td>
+      <td class="ck-st-cast">${ckSpellTableCastHTML(card)}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="ck-spell-table-wrap"><table class="ck-spell-table">
+    <thead><tr><th>Lv</th><th>Name</th><th>Casting</th><th>Save / Atk</th><th>Effect</th><th>Cast</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+// The Spellbook panel — a standalone reference card (not nested in "Do Something"), always the
+// dense table above, hidden entirely when the character has no spells (see
+// applyCombatPanelVisibility). Independent of Do Something's own search/zone-filter/action-type
+// state — this is meant to always show every castable spell, not whatever the action grid happens
+// to be filtered to right now.
+function renderSpellbookPanel(){
+  const box=$('#ckSpellbook'); if(!box) return;
+  const spells=cockpitCards().filter(x=>x.zone==='spell').sort((a,b)=>a.L-b.L||a.name.localeCompare(b.name));
+  box.innerHTML = spells.length ? spellZoneTableHTML(spells) : '';
+}
 // stepIdx present → this open body is a turn-plan step, not the "Do Something" grid card.
 // Same weapon, two different questions: the card's tags say every economy slot it *could* fill
 // (drives where it shows up when browsing); a step's own type says what it *is*, right here, in
@@ -2643,18 +2771,11 @@ function ckCardOpenHTML(card,stepIdx){
       <p class="prep-note" style="margin:4px 0 0">Full editing (buffs, magic, dice) in the Attacks panel below.</p>${g}</div>`;
   }
   if(card.kind==='sp'){
-    const sp=ckRef(card.key), L=card.L;
-    const castable=[];
-    if(L>0) S.spellLevels.forEach((lv,k)=>{ if(k>=L&&lv.total>lv.used) castable.push(k); });
-    const castRow = L===0
-      ? `<span class="cf-tag">at will</span>`
-      : castable.length
-        ? `<span class="ck-castlbl">Cast with slot:</span>`+castable.map(k=>`<button class="ck-cast" data-ckcast="${card.key}:${k}">${ordinalLevel(k)}</button>`).join('')
-        : `<span class="prep-note" style="margin:0">No free slots of ${ordinalLevel(L)}+</span>`;
+    const sp=ckRef(card.key);
     return `<div class="ck-body">
       ${sp.desc?`<div class="ck-desc">${esc(sp.desc)}</div>`:''}
       ${card.conc?`<div class="ck-note">◉ Concentration — casting this drops anything you're already concentrating on.</div>`:''}
-      <div class="ck-castrow">${castRow}</div>${g}</div>`;
+      <div class="ck-castrow">${ckSpellCastRowHTML(card)}</div>${g}</div>`;
   }
   if(card.kind==='ft'){
     const f=ckRef(card.key);
@@ -2697,18 +2818,10 @@ function ckSubHTML(card,withRoll){
     return `Hit <b class="ck-atkhit" data-atkview="${i}">${esc(cSum.bonus)}</b> · <span class="ck-atkdmg" data-atkdmg="${i}">${esc(cSum.dmg)}</span>${roll}`;
   }
   if(card.kind==='sp'){
-    const sp=ckRef(card.key);
     // Same "what you need to know without opening the card" bar the weapon-attack branch above
-    // gives Hit/Damage — a save spell shows its DC, an attack spell shows the spell attack bonus,
-    // and any damage/healing line (sp.dmg) rides along either way. Resolve heuristic is the same
-    // one already used by the Spells-tab modal (spellRulesCallout), just surfaced here too.
-    // (The spell's level itself is shown as its own badge next to the name, not repeated here.)
-    const bits=sp.meta?[esc(sp.meta)]:[];
-    const resolve=spellRulesCallout(sp.desc).resolve;
-    const sca=spellDCAtk();
-    if(resolve) bits.push(`${resolve.glyph} ${esc(resolve.label)}${sca.dc!=null?' DC '+sca.dc:''}`);
-    else if(sp.dmg&&!sp.heal&&sca.atk!=null) bits.push(`✨ Attack ${fmt(sca.atk)}`);
-    if(sp.dmg) bits.push(`${sp.heal?'✨':'🔥'} ${esc(sp.dmg)}`);
+    // gives Hit/Damage — see ckSpellMetaParts for what each piece means.
+    const p=ckSpellMetaParts(card);
+    const bits=[p.meta,p.resolve,p.dmg].filter(Boolean);
     return bits.join(' · ')+(card.L>0?' '+ckSlotPips(card.L):'');
   }
   if(card.kind==='ft'){
@@ -2806,6 +2919,7 @@ function renderCockpitCards(){
   const st=$('#ckSpellsToggle');
   st.style.display=anyPrep?'':'none';
   st.textContent=c.showAllSpells?'Showing all spells — tap for prepared only':'Prepared spells only — tap for all';
+  renderSpellbookPanel();
   renderCockpitPlan();
   renderCkPopover();
 }
@@ -2946,6 +3060,50 @@ function renderCockpitPlan(){
   const duo=$('#ckDuo');
   if(duo) duo.classList.toggle('ck-plan-collapsed',!!ck().planCollapsed);
 }
+// The Special DCs and Spellbook panels are only worth showing when they'd have something in
+// them — everyone else's Combat tab shouldn't carry an empty card.
+function applyCombatPanelVisibility(){
+  const dc=$('#ckSpecialDCPanel'); if(dc) dc.hidden=!fxSaveDCs().length;
+  const sb=$('#ckSpellbookPanel'); if(sb) sb.hidden=!cockpitCards().some(x=>x.zone==='spell');
+}
+// The condition-picker drawer — an off-canvas grid of one-tap preset buttons (mirrors the
+// Inventory tab's item drawer, .eq-drawer, just opening from the left instead of the right).
+// Tapping a preset toggles it on/off (same data-stpreset handler as before, now living here
+// instead of inline on the page) and the drawer stays open so several can be added in one go;
+// the custom-text row underneath still covers anything not in STATE_PRESETS.
+function conditionPresetGridHTML(){
+  const activeKeys=new Set(S.states.map(s=>s.key).filter(Boolean));
+  return STATE_PRESETS.map(p=>
+    `<button class="ck-cond-btn ${p.bad?'bad':'buff'} ${activeKeys.has(p.key)?'on':''}" data-stpreset="${p.key}" title="${esc(p.blurb)}">${esc(p.name)}</button>`).join('');
+}
+function openConditionsDrawer(){
+  $('#ckCondGrid').innerHTML=conditionPresetGridHTML();
+  $('#conditionsBackdrop').classList.add('open');
+  $('#conditionsDrawer').classList.add('open');
+}
+function closeConditionsDrawer(){
+  $('#conditionsBackdrop').classList.remove('open');
+  $('#conditionsDrawer').classList.remove('open');
+}
+function wireConditionsDrawer(){
+  const backdrop=$('#conditionsBackdrop'), drawer=$('#conditionsDrawer');
+  if(!backdrop||!drawer) return;
+  // Moved to <body> for the same reason as the equipment drawer (see wireEquipmentDrawer): a
+  // fixed-position off-canvas panel can't be trusted to stay put inside a tab-switch animation.
+  document.body.appendChild(backdrop);
+  document.body.appendChild(drawer);
+  $('#ckAddConditionBtn').addEventListener('click',openConditionsDrawer);
+  $('#conditionsDrawerClose').addEventListener('click',closeConditionsDrawer);
+  backdrop.addEventListener('click',closeConditionsDrawer);
+  drawer.addEventListener('click',e=>{
+    const b=e.target.closest('[data-stpreset]'); if(!b) return;
+    const key=b.dataset.stpreset, p=statePresetFor(key);
+    const idx=S.states.findIndex(s=>s.key===key);
+    if(idx>=0) S.states.splice(idx,1); else S.states.push({id:genId('st'),name:p?p.name:key,key,dur:null});
+    $('#ckCondGrid').innerHTML=conditionPresetGridHTML();
+    renderCockpitExtras(); save();
+  });
+}
 // Concentration banner, state chips, ★ reminders feed, rules drawer. Concentration/top-states/
 // full-states-list each render into every instance found (Combat's HUD + reference zone, and
 // Overview's identity banner + states card) — same data, several homes.
@@ -2958,19 +3116,43 @@ function renderCockpitExtras(){
   $$('.ck-conc').forEach(el=>el.innerHTML=concHtml);
   const abChips=ABILITIES.filter(([k])=>tempAbilityDelta(k)).map(([k])=>
     `<span class="ck-state ${tempAbilityDelta(k)<0?'down':'up'}" title="Temporary adjustment — clear it from the Ability Scores card on Overview">${AB_ICON[k]||''} ${k.toUpperCase()} ${fmt(tempAbilityDelta(k))}</span>`);
-  const topHtml=[...abChips,...S.states.map(s=>`<span class="ck-state">${esc(s)}</span>`)].join('');
+  const topHtml=[...abChips,...S.states.map(s=>{
+    const p=s.key?statePresetFor(s.key):null;
+    const durTag=s.dur!=null?` ${s.dur}`:'';
+    return `<span class="ck-state ${p?(p.bad?'bad':'buff'):''}">${esc(s.name)}${durTag}</span>`;
+  })].join('');
   $$('.ck-topstates').forEach(el=>el.innerHTML=topHtml);
   const listHtml = S.states.length
-    ? S.states.map((s,i)=>`<span class="fx-chip">${esc(s)}<button data-stdel="${i}">✕</button></span>`).join('')
-    : '<p class="prep-note" style="margin:0">Nothing active.</p>';
+    ? S.states.map(s=>{
+        const p=s.key?statePresetFor(s.key):null;
+        const open=CK_STATE_OPEN.has(s.id);
+        const durHtml = s.dur!=null
+          ? `<span class="ck-cond-dur"><button data-stdur="${s.id}:-1" title="1 round passed">−</button><b>${s.dur}</b><button data-stdur="${s.id}:1" title="Add a round back">+</button></span>`
+          : `<button class="ck-cond-adddur" data-stdur="${s.id}:set" title="Track a round countdown">+dur</button>`;
+        return `<span class="ck-cond-chip ${p?(p.bad?'bad':'buff'):'custom'} ${s.dur===0?'expiring':''} ${open?'open':''}" data-sttoggle="${s.id}">
+          <span class="ck-cond-main">
+            <span class="ck-cond-name">${esc(s.name)}</span>
+            ${durHtml}
+            <button class="ck-cond-del" data-stdel="${s.id}" title="Remove">✕</button>
+          </span>
+          ${p&&p.blurb?`<span class="ck-cond-blurb">${esc(p.blurb)}</span>`:''}
+        </span>`;
+      }).join('')
+    : '<p class="prep-note" style="margin:0">Nothing active — tap + Add to pick a condition.</p>';
   $$('.ck-states-list').forEach(el=>el.innerHTML=listHtml);
-  const rems=allFx().filter(x=>x.t==='statnote');
+  const rems=allFx().filter(x=>x.t==='statnote'||x.t==='savenote');
   $('#ckRems').innerHTML = rems.length
     ? rems.map(r=>{
+        if(r.t==='savenote') return `<div class="ck-rem">★ ${esc(r.src)} — ${AB_NAMES[r.ab]||r.ab} save <b>advantage</b>${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
         const amt=(r.n!=null&&String(r.n).trim()!=='')?` <b>${fmt(fxAmount(r.n))}</b>`:'';
         return `<div class="ck-rem">★ ${esc(r.src)} — ${FX_STATS[r.stat]||r.stat}${amt}${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
       }).join('')
-    : '<p class="prep-note" style="margin:0">★ Stat reminders you add on the Features tab show up here and on their stat.</p>';
+    : '<p class="prep-note" style="margin:0">★ Stat and save reminders you add on the Features tab show up here too.</p>';
+  const dcs=fxSaveDCs();
+  if($('#ckSpecialDC')) $('#ckSpecialDC').innerHTML=dcs.map(x=>
+    `<div class="ckv ckv-sec"><span class="ckv-l">${esc(x.label||'Special DC')}</span><span class="ckv-big">${saveDCValue(x)}</span><span class="prep-note" style="margin:2px 0 0">${AB_NAMES[x.ab]||x.ab} · ${esc(x.src)}</span></div>`
+  ).join('');
+  applyCombatPanelVisibility();
   const rulesBox=$('#ckRules');
   if(rulesBox && typeof RULES_DB!=='undefined'){
     rulesBox.innerHTML=RULES_DB.map((sec,si)=>{
@@ -3095,7 +3277,20 @@ function wireCombatFeatures(){
       renderCockpitExtras(); return; }
     if(t.closest('[data-ckconcdrop]')){ S.concentration=null; renderCockpitExtras(); save(); return; }
     const sdel=t.closest('[data-stdel]');
-    if(sdel){ S.states.splice(+sdel.dataset.stdel,1); renderCockpitExtras(); save(); return; }
+    if(sdel){
+      const idx=S.states.findIndex(s=>s.id===sdel.dataset.stdel);
+      if(idx>=0) S.states.splice(idx,1);
+      renderCockpitExtras(); save(); return; }
+    const sdur=t.closest('[data-stdur]');
+    if(sdur){
+      const [id,op]=sdur.dataset.stdur.split(':'); const st=S.states.find(s=>s.id===id); if(!st) return;
+      if(op==='set') st.dur=3; else st.dur=Math.max(0,num(st.dur)+ +op);
+      renderCockpitExtras(); save(); return; }
+    const stoggle=t.closest('[data-sttoggle]');
+    if(stoggle){
+      const id=stoggle.dataset.sttoggle;
+      CK_STATE_OPEN.has(id)?CK_STATE_OPEN.delete(id):CK_STATE_OPEN.add(id);
+      renderCockpitExtras(); return; }
     if(t.closest('[data-ckpopclose]')){ closeCkPop(); return; }
     // Card tap opens its detail popover — but not when the tap landed on a control already
     // handled above, or inside the popover itself (accidental scroll-taps on a tablet shouldn't
@@ -3160,12 +3355,15 @@ function wireCombatFeatures(){
     const inp=$(inId), btn=$(btnId); if(!inp||!btn) return;
     btn.addEventListener('click',()=>{
       const v=inp.value.trim(); if(!v) return;
-      ck(); S.states.push(v); inp.value='';
+      ck();
+      const preset=STATE_PRESETS.find(p=>p.name.toLowerCase()===v.toLowerCase());
+      S.states.push({id:genId('st'),name:v,key:preset?preset.key:'',dur:null});
+      inp.value='';
       renderCockpitExtras(); save();
     });
     inp.addEventListener('keydown',e=>{ if(e.key==='Enter') btn.click(); });
   };
-  wireStateAdd('#ckStateIn','#ckStateAdd');
+  wireStateAdd('#ckStateInDrawer','#ckStateAddDrawer');
   wireStateAdd('#ovStateIn','#ovStateAdd');
   // Death saves stay out of sight while you're up; the header is always tappable to peek.
   $('#ckDeathHead').addEventListener('click',()=>{
@@ -3176,6 +3374,13 @@ function wireCombatFeatures(){
     $('#ckAtkPanel').classList.toggle('open',ck().atkOpen);
   });
   $('#ckAtkPanel').classList.toggle('open',!!ck().atkOpen);
+  // Same collapsed-by-default pattern as Attacks — a caster opens it when they actually want the
+  // dense reference, instead of it always eating a full card's worth of space.
+  $('#ckSpellbookHead').addEventListener('click',()=>{
+    ck().spellbookOpen=!ck().spellbookOpen;
+    $('#ckSpellbookPanel').classList.toggle('open',ck().spellbookOpen);
+  });
+  $('#ckSpellbookPanel').classList.toggle('open',!!ck().spellbookOpen);
 }
 
 // Free-text filter over the "Do Something" grid — same live-search pattern as the equipment
@@ -3647,7 +3852,7 @@ function wireFx(){
   }));
   $$('[data-fxa]').forEach(s=>s.addEventListener('change',()=>{
     const d=FX_DRAFT[+s.dataset.fxa];
-    if(d.t==='stat'||d.t==='statnote') d.stat=s.value; else if(d.t==='save'||d.t==='savenote') d.ab=s.value;
+    if(d.t==='stat'||d.t==='statnote') d.stat=s.value; else if(d.t==='save'||d.t==='savenote'||d.t==='savedc') d.ab=s.value;
   }));
   // multi-skill picker (used by 'skill' and 'note' effect types) — tappable chips, not checkboxes.
   // Delegated per-picker so it survives re-renders triggered by other controls (e.g. the kind select).
@@ -3699,6 +3904,7 @@ function wireFx(){
     }
     if(d.t==='save'){x.ab=d.ab;}
     if(d.t==='savenote'){x.ab=d.ab;x.cond=d.text||'';}
+    if(d.t==='savedc'){x.ab=d.ab;x.label=d.text||'Special DC';}
     if(d.t==='note'){
       const sk=xSkills(d); if(!sk.length) return;
       x.skills=sk;x.kind=(d.kind==='prof'?'dprof':d.kind)||'dprof';x.cond=d.text||'';if(d.kind==='flat')x.n=rawN(d.n)||0;
@@ -6832,7 +7038,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsDrawer(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
 showTab(lastTab());
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

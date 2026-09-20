@@ -1231,11 +1231,96 @@ label.fld span{
 .ck-state{border:1px solid rgba(111,208,196,.45);color:#6fd0c4;border-radius:999px;padding:1px 9px;font-size:.72rem}
 .ck-state.down{border-color:rgba(224,117,102,.5);color:var(--red)}
 .ck-state.up{border-color:rgba(111,158,99,.5);color:var(--green)}
+.ck-state.bad{border-color:rgba(224,117,102,.5);color:var(--red)}
+.ck-state.buff{border-color:rgba(201,162,39,.5);color:var(--gold-lt)}
 /* reminders + rules */
 .ck-rem{color:var(--gold-lt);font-size:.8rem;padding:4px 0;border-bottom:1px solid var(--border)}
 .ck-rem:last-child{border-bottom:none}
 .ck-rem b{color:var(--text)}
 .ck-rem-cond{display:block;color:var(--muted);font-size:.74rem;font-style:italic}
+
+/* ===== Active conditions — a slim inline row, not a bordered panel: just the chip list (when
+   there's anything active) and a small trigger for the condition-picker drawer. ===== */
+.ck-cond-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+.ck-states-list{display:flex;flex-wrap:wrap;gap:8px}
+.ck-cond-chip{
+  display:flex;flex-direction:column;background:var(--panel3);border:1px solid var(--border-lt);
+  border-radius:10px;padding:6px 4px 6px 10px;max-width:100%;cursor:pointer;
+  transition:border-color .15s ease,background .15s ease;
+}
+.ck-cond-chip.bad{border-color:rgba(192,80,70,.5)}
+.ck-cond-chip.buff{border-color:rgba(201,162,39,.5)}
+.ck-cond-chip.expiring{border-color:var(--red);animation:ckCondPulse 1.4s ease-in-out infinite}
+@keyframes ckCondPulse{0%,100%{box-shadow:0 0 0 rgba(192,80,70,0)}50%{box-shadow:0 0 10px rgba(192,80,70,.55)}}
+.ck-cond-main{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+.ck-cond-name{font-weight:600;font-size:.88rem;color:var(--text);white-space:nowrap}
+.ck-cond-chip.bad .ck-cond-name{color:#e08a80}
+.ck-cond-chip.buff .ck-cond-name{color:var(--gold-lt)}
+.ck-cond-dur{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:.78rem}
+.ck-cond-dur button{
+  width:20px;height:20px;border-radius:50%;border:1px solid var(--border-lt);background:transparent;
+  color:var(--muted);cursor:pointer;font-size:.85rem;line-height:1;padding:0;
+}
+.ck-cond-dur button:hover{border-color:var(--gold);color:var(--gold-lt)}
+.ck-cond-dur b{color:var(--text);min-width:1ch;text-align:center}
+.ck-cond-adddur{background:transparent;border:1px solid var(--border-lt);border-radius:999px;color:var(--faint);cursor:pointer;font-size:.68rem;padding:1px 7px}
+.ck-cond-adddur:hover{color:var(--gold-lt);border-color:var(--gold-dim)}
+.ck-cond-del{background:transparent;border:none;color:var(--faint);cursor:pointer;font-size:.85rem;padding:0 2px;margin-left:2px}
+.ck-cond-del:hover{color:var(--red)}
+.ck-cond-blurb{
+  max-height:0;overflow:hidden;opacity:0;color:var(--muted);font-size:.76rem;font-style:italic;
+  line-height:1.35;transition:max-height .22s ease,opacity .18s ease,margin-top .22s ease;margin-top:0;max-width:260px;
+}
+.ck-cond-chip.open .ck-cond-blurb{max-height:120px;opacity:1;margin-top:5px}
+
+/* ===== Spellbook — its own standalone reference card, not nested inside Do Something. Same
+   "lit stage" panel treatment as .ck-duo/.ck-states-strip, since it's a primary tool for a
+   caster, not background reference material. ===== */
+.ck-spellbook-panel{margin-bottom:10px;border-top:2px solid var(--gold-dim);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(201,162,39,.08)}
+.ck-spellbook-panel h2{color:var(--gold-lt);font-size:1rem;letter-spacing:2.5px}
+.ck-spell-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:9px}
+.ck-spell-table{width:100%;border-collapse:collapse;font-size:.84rem}
+.ck-spell-table thead{background:var(--panel2)}
+.ck-spell-table th{
+  text-align:left;color:var(--muted);font-family:'Cinzel',serif;font-size:.66rem;
+  letter-spacing:1px;text-transform:uppercase;padding:7px 12px;border-bottom:1px solid var(--gold-dim);white-space:nowrap;
+}
+.ck-strow{cursor:pointer;transition:background .15s ease}
+.ck-strow:nth-child(even){background:rgba(255,255,255,.015)}
+.ck-strow:hover,.ck-strow.ck-active{background:var(--panel2)}
+.ck-strow td{padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:middle;line-height:1.3}
+.ck-strow:last-child td{border-bottom:none}
+.ck-st-lvl{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:.74rem;white-space:nowrap}
+.ck-st-name{font-weight:600;color:var(--text);white-space:nowrap}
+.ck-st-meta,.ck-st-resolve,.ck-st-dmg{color:var(--muted);white-space:nowrap}
+.ck-st-cast{white-space:nowrap;display:flex;align-items:center;gap:8px}
+.ck-st-cast .ck-cast{margin:0}
+
+/* ===== 🏷 Add a Condition drawer — left-side mirror of .eq-drawer/.eq-backdrop above. Same
+   panel the ☰ Customize drawer used to be; repurposed as one-tap condition presets instead of a
+   panel-visibility checklist, tucked away rather than permanently taking up page space. ===== */
+.ck-cust-backdrop{position:fixed;inset:0;background:rgba(6,4,2,.6);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:55}
+.ck-cust-backdrop.open{opacity:1;pointer-events:auto}
+.ck-cust-drawer{
+  position:fixed;z-index:56;background:var(--panel);border:1px solid var(--gold-dim);
+  box-shadow:16px 0 40px rgba(0,0,0,.5);display:flex;flex-direction:column;
+  transition:transform .25s cubic-bezier(.2,.8,.2,1);
+  left:0;top:0;bottom:0;width:min(340px,88vw);border-width:0 1px 0 0;transform:translateX(-100%);
+  padding:18px;overflow-y:auto;
+}
+.ck-cust-drawer.open{transform:translateX(0)}
+.ck-cust-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ck-cust-head h2{font-size:.95rem;color:var(--gold-lt);letter-spacing:1px;text-transform:uppercase;font-family:'Cinzel',serif}
+.ck-cond-grid{display:flex;flex-direction:column;gap:6px}
+.ck-cond-btn{
+  display:flex;align-items:center;gap:8px;background:var(--panel3);border:1px solid var(--border-lt);
+  border-radius:8px;color:var(--muted);font-size:.88rem;padding:9px 12px;cursor:pointer;text-align:left;
+  transition:border-color .15s ease,color .15s ease,background .15s ease;
+}
+.ck-cond-btn:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
+.ck-cond-btn.on.bad{border-color:var(--red);color:#e08a80;background:rgba(192,80,70,.12)}
+.ck-cond-btn.on.buff{border-color:var(--gold);color:var(--gold-lt);background:rgba(201,162,39,.12)}
+@media(max-width:700px){.ck-cust-drawer{width:auto;right:0}}
 .ck-rsec-head{
   display:block;width:100%;text-align:left;background:transparent;border:none;
   color:var(--muted);font-size:.84rem;padding:7px 0;cursor:pointer;border-bottom:1px solid var(--border);
@@ -1244,8 +1329,9 @@ label.fld span{
 .ck-rsec-body{padding:4px 0 8px}
 .ck-rule{color:var(--muted);font-size:.78rem;line-height:1.45;padding:3px 0}
 .ck-rule b{color:var(--text)}
-/* collapsible panels: death saves + attack editor */
-.ck-death #ckDeathHead,.ck-atk-panel #ckAtkHead{cursor:pointer}
+/* Death Saves: a different collapse mechanism from .ck-collapsible below — defaults open, and
+   auto-hides while healthy rather than being a manual show/hide the player toggles at will. */
+.ck-death #ckDeathHead{cursor:pointer}
 .ck-death.ck-collapsed .ck-death-body{display:none}
 .ck-death.ck-collapsed h2::after{content:' — hidden while you\'re up (tap to peek)';color:var(--faint);font-size:.7rem;letter-spacing:0;text-transform:none}
 .ck-death.ck-down{border-color:var(--red);box-shadow:0 0 12px rgba(224,75,74,.25)}
@@ -1266,13 +1352,18 @@ label.fld span{
 .atk-note::placeholder{color:var(--faint)}
 .atk-note:hover{border-bottom-color:var(--border-lt)}
 .atk-note:focus{border-bottom-color:var(--gold);outline:none;background:var(--ink);border-radius:4px;color:var(--text)}
-.ck-atk-panel .ck-atk-body{display:none}
-.ck-atk-panel.open .ck-atk-body{display:block}
+/* Shared collapse mechanism — closed by default, header click reveals the body. Used by Attacks
+   and Spellbook so neither eats a full card's worth of space until it's actually wanted. */
+.ck-collapsible h2{cursor:pointer}
+.ck-collapsible .ck-collapsible-body{display:none}
+.ck-collapsible.open .ck-collapsible-body{display:block}
 /* Collapsed = one slim line, not a full panel header */
-.ck-atk-panel:not(.open){padding:7px 14px}
-.ck-atk-panel:not(.open) h2{margin:0;padding:0;border:none;font-size:.8rem;letter-spacing:1.5px}
-.ck-atk-panel:not(.open) h2::after{content:'  ▸ edit';color:var(--faint);font-size:.7rem;letter-spacing:.5px;text-transform:none}
-.ck-atk-panel.open h2::after{content:'  ▾';color:var(--faint)}
+.ck-collapsible:not(.open){padding:7px 14px}
+.ck-collapsible:not(.open) h2{margin:0;padding:0;border:none;font-size:.8rem;letter-spacing:1.5px}
+.ck-collapsible:not(.open) h2::after{content:'  ▸ show';color:var(--faint);font-size:.7rem;letter-spacing:.5px;text-transform:none}
+.ck-collapsible.open h2::after{content:'  ▾';color:var(--faint)}
+.ck-atk-panel:not(.open) h2::after{content:'  ▸ edit'}
+.ck-spellbook-panel:not(.open) h2::after{content:'  ▸ view'}
 /* Live "= N" preview beside the effect-amount formula field */
 .fx-amt-hint{color:var(--green);font-size:.8rem;font-weight:600;white-space:nowrap}
 .fx-addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
