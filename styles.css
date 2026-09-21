@@ -984,6 +984,23 @@ label.fld span{
 .ck-cards{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px;
 }
+/* Spell cards carry more text per card (casting meta, save/attack + damage, slot pips) than a
+   weapon or item card — give the spell zone extra column width so that text has room to sit on
+   its own line instead of wrapping into a cramped stack. */
+.ck-zone-spell .ck-cards{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+/* Level sub-headers inside the spell zone (see ckSpellLevelGroupsHTML) — same tier accent colors
+   as the Spells tab's own chapter headers (.spell-level.tierN), just a slim inline label instead
+   of a full ornate chapter card, since Combat's grid is already the denser, busier screen. */
+.ck-spell-lvlgroup{margin-bottom:10px}
+.ck-spell-lvlgroup:last-child{margin-bottom:0}
+.ck-spell-lvlhead{
+  color:var(--accent,var(--muted));font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:2px;
+  text-transform:uppercase;margin-bottom:6px;padding-left:8px;border-left:3px solid var(--accent,var(--border-lt));
+}
+.ck-spell-lvlgroup.tier0{--accent:#8b98ab}
+.ck-spell-lvlgroup.tier1{--accent:#5aa9e0}
+.ck-spell-lvlgroup.tier2{--accent:#a58ce0}
+.ck-spell-lvlgroup.tier3{--accent:#c9a227}
 /* Every card carries a lit left spine in its action-type color — the same color language as
    the filter pills and turn-plan steps, so the grid is scannable by color alone: green =
    action, gold = bonus, teal = item, blue = other. No need to read every label to find
@@ -1003,7 +1020,7 @@ label.fld span{
 /* Spells carry a second, independent signal — a violet wash on top of whichever action-type
    spine color they already have — so Fireball (green spine, it's an Action) still visibly reads
    as a spell at a glance instead of looking identical to a weapon attack. */
-.ck-card.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.22),var(--panel3) 70%)}
+.ck-card.ck-card-spell{background:linear-gradient(165deg,rgba(165,140,224,.22),var(--panel3) 70%);padding:10px 12px}
 /* Feats carry the same kind of second signal as spells above — a rose wash over whatever
    action-type spine color they already have — so a feat with an Action tag (green spine) still
    visibly reads as a feat, distinct from the violet spell wash. */
@@ -1044,11 +1061,33 @@ label.fld span{
    own flex-wrap:wrap line, this pair either fits or wraps to the next line together; it can never
    split with the badge stranded on its own below the formula. */
 .ck-atkdmg-wrap{display:inline-flex;align-items:center;gap:5px}
+/* Spell sub-line, headline-first: the resolve (save DC/attack bonus, split from damage/healing
+   the same gold/red pattern as Hit/Damage above) is the number a caster needs mid-turn, so it
+   leads on its own bolded row, sized up from the rest of the sub-line to actually read as a
+   headline. Range/an unusual cast time (see ckSpellMetaParts) trail as a small muted caption on
+   the row under it — present for the tactical "can I even reach it" question, but never fighting
+   the headline for attention. Casting time/duration/components/school/ritual are deliberately
+   left off the card face entirely — full depth lives in the tap-open popover instead. */
+.ck-spell-resolve{flex:1 1 100%;font-size:.92rem;font-weight:700}
+.ck-spell-savatk{color:var(--gold-lt)}
+.ck-spell-dmg{color:var(--red)}
+.ck-spell-dmg.heal{color:var(--green)}
+/* Icons sit inline with their text here (plain spans, not a flex row with its own gap like
+   .spell-resolve/.spell-damage/.sc-effect get elsewhere), so they need their own margin. */
+.ck-spell-savatk .gi,.ck-spell-dmg .gi{margin-right:4px}
+.ck-spell-cap{flex:1 1 100%;color:var(--muted);font-size:.74rem}
 .ck-card-cond{color:#e8c25b;font-size:.76rem;margin-top:3px;font-style:italic}
 .ck-pips{display:inline-flex;gap:3px;vertical-align:middle}
 /* Unfolding a card breathes instead of snapping */
 @keyframes ckUnfold{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .ck-body{margin-top:8px;border-top:1px solid var(--border);padding-top:8px;cursor:default;animation:ckUnfold .18s ease-out}
+/* A spell card's popover reuses the Spells tab's own stat-strip/pills/resolve/damage/SRD-fact
+   components (see ckCardOpenHTML) for full parity instead of a second, thinner spell-detail
+   layout — but those carry a 30px left indent tuned to sit under the Spells tab row's prep-dot,
+   which this popover doesn't have. Same fix as .spell-modal-body's own override for the same
+   components in the bigger modal. */
+.ck-body .spell-stats{margin-left:0}
+.ck-body .spell-pills,.ck-body .spell-resolve,.ck-body .spell-damage{margin-left:0}
 /* A card's detail floats beside it instead of expanding the grid in place — same .ck-body
    content every card has always had (cast-with-slot buttons, condition field, pin, feature-use
    pips, custom-card editing), just relocated into a small anchored panel. Re-tapping the card,
@@ -1288,29 +1327,6 @@ label.fld span{
 }
 .ck-cond-chip.open .ck-cond-blurb{max-height:120px;opacity:1;margin-top:5px}
 
-/* ===== Spellbook — its own standalone reference card, not nested inside Do Something. Same
-   "lit stage" panel treatment as .ck-duo/.ck-states-strip, since it's a primary tool for a
-   caster, not background reference material. ===== */
-.ck-spellbook-panel{margin-bottom:10px;border-top:2px solid var(--gold-dim);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(201,162,39,.08)}
-.ck-spellbook-panel h2{color:var(--gold-lt);font-size:1rem;letter-spacing:2.5px}
-.ck-spell-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:9px}
-.ck-spell-table{width:100%;border-collapse:collapse;font-size:.84rem}
-.ck-spell-table thead{background:var(--panel2)}
-.ck-spell-table th{
-  text-align:left;color:var(--muted);font-family:'Cinzel',serif;font-size:.66rem;
-  letter-spacing:1px;text-transform:uppercase;padding:7px 12px;border-bottom:1px solid var(--gold-dim);white-space:nowrap;
-}
-.ck-strow{cursor:pointer;transition:background .15s ease}
-.ck-strow:nth-child(even){background:rgba(255,255,255,.015)}
-.ck-strow:hover,.ck-strow.ck-active{background:var(--panel2)}
-.ck-strow td{padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:middle;line-height:1.3}
-.ck-strow:last-child td{border-bottom:none}
-.ck-st-lvl{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:.74rem;white-space:nowrap}
-.ck-st-name{font-weight:600;color:var(--text);white-space:nowrap}
-.ck-st-meta,.ck-st-resolve,.ck-st-dmg{color:var(--muted);white-space:nowrap}
-.ck-st-cast{white-space:nowrap;display:flex;align-items:center;gap:8px}
-.ck-st-cast .ck-cast{margin:0}
-
 /* ===== Add a Condition — a small centered modal (.modal-bg/.modal, same idiom as the weapon
    picker) with one-tap preset buttons. ===== */
 .modal.cond-modal{max-width:400px}
@@ -1502,7 +1518,7 @@ label.fld span{
 .atk-note:hover{border-bottom-color:var(--border-lt)}
 .atk-note:focus{border-bottom-color:var(--gold);outline:none;background:var(--ink);border-radius:4px;color:var(--text)}
 /* Shared collapse mechanism — closed by default, header click reveals the body. Used by Attacks
-   and Spellbook so neither eats a full card's worth of space until it's actually wanted. */
+   so it doesn't eat a full card's worth of space until it's actually wanted. */
 .ck-collapsible h2{cursor:pointer}
 .ck-collapsible .ck-collapsible-body{display:none}
 .ck-collapsible.open .ck-collapsible-body{display:block}
@@ -1512,7 +1528,6 @@ label.fld span{
 .ck-collapsible:not(.open) h2::after{content:'  ▸ show';color:var(--faint);font-size:.7rem;letter-spacing:.5px;text-transform:none}
 .ck-collapsible.open h2::after{content:'  ▾';color:var(--faint)}
 .ck-atk-panel:not(.open) h2::after{content:'  ▸ edit'}
-.ck-spellbook-panel:not(.open) h2::after{content:'  ▸ view'}
 /* Live "= N" preview beside the effect-amount formula field */
 .fx-amt-hint{color:var(--green);font-size:.8rem;font-weight:600;white-space:nowrap}
 .fx-addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;min-width:0;max-width:100%}
@@ -2596,15 +2611,21 @@ select.sc-input{-webkit-appearance:none;appearance:none;cursor:pointer}
 }
 .tagbtn:hover{opacity:.8}
 .tagbtn.on{opacity:1;background:rgba(0,0,0,.25)}
-/* Damage/healing — a real editable field (not just derived from the description), plus a toggle
-   for which color/icon it renders with in the locked view. */
-.dmg-edit{display:flex;align-items:center;gap:8px;margin:7px 0 0 30px}
-.heal-toggle{
-  flex-shrink:0;width:26px;height:26px;border-radius:50%;cursor:pointer;
-  background:var(--panel3);border:1px solid var(--border-lt);font-size:.85rem;
+/* Damage/healing — a real editable field (not just derived from the description), plus a picker
+   for which of the 13 damage types (or Healing) it renders with in the locked view. Every button
+   is always visible rather than a single cycling toggle — a caster with several spells of
+   different types can see and set each one's icon without stepping through the others first. */
+.dmg-type-picker{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0 0 30px}
+.dmg-type-btn{
+  flex-shrink:0;width:32px;height:32px;border-radius:8px;cursor:pointer;color:var(--faint);
+  background:var(--panel3);border:1px solid var(--border-lt);
   display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;
+  transition:color .12s ease,border-color .12s ease,background .12s ease;
 }
-.heal-toggle.on{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset}
+.dmg-type-btn .gi{width:17px;height:17px}
+.dmg-type-btn:hover{color:var(--muted)}
+.dmg-type-btn.on{color:var(--dmg-c);border-color:var(--dmg-c);background:color-mix(in srgb,var(--dmg-c) 16%,var(--panel3))}
+.dmg-edit{display:flex;align-items:center;gap:8px;margin:7px 0 0 30px}
 .dmg-input{
   flex:1;min-width:0;background:transparent;border:1px solid transparent;border-bottom:1px dashed transparent;
   color:var(--text);font-family:'Cinzel',serif;font-size:.78rem;font-weight:600;padding:4px 5px;border-radius:0;

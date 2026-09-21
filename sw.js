@@ -32,6 +32,22 @@ const ASSETS = [
   './icons/glyphs/ab-int.svg',
   './icons/glyphs/ab-wis.svg',
   './icons/glyphs/ab-cha.svg',
+  './icons/glyphs/dmg-acid.svg',
+  './icons/glyphs/dmg-bludgeoning.svg',
+  './icons/glyphs/dmg-cold.svg',
+  './icons/glyphs/dmg-fire.svg',
+  './icons/glyphs/dmg-force.svg',
+  './icons/glyphs/dmg-heal.svg',
+  './icons/glyphs/dmg-lightning.svg',
+  './icons/glyphs/dmg-necrotic.svg',
+  './icons/glyphs/dmg-piercing.svg',
+  './icons/glyphs/dmg-poison.svg',
+  './icons/glyphs/dmg-psychic.svg',
+  './icons/glyphs/dmg-radiant.svg',
+  './icons/glyphs/dmg-slashing.svg',
+  './icons/glyphs/dmg-thunder.svg',
+  './icons/glyphs/sp-save.svg',
+  './icons/glyphs/sp-attack.svg',
 ];
 
 self.addEventListener('install', (event) => {

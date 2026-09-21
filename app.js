@@ -47,7 +47,7 @@ function defaultState(){
     // Combat cockpit
     customCards:[], states:[], concentration:null,
     turnPlans:[{name:'Default',steps:[]}], turnPlanIdx:0,
-    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false,spellbookOpen:false,hiddenZones:[],planCollapsed:false,quickRef:{items:false,attacks:false,saves:false,skills:false}},
+    cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false,hiddenZones:[],planCollapsed:false,quickRef:{items:false,attacks:false,saves:false,skills:false}},
     // Page 2
     portrait:'',
     age:'',height:'',weight:'',eyes:'',skin:'',hair:'',
@@ -475,10 +475,6 @@ combat:`
         <div class="ck-plan" id="ckPlan"></div>
       </div>
     </div>
-  </div>
-  <div class="panel ck-spellbook-panel ck-collapsible" id="ckSpellbookPanel" hidden>
-    <h2 id="ckSpellbookHead">Spellbook</h2>
-    <div class="ck-collapsible-body" id="ckSpellbook"></div>
   </div>
   <div class="ck-pop" id="ckPop"></div>
   <div class="ck-grid">
@@ -1234,6 +1230,38 @@ const AB_COLOR={str:'#e0705a',dex:'#7dc26a',con:'#e0ab4a',int:'#5aa9e0',wis:'#a5
 function giHTML(file,extraCls,color){
   if(!file) return '';
   return `<i class="gi${extraCls?` ${extraCls}`:''}" style="--gi-url:url('icons/glyphs/${file}')${color?`;color:${color}`:''}"></i>`;
+}
+// Spell damage/healing icon set — same tintable glyph system as AB_ICON/CLASS_ICON above, standing
+// in for what used to be a single 🔥/✨ emoji pair on the heal-toggle. Reuses the same 13 damage
+// types and colors the Attacks tab's damage-buff pills already use (DMG_TYPES/DMG_COLOR, defined
+// in data-equipment.js — "fire glows orange" means the same thing everywhere in the app now)
+// rather than a second, differently-tinted palette, plus Healing as its own 14th icon on top.
+// Picked explicitly per spell (see the dmg-type-picker in spellRowEdit) rather than only inferred,
+// so a spell whose free-text damage line doesn't happen to name its type in words still gets one.
+const SPELL_DMG_TYPES=[...DMG_TYPES.filter(([v])=>v).map(([v,l])=>[v,l,DMG_COLOR[v]]),['heal','Healing','#7fd6a4']];
+const SPELL_DMG_ICON=Object.fromEntries(SPELL_DMG_TYPES.map(([k])=>[k,`dmg-${k}.svg`]));
+const SPELL_DMG_COLOR=Object.fromEntries(SPELL_DMG_TYPES.map(([k,,c])=>[k,c]));
+// Same 13 damage-type words the free-text damage auto-fill (spellRulesCallout in data-spells.js)
+// already scans for — used only to backfill dmgType the first time an older/hand-typed spell
+// renders (see renderSpellLevels); from then on dmgType is fully player-owned via the icon picker.
+const SPELL_DMG_TYPE_RE=/\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\b/i;
+function spellDmgTypeFromLabel(label){
+  const m=(label||'').match(SPELL_DMG_TYPE_RE);
+  return m?m[1].toLowerCase():'';
+}
+// The icon for a spell's damage/heal line. Healing always wins over any damage-type word that
+// might also appear in the text (e.g. a spell that both heals and mentions "fire" in flavor text);
+// otherwise falls back to Force's burst glyph for "this does damage, but no type is set yet"
+// rather than rendering nothing.
+function dmgIconHTML(sp){
+  if(!sp.dmg) return '';
+  const type=sp.dmgType||'force';
+  return giHTML(SPELL_DMG_ICON[type]||SPELL_DMG_ICON.force,'ck-dmgicon',SPELL_DMG_COLOR[type]);
+}
+// Save-throw / attack-roll icons for a spell's resolve line — see ckSpellMetaParts, ckCardOpenHTML
+// and spellModalHTML, all of which used to prefix this line with a 🛡/✨ emoji.
+function resolveIconHTML(kind){
+  return giHTML(kind==='attack'?'sp-attack.svg':'sp-save.svg','ck-resicon');
 }
 function renderAbilityCards(){
   $('#abilityCards').innerHTML = ABILITIES.map(([k,label])=>`
@@ -2814,8 +2842,7 @@ function ckSlotPips(L){
   return `<span class="pips ck-pips">${Array.from({length:lv.total},(_,k)=>
     `<button class="pip ${k<lv.used?'used':''}" data-ckslot="${L}.${k}"></button>`).join('')}</span>`;
 }
-// The "cast with a free slot" row — shared by the popover's full card body (ckCardOpenHTML) and
-// the dense spell table (spellZoneTableHTML) below, so casting works identically from either view.
+// The "cast with a free slot" row — used by the popover's full card body (ckCardOpenHTML).
 function ckSpellCastRowHTML(card){
   const L=card.L, castable=[];
   if(L>0) S.spellLevels.forEach((lv,k)=>{ if(k>=L&&lv.total>lv.used) castable.push(k); });
@@ -2825,70 +2852,30 @@ function ckSpellCastRowHTML(card){
       ? `<span class="ck-castlbl">Cast with slot:</span>`+castable.map(k=>`<button class="ck-cast" data-ckcast="${card.key}:${k}">${ordinalLevel(k)}</button>`).join('')
       : `<span class="prep-note" style="margin:0">No free slots of ${ordinalLevel(L)}+</span>`;
 }
-// Structured pieces of a spell's "what you need to know" line — same underlying data ckSubHTML's
-// 'sp' branch shows joined into one string, split apart here so the Spellbook table (below) can
-// lay them out in their own columns instead of one crowded, wrapping cell.
+// Structured pieces of a spell's "what you need to know" line — used by ckSubHTML's 'sp' branch.
+// Deliberately narrow: standard spell-card fields (name/level/school/casting time/range/duration/
+// components) are all in the tap-open popover (see ckCardOpenHTML) at full depth, but a card face
+// glanced at mid-turn only needs the two things that actually drive "do I cast this right now" —
+// can I resolve it (save DC / attack bonus) and what does it do (damage/healing) — so those are
+// the only pieces bolded. Casting time is dropped entirely (Action/Bonus/Reaction is already the
+// card's own economy pill) unless it's something that pill can't say, like "1 Minute", which can
+// block using this on a normal turn at all; range stays since it's a real targeting decision.
 function ckSpellMetaParts(card){
   const sp=ckRef(card.key);
+  const [t,rg]=splitMeta(sp.meta);
   const resolve=spellRulesCallout(sp.desc).resolve;
   const sca=spellDCAtk();
-  let resolveTxt='';
-  if(resolve) resolveTxt=`${resolve.glyph} ${esc(resolve.label)}${sca.dc!=null?' DC '+sca.dc:''}`;
-  else if(sp.dmg&&!sp.heal&&sca.atk!=null) resolveTxt=`✨ Attack ${fmt(sca.atk)}`;
+  let resolveTxt='',resolveIcon='';
+  if(resolve){ resolveIcon=resolveIconHTML('save'); resolveTxt=`${esc(resolve.label)}${sca.dc!=null?' DC '+sca.dc:''}`; }
+  else if(sp.dmg&&sp.dmgType!=='heal'&&sca.atk!=null){ resolveIcon=resolveIconHTML('attack'); resolveTxt=`Attack ${fmt(sca.atk)}`; }
   return {
-    meta: sp.meta?esc(sp.meta):'',
-    resolve: resolveTxt,
-    dmg: sp.dmg?`${sp.heal?'✨':'🔥'} ${esc(sp.dmg)}`:'',
+    range: rg?esc(rg):'',
+    timeFlag: (spellActionType(sp)==='other'&&t)?esc(t):'',
+    resolveIcon, resolve: resolveTxt,
+    dmgType: sp.dmgType||'',
+    dmgIcon: dmgIconHTML(sp),
+    dmg: sp.dmg?esc(sp.dmg):'',
   };
-}
-// A single-button cast control for the Spellbook table — one row shouldn't repeat a full
-// "Cast with slot: 1st / 2nd / 3rd..." button row (that's what made the table feel bulky and
-// inconsistent height); the table casts at the lowest free slot of the spell's own level or
-// higher, the common case. Tapping the row itself still opens the full card (ckCardOpenHTML),
-// which keeps the complete per-level slot buttons for the rarer deliberate-upcast case.
-function ckSpellTableCastHTML(card){
-  const L=card.L;
-  if(L===0) return `<span class="cf-tag">at will</span>`;
-  let castK=null;
-  S.spellLevels.forEach((lv,k)=>{ if(castK==null&&k>=L&&lv.total>lv.used) castK=k; });
-  return `${ckSlotPips(L)}${castK!=null
-    ? `<button class="ck-cast" data-ckcast="${card.key}:${castK}" title="Cast with a ${ordinalLevel(castK)}-level slot">Cast</button>`
-    : `<span class="prep-note" style="margin:0">No slots</span>`}`;
-}
-// Dense Spellbook table — every known/prepared spell at a glance (Lv, name, casting time/range/
-// duration, save DC or attack bonus, damage/healing, cast-with-slot), for players who'd rather
-// scan one table than open cards one at a time. Lives in its own panel (see renderSpellbookPanel),
-// separate from the "Do Something" card grid — this is an additional reference view, not a
-// replacement, so a spell's normal card (pin, drag into a turn plan) is still right there too.
-// Tapping a row opens the same popover a card would (same data-ckopen anchor).
-function spellZoneTableHTML(list){
-  const rows=list.map(card=>{
-    const active=CK_OPEN_KEY===card.key;
-    const lvl=card.L===0?'Cantrip':ordinalLevel(card.L);
-    const p=ckSpellMetaParts(card);
-    return `<tr class="ck-strow ${active?'ck-active':''}" data-ckopen="${card.key}">
-      <td class="ck-st-lvl">${esc(lvl)}</td>
-      <td class="ck-st-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</td>
-      <td class="ck-st-meta">${p.meta||'—'}${card.cond?`<span class="ck-rem-cond">⏱ ${esc(card.cond)}</span>`:''}</td>
-      <td class="ck-st-resolve">${p.resolve||'—'}</td>
-      <td class="ck-st-dmg">${p.dmg||'—'}</td>
-      <td class="ck-st-cast">${ckSpellTableCastHTML(card)}</td>
-    </tr>`;
-  }).join('');
-  return `<div class="ck-spell-table-wrap"><table class="ck-spell-table">
-    <thead><tr><th>Lv</th><th>Name</th><th>Casting</th><th>Save / Atk</th><th>Effect</th><th>Cast</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table></div>`;
-}
-// The Spellbook panel — a standalone reference card (not nested in "Do Something"), always the
-// dense table above, hidden entirely when the character has no spells (see
-// applyCombatPanelVisibility). Independent of Do Something's own search/zone-filter/action-type
-// state — this is meant to always show every castable spell, not whatever the action grid happens
-// to be filtered to right now.
-function renderSpellbookPanel(){
-  const box=$('#ckSpellbook'); if(!box) return;
-  const spells=cockpitCards().filter(x=>x.zone==='spell').sort((a,b)=>a.L-b.L||a.name.localeCompare(b.name));
-  box.innerHTML = spells.length ? spellZoneTableHTML(spells) : '';
 }
 // stepIdx present → this open body is a turn-plan step, not the "Do Something" grid card.
 // Same weapon, two different questions: the card's tags say every economy slot it *could* fill
@@ -2926,9 +2913,29 @@ function ckCardOpenHTML(card,stepIdx){
       <p class="prep-note" style="margin:4px 0 0">Full editing (buffs, magic, dice) in the Attacks panel below.</p>${g}</div>`;
   }
   if(card.kind==='sp'){
+    // Full parity with the Spells tab's own tap-open detail (spellModalHTML) — same stat strip,
+    // pills, resolve/damage, description and SRD facts+link, just reusing those exact builders —
+    // so nothing the card face leaves off (see ckSpellMetaParts) is actually unavailable, only a
+    // tap away, and a player never has to leave Combat to look a spell up on the Spells tab.
     const sp=ckRef(card.key);
+    const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
+    const [t,rg,du]=splitMeta(sp.meta);
+    const comp=db?db.cp.split('').join(', '):'';
+    const pills=spellTagsHTML(sp);
+    const resolve=spellRulesCallout(sp.desc).resolve;
+    const detail=spellDetailHTML(sp.name,card.L);
     return `<div class="ck-body">
+      <div class="spell-stats">
+        <div class="ss-cell"><b>Cast</b><span>${esc(t)||'—'}</span></div>
+        <div class="ss-cell"><b>Range</b><span>${esc(rg)||'—'}</span></div>
+        <div class="ss-cell"><b>Duration</b><span>${esc(du)||'—'}</span></div>
+        <div class="ss-cell"><b>Comp.</b><span>${esc(comp)||'—'}</span></div>
+      </div>
+      ${pills?`<div class="spell-pills">${pills}</div>`:''}
+      ${resolve?`<div class="spell-resolve">${resolveIconHTML('save')}${esc(resolve.label)}</div>`:''}
+      ${sp.dmg?`<div class="spell-damage${sp.dmgType==='heal'?' heal':''}">${dmgIconHTML(sp)}${esc(sp.dmg)}</div>`:''}
       ${sp.desc?`<div class="ck-desc">${esc(sp.desc)}</div>`:''}
+      ${detail}
       ${card.conc?`<div class="ck-note">◉ Concentration — casting this drops anything you're already concentrating on.</div>`:''}
       <div class="ck-castrow">${ckSpellCastRowHTML(card)}</div>${g}</div>`;
   }
@@ -2977,11 +2984,17 @@ function ckSubHTML(card,withRoll){
     return `Hit <b class="ck-atkhit" data-atkview="${i}">${esc(cSum.bonus)}</b> · <span class="ck-atkdmg-wrap"><span class="ck-atkdmg" data-atkdmg="${i}">${esc(cSum.dmg)}</span>${condBonus}</span>${roll}`;
   }
   if(card.kind==='sp'){
-    // Same "what you need to know without opening the card" bar the weapon-attack branch above
-    // gives Hit/Damage — see ckSpellMetaParts for what each piece means.
+    // Headline first, own line, bolded and color-split like the weapon-attack branch's Hit/Damage
+    // above (gold = will it land, red/green = what it does) — this is the number a caster actually
+    // needs mid-turn. Range/an unusual cast time (see ckSpellMetaParts) trail as a small muted
+    // caption on their own line underneath, never competing with the headline for attention.
     const p=ckSpellMetaParts(card);
-    const bits=[p.meta,p.resolve,p.dmg].filter(Boolean);
-    return bits.join(' · ')+(card.L>0?' '+ckSlotPips(card.L):'');
+    const savatk=p.resolve?`<span class="ck-spell-savatk">${p.resolveIcon}${p.resolve}</span>`:'';
+    const dmg=p.dmg?`<span class="ck-spell-dmg ${p.dmgType==='heal'?'heal':''}">${p.dmgIcon}${p.dmg}</span>`:'';
+    const resolvePart=(savatk||dmg)?`<span class="ck-spell-resolve">${savatk}${savatk&&dmg?' · ':''}${dmg}</span>`:'';
+    const capBits=[p.timeFlag,p.range].filter(Boolean);
+    const capPart=capBits.length?`<span class="ck-spell-cap">${capBits.join(' · ')}</span>`:'';
+    return resolvePart+capPart+(card.L>0?' '+ckSlotPips(card.L):'');
   }
   if(card.kind==='ft'){
     const f=ckRef(card.key), max=num(f.usesMax), used=Math.min(num(f.usesUsed),max);
@@ -3000,6 +3013,21 @@ function ckSubHTML(card,withRoll){
     return `${tracked?`<span class="cf-count" title="Quantity left">×${q}</span>`:''}${tracked&&q<=0?' <span class="cf-tag">out</span>':''}${e.desc?' '+esc(e.desc.split('\n')[0]):''}`;
   }
   return '';
+}
+// Spell cards in the Do Something grid get their own level sub-headers (Cantrips/1st/2nd/…),
+// same tier color language as the Spells tab's own chapter headers (spellTier/toRoman/ordinalLevel
+// — all already shared globals) — so "is this a cantrip or a 3rd-level spell" reads at a glance
+// without opening every card, instead of one flat wall of spell cards in whatever order they
+// happen to sort in. Every other zone (weapons/feats/items) stays a single flat grid — spells are
+// the one category where level is a real, frequent decision axis (slots to spend).
+function ckSpellLevelGroupsHTML(list){
+  const byL=new Map();
+  list.forEach(c=>{ if(!byL.has(c.L)) byL.set(c.L,[]); byL.get(c.L).push(c); });
+  const levels=[...byL.keys()].sort((a,b)=>a-b);
+  return levels.map(L=>`<div class="ck-spell-lvlgroup tier${spellTier(L)}">
+      <div class="ck-spell-lvlhead">${L===0?'Cantrips':ordinalLevel(L)+' Level'}</div>
+      <div class="ck-cards">${byL.get(L).map(ckCardHTML).join('')}</div>
+    </div>`).join('');
 }
 function ckCardHTML(card){
   const active=CK_OPEN_KEY===card.key;
@@ -3070,7 +3098,7 @@ function renderCockpitCards(){
       ? '<p class="prep-note" style="margin:0">Every category is hidden — tap one above to bring it back.</p>'
       : visible.map(g=>`<div class="ck-zone ck-zone-${g.z}">
           <div class="ck-zone-lbl">${g.icon} ${esc(g.label)}</div>
-          <div class="ck-cards">${g.list.map(ckCardHTML).join('')}</div>
+          ${g.z==='spell' ? ckSpellLevelGroupsHTML(g.list) : `<div class="ck-cards">${g.list.map(ckCardHTML).join('')}</div>`}
         </div>`).join('');
   $('#ckUndo').innerHTML = CK_UNDO
     ? `<div class="ck-undo">${esc(CK_UNDO.msg)} <button data-ckundo>Undo</button><button data-ckundox>✕</button></div>` : '';
@@ -3078,7 +3106,6 @@ function renderCockpitCards(){
   const st=$('#ckSpellsToggle');
   st.style.display=anyPrep?'':'none';
   st.textContent=c.showAllSpells?'Showing all spells — tap for prepared only':'Prepared spells only — tap for all';
-  renderSpellbookPanel();
   renderCockpitPlan();
   renderCkPopover();
 }
@@ -3218,10 +3245,6 @@ function renderCockpitPlan(){
   if(cc) cc.textContent=cur.steps.length?String(cur.steps.length):'';
   const duo=$('#ckDuo');
   if(duo) duo.classList.toggle('ck-plan-collapsed',!!ck().planCollapsed);
-}
-// The Spellbook panel is only worth showing when the character actually has spells.
-function applyCombatPanelVisibility(){
-  const sb=$('#ckSpellbookPanel'); if(sb) sb.hidden=!cockpitCards().some(x=>x.zone==='spell');
 }
 // The condition-picker — a small centered modal (same .modal-bg/.modal idiom as the weapon
 // picker) with one-tap preset buttons. Tapping a preset toggles it on/off; the modal stays open
@@ -3499,7 +3522,6 @@ function renderCockpitExtras(){
   updateQuickRefHandle();
   const qrPanel=$('#quickRefPanel');
   if(qrPanel&&qrPanel.classList.contains('open')) $('#quickRefBody').innerHTML=quickRefPanelHTML();
-  applyCombatPanelVisibility();
   const rulesBox=$('#ckRules');
   if(rulesBox && typeof RULES_DB!=='undefined'){
     rulesBox.innerHTML=RULES_DB.map((sec,si)=>{
@@ -3721,13 +3743,6 @@ function wireCombatFeatures(){
     $('#ckAtkPanel').classList.toggle('open',ck().atkOpen);
   });
   $('#ckAtkPanel').classList.toggle('open',!!ck().atkOpen);
-  // Same collapsed-by-default pattern as Attacks — a caster opens it when they actually want the
-  // dense reference, instead of it always eating a full card's worth of space.
-  $('#ckSpellbookHead').addEventListener('click',()=>{
-    ck().spellbookOpen=!ck().spellbookOpen;
-    $('#ckSpellbookPanel').classList.toggle('open',ck().spellbookOpen);
-  });
-  $('#ckSpellbookPanel').classList.toggle('open',!!ck().spellbookOpen);
 }
 
 // Free-text filter over the "Do Something" grid — same live-search pattern as the equipment
@@ -4424,7 +4439,7 @@ function spellCardHTML(sp,L,i){
   const actWord={action:'Action',bonus:'Bonus Action',reaction:'Reaction'}[sp.castTag];
   const actPill=actWord?`<span class="sp-pill pill-${sp.castTag==='reaction'?'react':sp.castTag}">${actWord}</span>`:'';
   const meta=[rg,du].filter(Boolean).join(' · ');
-  const effect=sp.dmg?`<div class="sc-effect${sp.heal?' heal':''}">${sp.heal?'✨':'🔥'} ${esc(sp.dmg)}</div>`:'';
+  const effect=sp.dmg?`<div class="sc-effect${sp.dmgType==='heal'?' heal':''}">${dmgIconHTML(sp)}${esc(sp.dmg)}</div>`:'';
   return `
   <div class="spell-card" data-spellcard="${L}.${i}">
     <div class="sc-head">${dot}<span class="sc-name">${esc(sp.name)||'Unnamed spell'}</span></div>
@@ -4457,8 +4472,8 @@ function spellModalHTML(sp,L,i){
       <div class="ss-cell"><b>Comp.</b><span>${esc(comp)||'—'}</span></div>
     </div>
     ${pills?`<div class="spell-pills">${pills}</div>`:''}
-    ${resolve?`<div class="spell-resolve">${resolve.glyph} ${esc(resolve.label)}</div>`:''}
-    ${sp.dmg?`<div class="spell-damage${sp.heal?' heal':''}">${sp.heal?'✨':'🔥'} ${esc(sp.dmg)}</div>`:''}
+    ${resolve?`<div class="spell-resolve">${resolveIconHTML('save')}${esc(resolve.label)}</div>`:''}
+    ${sp.dmg?`<div class="spell-damage${sp.dmgType==='heal'?' heal':''}">${dmgIconHTML(sp)}${esc(sp.dmg)}</div>`:''}
     ${sp.desc?`<p class="spell-desc-ro">${esc(sp.desc)}</p>`:''}
     ${detail}
   </div>`;
@@ -4468,8 +4483,9 @@ function spellModalHTML(sp,L,i){
 // the cells. Cast/Range/Duration stay one underlying `meta` string (see splitMeta) so unlocking
 // never risks losing anything a player typed in there before this existed. Pills become a
 // tag-picker (click to set/clear Action/Bonus/Reaction, toggle Concentration/Ritual) and the
-// damage line becomes a plain text field + a heal toggle — both auto-filled once when the spell
-// is picked, then fully owned by the player, same as everything else on this row.
+// damage line becomes a plain text field + a damage-type icon picker (see SPELL_DMG_TYPES) — both
+// auto-filled once when the spell is picked, then fully owned by the player, same as everything
+// else on this row.
 function spellRowEdit(sp,L,i){
   const detail=spellDetailHTML(sp.name,L);
   const db=SPELL_DB[(sp.name||'').trim().toLowerCase()];
@@ -4503,9 +4519,11 @@ function spellRowEdit(sp,L,i){
       <button class="tagbtn pill-conc${sp.conc?' on':''}" data-tagconc="${L}.${i}">Concentration</button>
       <button class="tagbtn pill-ritual${sp.ritual?' on':''}" data-tagritual="${L}.${i}">Ritual</button>
     </div>
+    <div class="dmg-type-picker">${SPELL_DMG_TYPES.map(([k,l,c])=>
+      `<button type="button" class="dmg-type-btn${sp.dmgType===k?' on':''}" data-dmgtype="${L}.${i}.${k}" title="${l}${sp.dmgType===k?' — tap again to clear':''}" style="--dmg-c:${c}">${giHTML(SPELL_DMG_ICON[k])}</button>`
+    ).join('')}</div>
     <div class="dmg-edit">
-      <button class="heal-toggle${sp.heal?' on':''}" data-healtoggle="${L}.${i}" title="${sp.heal?'Healing — tap to switch to damage':'Damage — tap to mark as healing'}">${sp.heal?'✨':'🔥'}</button>
-      <input type="text" class="dmg-input" value="${esc(sp.dmg)}" data-dmgfield="${L}.${i}" placeholder="Damage/healing, e.g. 8d6 Fire (optional)">
+      <input type="text" class="dmg-input" value="${esc(sp.dmg)}" data-dmgfield="${L}.${i}" placeholder="Damage/healing dice, e.g. 8d6 (optional)">
     </div>
     <textarea class="spell-desc" data-li="spellLevels.${L}.spells.${i}.desc" placeholder="What does this spell do?">${esc(sp.desc)}</textarea>
     ${detail?`<div class="spell-detail">${detail}</div>`:''}
@@ -4532,7 +4550,11 @@ function renderSpellLevels(){
       if(sp.meta==null) sp.meta=spellMetaDefault(sp.name);
       if(sp.desc==null) sp.desc=spellDescDefault(sp.name);
       if(sp.castTag==null||sp.conc==null||sp.ritual==null) Object.assign(sp,spellTagsDefault(sp.name));
-      if(sp.dmg==null){ const d=spellRulesCallout(sp.desc).damage; sp.dmg=d?d.label:''; sp.heal=d?d.heal:false; }
+      if(sp.dmg==null){ const d=spellRulesCallout(sp.desc).damage; sp.dmg=d?d.label:''; }
+      // dmgType is new bookkeeping (replaces the old heal boolean) — backfilled once from it (or,
+      // for a save with no heal flag at all yet, parsed straight out of the dmg text) so an
+      // existing spell picks up its icon instead of silently defaulting to Force's burst glyph.
+      if(sp.dmgType==null){ sp.dmgType=sp.heal?'heal':spellDmgTypeFromLabel(sp.dmg); delete sp.heal; }
       return locked ? spellCardHTML(sp,L,i) : spellRowEdit(sp,L,i);
     }).join('');
     // Locked mode packs its cards into the responsive grid; edit mode keeps its own full-width
@@ -4577,7 +4599,7 @@ function renderSpellLevels(){
   }));
   // wire add-spell buttons
   $$('[data-addspell]').forEach(b=>b.addEventListener('click',()=>{
-    S.spellLevels[+b.dataset.addspell].spells.push({name:'',prep:false,meta:'',desc:'',castTag:'',conc:false,ritual:false,dmg:'',heal:false});
+    S.spellLevels[+b.dataset.addspell].spells.push({name:'',prep:false,meta:'',desc:'',castTag:'',conc:false,ritual:false,dmg:'',dmgType:''});
     renderSpellLevels(); save();
     focusLast('#spellLevels');
   }));
@@ -4592,7 +4614,7 @@ function renderSpellLevels(){
       sp.desc=spellDescDefault(sp.name);
       Object.assign(sp,spellTagsDefault(sp.name));
       const d=spellRulesCallout(sp.desc).damage;
-      sp.dmg=d?d.label:''; sp.heal=d?d.heal:false;
+      sp.dmg=d?d.label:''; sp.dmgType=d?(d.heal?'heal':spellDmgTypeFromLabel(d.label)):'';
       save();
     }
     renderSpellLevels();
@@ -4617,17 +4639,20 @@ function renderSpellLevels(){
     const sp=S.spellLevels[L].spells[i];
     sp.ritual=!sp.ritual; renderSpellLevels(); save();
   }));
-  // wire the damage/healing text field and its heal toggle — a plain field, not re-derived from
-  // the description once touched, so correcting or clearing it here always sticks.
+  // wire the damage/healing text field and its damage-type icon picker — plain fields, not
+  // re-derived from the description once touched, so correcting or clearing them here always sticks.
   $$('[data-dmgfield]').forEach(inp=>inp.addEventListener('input',()=>{
     const [L,i]=inp.dataset.dmgfield.split('.').map(Number);
     S.spellLevels[L].spells[i].dmg=inp.value;
     save();
   }));
-  $$('[data-healtoggle]').forEach(b=>b.addEventListener('click',()=>{
-    const [L,i]=b.dataset.healtoggle.split('.').map(Number);
-    const sp=S.spellLevels[L].spells[i];
-    sp.heal=!sp.heal; renderSpellLevels(); save();
+  // Tapping the already-selected type clears it back to "no type set" (falls back to Force's
+  // burst glyph wherever it's displayed), same tap-to-clear idiom as the cast-type tag buttons.
+  $$('[data-dmgtype]').forEach(b=>b.addEventListener('click',()=>{
+    const [L,i,type]=b.dataset.dmgtype.split('.');
+    const sp=S.spellLevels[+L].spells[+i];
+    sp.dmgType = sp.dmgType===type ? '' : type;
+    renderSpellLevels(); save();
   }));
   // wire the three cast/range/duration cells (edit mode) — they're a view over the single
   // `meta` string, not separate fields, so editing any of the three just rejoins all three.
@@ -4785,7 +4810,7 @@ function wireSpellLibrary(){
     const sp=SPELL_DB[item.dataset.spellpick.toLowerCase()]; if(!sp) return;
     const desc=spellDescDefault(sp.n), dmg=spellRulesCallout(desc).damage;
     S.spellLevels[sp.lv].spells.push({name:sp.n,prep:false,meta:spellMetaDefault(sp.n),desc,
-      ...spellTagsDefault(sp.n),dmg:dmg?dmg.label:'',heal:dmg?dmg.heal:false});
+      ...spellTagsDefault(sp.n),dmg:dmg?dmg.label:'',dmgType:dmg?(dmg.heal?'heal':spellDmgTypeFromLabel(dmg.label)):''});
     input.value=''; close();
     renderSpellLevels(); save();
   });
