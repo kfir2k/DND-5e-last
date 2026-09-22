@@ -2624,7 +2624,13 @@ function renderFeaturesByLevel(){
 function renderFeatures(){
   const html = S.featuresView==='level' ? renderFeaturesByLevel() : renderFeaturesBySource();
   $('#featureList').innerHTML = html || '<div class="fv-empty">No features yet — search above or add one below.</div>';
-  wireList('#featureList');
+  // A feature card can carry real setup (fx, uses tracking, an edited description) — an accidental
+  // tap on its small ✕ shouldn't erase that with no way back, same reasoning as the attack list.
+  wireList('#featureList',{confirmDel:b=>{
+    const i=+b.dataset.del.split('.').pop();
+    const name=(S.features[i]&&S.features[i].title.trim())||'this feature';
+    return `Delete "${name}"? This can't be undone.`;
+  }});
   wireFx();
   wireFeatureLevelInputs();
   wireFeatureGroupToggles();
@@ -5865,7 +5871,9 @@ function levelUpFeatCardHTML(p,newLevel){
   const ent=p.ent,key=p.key;
   const added=!!S.features.find(f=>(f.source||{}).grantKey===key);
   const isCD=/\(Channel Divinity\)$/.test(ent.n);
-  return `<div class="lvlup-feat">
+  // Cards get laid out 2-up to cut down on scrolling; a pool picker's chip grid needs the full
+  // width to stay readable, so its card spans both columns instead of getting squeezed to half.
+  return `<div class="lvlup-feat${ent.pickCap?' lvlup-feat-wide':''}">
     <div class="lvlup-feat-row">
       <div class="lvlup-feat-body">
         <b>${esc(ent.n)}</b>${isCD?'<span class="lvlup-cd-tag">⚡ New Channel Divinity option</span>':''}
@@ -5900,22 +5908,22 @@ function levelUpPoolPickerHTML(ent,newLevel){
     ${swapNote}
   </div>`;
 }
-// "New this level" (always open — the collapsed toggle here was the #1 reported way a fresh
-// feature went unnoticed) plus a small, still-collapsed disclosure for heritage/race traits,
-// which are static and were never the part players said they missed.
+// "New this level" class/subclass cards, plus a full Heritage section for race/subrace traits —
+// both rendered as the same addable card (levelUpFeatCardHTML), so a racial trait is exactly as
+// tappable as a class feature instead of being read-only reminder text. Heritage traits aren't
+// "new" at this level (most were already active), so they get their own section rather than being
+// folded into "What You Gain" — but they're no longer hidden behind a collapsed toggle either.
 function levelUpGainHTML(newLevel,plan,raceFeats){
-  const open=!!LVLUP.reminderOpen;
   const cards=plan.map(p=>levelUpFeatCardHTML(p,newLevel)).join('');
+  const ri=raceInfo();
+  const raceCards=ri?raceFeats.map(e=>levelUpFeatCardHTML({key:['race',ri.r.name,e.n].join(GRANT_SEP),ent:e},newLevel)).join(''):'';
   return `
     <h4>What You Gain at Level ${newLevel}</h4>
     ${plan.length?`<div class="lvlup-featgrp">${cards}</div>`
       :`<p class="prep-note" style="margin:4px 0 10px">No named class or subclass feature this level — HP only.</p>`}
-    <button type="button" class="lvlup-reminder-toggle" data-lvlremindertoggle>${open?'▾':'▸'} ${esc(raceDisplayName()||'Heritage')} traits — always active${raceFeats.length?` (${raceFeats.length})`:''}</button>
-    ${open?`<div class="lvlup-reminder-body">
-      ${raceFeats.length?raceFeats.map(e=>`<div class="lvlup-feat"><b>${esc(e.n)}</b><small>${esc(e.d||'')}</small></div>`).join('')
-        :`<p class="prep-note" style="margin:4px 0">No traits found for your race/subrace.</p>`}
-      <p class="prep-note" style="margin:6px 0 0">Informational only — add anything you want tracked to the Features tab yourself.</p>
-    </div>`:''}`;
+    <h4 class="lvlup-heritage-h">${esc(raceDisplayName()||'Heritage')} Traits</h4>
+    ${raceFeats.length?`<div class="lvlup-featgrp">${raceCards}</div>`
+      :`<p class="prep-note" style="margin:4px 0">No traits found for your race/subrace.</p>`}`;
 }
 function levelUpBodyHTML(){
   const c=CLASSES[S.classId];
@@ -5938,9 +5946,15 @@ function levelUpBodyHTML(){
   const ri=raceInfo();
   const raceFeats=ri?RACE_LIB.filter(e=>raceEntryIsMine(e)&&num(e.l||1)<=num(S.level)):[];
   const raceSlug=ri?spellSlug(ri.r.name):'';
+  const accent=CLASS_COLOR[S.classId]||'#c9a227';
   return `
     <div class="lvlup-head">
-      <div class="lvlup-h1">🎉 Level Up! 🎉</div>
+      <div class="lvlup-crest">
+        <span class="lvlup-crest-glow"></span>
+        <span class="lvlup-crest-ring"></span>
+        ${CLASS_ICON[S.classId]?giHTML(CLASS_ICON[S.classId],'lvlup-crest-icon',accent):''}
+      </div>
+      <div class="lvlup-h1">Level Up</div>
       <div class="lvlup-title">${esc(c.name)} <span class="lvlup-arrow">${num(S.level)} → ${newLevel}</span></div>
       <div class="lvlup-links">
         <a class="sd-link" href="https://dnd5e.wikidot.com/${spellSlug(c.name)}" target="_blank" rel="noopener">${esc(c.name)} ↗</a>
@@ -5963,7 +5977,7 @@ function levelUpBodyHTML(){
         :`<p class="prep-note" style="margin:0">No Ability Score Improvement or Feat at level ${newLevel} — HP only this time.${levelUpNextAsiNote(newLevel)}</p>`}
     </div>
     ${needSubclass?`<div class="lvlup-sec lvlup-sec-subclass">${levelUpSubclassPickHTML(c)}</div>`:''}
-    <div class="lvlup-sec lvlup-sec-reminder">${levelUpGainHTML(newLevel,plan,raceFeats)}</div>`;
+    <div class="lvlup-sec lvlup-sec-heritage">${levelUpGainHTML(newLevel,plan,raceFeats)}</div>`;
 }
 function levelUpNextAsiNote(newLevel){
   const next=asiLevels(S.classId).find(L=>L>=newLevel);
@@ -5979,6 +5993,10 @@ function paintLevelUpModal(){
   try{ html=levelUpBodyHTML(); }
   catch(err){ html=`<p class="prep-note" style="margin:0;color:var(--red)">Something went wrong building this screen: ${esc(err.message)}. Try closing and reopening — if it keeps happening, your save data may need a look.</p>`; }
   LVLUP.wrap.querySelector('#lvlupBody').innerHTML=html;
+  // The whole modal's glow/border/sparkles tint toward the character's own class color (same
+  // CLASS_COLOR used for the Build screen's class-flash) instead of staying flat gold — a level-up
+  // reads as this character's moment, not a generic system dialog.
+  LVLUP.wrap.querySelector('.lvlup-modal').style.setProperty('--lvlc',CLASS_COLOR[S.classId]||'#c9a227');
   const applyBtn=LVLUP.wrap.querySelector('#lvlupApply');
   applyBtn.style.display=canApply?'':'none';
   if(canApply) applyBtn.textContent=`Level Up to ${levelUpNewLevel()} →`;
@@ -5987,21 +6005,20 @@ function openLevelUpModal(){
   const wrap=document.createElement('div');
   wrap.className='ui-dlg-bg lvlup-bg open';
   wrap.innerHTML=`<div class="ui-dlg lvlup-modal" role="dialog" aria-modal="true">
-    <span class="lvlup-sparkle s1">✦</span><span class="lvlup-sparkle s2">✧</span><span class="lvlup-sparkle s3">✦</span>
+    <span class="lvlup-sparkle s1">✦</span><span class="lvlup-sparkle s2">✧</span><span class="lvlup-sparkle s3">✦</span><span class="lvlup-sparkle s4">✧</span>
     <button type="button" class="tw-close" data-lvlupclose title="Close">✕</button>
     <div class="lvlup-body" id="lvlupBody"></div>
     <p class="prep-note lvlup-note">ASI/Feat picks above save as you make them, same as the Build tab. Level and HP only apply when you press the button below.</p>
     <div class="ui-dlg-btns"><button type="button" class="ui-dlg-ok" id="lvlupApply">Level Up →</button></div>
   </div>`;
   const onKey=e=>{ if(e.key==='Escape'){ if(SUG_MODAL) return; closeLevelUpModal(); } };
-  LVLUP={wrap,hpMode:'avg',hpRoll:null,reminderOpen:false,onKey};
+  LVLUP={wrap,hpMode:'avg',hpRoll:null,onKey};
   wrap.addEventListener('click',e=>{
     if(e.target===wrap) return closeLevelUpModal();
     if(e.target.closest('[data-lvlupclose]')) return closeLevelUpModal();
     const hpBtn=e.target.closest('[data-hpmode]');
     if(hpBtn){ LVLUP.hpMode=hpBtn.dataset.hpmode; if(LVLUP.hpMode==='roll'&&LVLUP.hpRoll==null) LVLUP.hpRoll=levelUpHitDieAvg((CLASSES[S.classId]||{}).hd||8); paintLevelUpModal(); return; }
     if(e.target.closest('#lvlupApply')) return applyLevelUp();
-    if(e.target.closest('[data-lvlremindertoggle]')){ LVLUP.reminderOpen=!LVLUP.reminderOpen; paintLevelUpModal(); return; }
     const subBtn=e.target.closest('[data-lvlsubclasspick]');
     if(subBtn){
       S.subclass=subBtn.dataset.lvlsubclasspick;
