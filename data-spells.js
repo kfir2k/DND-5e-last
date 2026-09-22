@@ -610,170 +610,170 @@ function spellDetailHTML(name,rowLevel){
 // ---------- Short summaries (Name|summary) — auto-fill the editable description box ----------
 const SPELL_DESC_RAW=`Acid Splash|Hurl acid at one or two adjacent creatures; 1d6 acid damage (Dex save).
 Blade Ward|Resistance to bludgeoning, piercing, and slashing weapon damage until your next turn.
-Booming Blade|Melee attack; target is sheathed in thunder and takes 1d8 if it willingly moves.
-Chill Touch|Ghostly hand deals 1d8 necrotic and blocks healing until your next turn.
+Booming Blade|Melee attack; target is sheathed in thunder and takes 1d8 if it willingly moves before your next turn (2d8 at 5th character level, 3d8 at 11th, 4d8 at 17th).
+Chill Touch|Ghostly hand deals 1d8 necrotic and blocks healing until your next turn (2d8 at 5th character level, 3d8 at 11th, 4d8 at 17th).
 Control Flames|Manipulate nonmagical flame - expand, extinguish, brighten, or shape it.
-Create Bonfire|Conjure a bonfire in a 5-ft cube; 1d8 fire damage (Dex save).
+Create Bonfire|Conjure a bonfire in a 5-ft cube; 1d8 fire damage (Dex save; 2d8 at 5th character level, 3d8 at 11th, 4d8 at 17th).
 Dancing Lights|Create up to four floating lights you can move around.
 Druidcraft|Minor nature effects - predict weather, bloom a flower, light a candle.
-Eldritch Blast|Beam of crackling energy; 1d10 force damage, more beams at higher character levels.
+Eldritch Blast|Beam of crackling energy; 1d10 force damage. 2 beams at 5th character level, 3 at 11th, 4 at 17th (each can target a different creature).
 Encode Thoughts|Pull a thought or memory into a visible, shareable thought strand.
-Fire Bolt|Hurl a mote of fire; 1d10 fire damage, ignites flammable objects.
+Fire Bolt|Hurl a mote of fire; 1d10 fire damage, ignites flammable objects (2d10 at 5th character level, 3d10 at 11th, 4d10 at 17th).
 Friends|Advantage on Charisma checks against one non-hostile creature; it realizes afterward.
-Frostbite|1d6 cold damage and disadvantage on the target's next weapon attack (Con save).
-Green-Flame Blade|Melee attack; fire leaps to a second creature within 5 ft of the target.
+Frostbite|1d6 cold damage and disadvantage on the target's next weapon attack (Con save; 2d6 at 5th character level, 3d6 at 11th, 4d6 at 17th).
+Green-Flame Blade|Melee attack; fire leaps to a second creature within 5 ft of the target for 1d8 + spell mod fire damage (both hits' fire damage become 2d8 at 5th character level, 3d8 at 11th, 4d8 at 17th).
 Guidance|Target adds 1d4 to one ability check of its choice.
 Gust|Push a creature 5 ft, shove a light object, or stir a breeze.
-Infestation|1d6 poison damage and target moves 5 ft in a random direction (Con save).
+Infestation|1d6 poison damage and target moves 5 ft in a random direction (Con save; 2d6 at 5th character level, 3d6 at 11th, 4d6 at 17th).
 Light|Touched object sheds bright light in a 20-ft radius.
-Lightning Lure|Pull a creature 10 ft toward you; 1d8 lightning if it ends within 5 ft.
+Lightning Lure|Pull a creature 10 ft toward you; 1d8 lightning if it ends within 5 ft (2d8 at 5th character level, 3d8 at 11th, 4d8 at 17th).
 Mage Hand|Spectral hand manipulates objects, opens doors, carries up to 10 lb.
 Magic Stone|Imbue up to three pebbles as magical thrown weapons (1d6 + spell mod).
 Mending|Repair a single break or tear in an object.
 Message|Whisper a message to a creature within range; only it hears and can reply.
-Mind Sliver|1d6 psychic damage and target subtracts 1d4 from its next save (Int save).
+Mind Sliver|1d6 psychic damage and target subtracts 1d4 from its next save (Int save; 2d6 at 5th character level, 3d6 at 11th, 4d6 at 17th).
 Minor Illusion|Create a sound or a small static image for 1 minute.
 Mold Earth|Excavate, shape, or decorate loose earth in a 5-ft cube.
-Poison Spray|Puff of toxic gas; 1d12 poison damage (Con save).
+Poison Spray|Puff of toxic gas; 1d12 poison damage (Con save; 2d12 at 5th character level, 3d12 at 11th, 4d12 at 17th).
 Prestidigitation|Minor magical tricks - sparks, cleaning, flavoring, small marks.
-Primal Savagery|Acidic claws or fangs; melee attack for 1d10 acid damage.
-Produce Flame|Flame in your palm - light, or hurl it for 1d8 fire damage.
-Ray of Frost|1d8 cold damage and target's speed drops by 10 ft.
+Primal Savagery|Acidic claws or fangs; melee attack for 1d10 acid damage (2d10 at 5th character level, 3d10 at 11th, 4d10 at 17th).
+Produce Flame|Flame in your palm - light, or hurl it for 1d8 fire damage (2d8 at 5th character level, 3d8 at 11th, 4d8 at 17th).
+Ray of Frost|1d8 cold damage and target's speed drops by 10 ft (2d8 at 5th character level, 3d8 at 11th, 4d8 at 17th).
 Resistance|Target adds 1d4 to one saving throw of its choice.
-Sacred Flame|Radiant flame descends; 1d8 radiant damage, ignores cover (Dex save).
-Sapping Sting|1d4 necrotic damage and the target falls prone (Con save).
+Sacred Flame|Radiant flame descends; 1d8 radiant damage, ignores cover (Dex save; 2d8 at 5th character level, 3d8 at 11th, 4d8 at 17th).
+Sapping Sting|1d4 necrotic damage and the target falls prone (Con save; 2d4 at 5th character level, 3d4 at 11th, 4d4 at 17th).
 Shape Water|Move, shape, freeze, or color water in a 5-ft cube.
 Shillelagh|Your club or staff attacks with your spellcasting mod and deals 1d8.
-Shocking Grasp|Melee 1d8 lightning damage; target can't take reactions this turn.
+Shocking Grasp|Melee 1d8 lightning damage; target can't take reactions this turn (2d8 at 5th character level, 3d8 at 11th, 4d8 at 17th).
 Spare the Dying|Stabilize a dying creature at 0 HP.
-Sword Burst|Ring of spectral blades; 1d6 force damage to creatures within 5 ft (Dex save).
+Sword Burst|Ring of spectral blades; 1d6 force damage to creatures within 5 ft (Dex save; 2d6 at 5th character level, 3d6 at 11th, 4d6 at 17th).
 Thaumaturgy|Minor divine wonders - booming voice, tremors, flickering flames.
-Thorn Whip|Vine whip; 1d6 piercing and pull the target 10 ft closer.
-Thunderclap|Crack of thunder; 1d6 thunder damage to all creatures within 5 ft (Con save).
-Toll the Dead|1d8 necrotic - 1d12 if the target is already wounded (Wis save).
+Thorn Whip|Vine whip; 1d6 piercing and pull the target 10 ft closer (2d6 at 5th character level, 3d6 at 11th, 4d6 at 17th).
+Thunderclap|Crack of thunder; 1d6 thunder damage to all creatures within 5 ft (Con save; 2d6 at 5th character level, 3d6 at 11th, 4d6 at 17th).
+Toll the Dead|1d8 necrotic - 1d12 if the target is already wounded (Wis save; 2d8/2d12 at 5th character level, 3d8/3d12 at 11th, 4d8/4d12 at 17th).
 True Strike|Gain advantage on your next attack against the studied target.
-Vicious Mockery|Magical insults; 1d4 psychic damage and disadvantage on next attack (Wis save).
-Word of Radiance|1d6 radiant damage to chosen creatures within 5 ft (Con save).
-Absorb Elements|Reaction: resist incoming elemental damage; add 1d6 of it to your next melee hit.
+Vicious Mockery|Magical insults; 1d4 psychic damage and disadvantage on next attack (Wis save; 2d4 at 5th character level, 3d4 at 11th, 4d4 at 17th).
+Word of Radiance|1d6 radiant damage to chosen creatures within 5 ft (Con save; 2d6 at 5th character level, 3d6 at 11th, 4d6 at 17th).
+Absorb Elements|Reaction: resist incoming elemental damage; add 1d6 of it to your next melee hit (+1d6 per slot level above 1st).
 Alarm|Ward an area; get a mental or audible alert when a creature enters.
-Animal Friendship|Charm a beast into friendliness for 24 hours (Wis save).
-Armor of Agathys|Gain 5 temp HP; melee attackers take 5 cold damage while it lasts.
-Arms of Hadar|Dark tendrils; 2d6 necrotic to all within 10 ft, no reactions (Str save).
-Bane|Up to three creatures subtract 1d4 from attacks and saves (Cha save).
+Animal Friendship|Charm a beast into friendliness for 24 hours (Wis save; +1 beast per slot level above 1st).
+Armor of Agathys|Gain 5 temp HP; melee attackers take 5 cold damage while it lasts (both +5 per slot level above 1st).
+Arms of Hadar|Dark tendrils; 2d6 necrotic to all within 10 ft, no reactions (Str save; +1d6 per slot level above 1st).
+Bane|Up to three creatures subtract 1d4 from attacks and saves (Cha save; +1 target per slot level above 1st).
 Beast Bond|Telepathic link with a beast; it gains advantage near you in combat.
-Bless|Up to three creatures add 1d4 to attacks and saving throws.
-Burning Hands|15-ft cone of flame; 3d6 fire damage (Dex half).
-Catapult|Hurl a loose object at a creature; 3d8 bludgeoning (Dex save).
-Cause Fear|Target becomes frightened of you (Wis save).
+Bless|Up to three creatures add 1d4 to attacks and saving throws (+1 target per slot level above 1st).
+Burning Hands|15-ft cone of flame; 3d6 fire damage (Dex half; +1d6 per slot level above 1st).
+Catapult|Hurl a loose object at a creature; 3d8 bludgeoning (Dex save; max object weight +5 lb and damage +1d8 per slot level above 1st).
+Cause Fear|Target becomes frightened of you (Wis save; +1 target within 30 ft of each other per slot level above 1st).
 Ceremony|Ritual rites - atonement, bless water, coming of age, dedication, funeral, wedding.
-Chaos Bolt|2d8 + 1d6 of a random damage type; can leap to additional targets.
-Charm Person|A humanoid regards you as a friendly acquaintance (Wis save).
-Chromatic Orb|3d8 damage of a type you choose - acid, cold, fire, lightning, poison, or thunder.
-Color Spray|Dazzling colors blind 6d10 HP worth of creatures until your next turn.
-Command|One-word command a creature must obey - halt, flee, drop, grovel (Wis save).
+Chaos Bolt|2d8 + 1d6 of a random damage type; can leap to additional targets (+1d6 per slot level above 1st).
+Charm Person|A humanoid regards you as a friendly acquaintance (Wis save; +1 target per slot level above 1st).
+Chromatic Orb|3d8 damage of a type you choose - acid, cold, fire, lightning, poison, or thunder (+1d8 per slot level above 1st).
+Color Spray|Dazzling colors blind 6d10 HP worth of creatures until your next turn (+2d10 per slot level above 1st).
+Command|One-word command a creature must obey - halt, flee, drop, grovel (Wis save; +1 target within 30 ft of each other per slot level above 1st).
 Compelled Duel|Target has disadvantage attacking anyone but you (Wis save).
 Comprehend Languages|Understand any spoken or written language you hear or touch.
-Create or Destroy Water|Create or destroy up to 10 gallons of water.
-Cure Wounds|Touch heals 1d8 + spellcasting modifier HP.
+Create or Destroy Water|Create or destroy up to 10 gallons of water (+10 gallons, or cube +5 ft, per slot level above 1st).
+Cure Wounds|Touch heals 1d8 + spellcasting modifier HP (+1d8 per slot level above 1st).
 Detect Evil and Good|Sense aberrations, celestials, elementals, fey, fiends, and undead within 30 ft.
 Detect Magic|Sense magic within 30 ft; see auras and learn schools of magic.
 Detect Poison and Disease|Sense poisons, poisonous creatures, and diseases within 30 ft.
 Disguise Self|Illusory change to appearance, clothing, armor, weapons, and carried gear.
-Dissonant Whispers|3d6 psychic damage; target must use its reaction to flee you (Wis save).
-Distort Value|Make an object appear far more or less valuable than it is.
+Dissonant Whispers|3d6 psychic damage; target must use its reaction to flee you (Wis save; +1d6 per slot level above 1st).
+Distort Value|Make an object appear far more or less valuable than it is (affected object's size limit +1 ft per slot level above 1st).
 Divine Favor|Your weapon attacks deal +1d4 radiant damage.
-Earth Tremor|Tremor within 10 ft; 1d6 bludgeoning, knocks prone, breaks ground (Dex save).
-Ensnaring Strike|Next weapon hit wraps the target in thorny vines - restrained, 1d6/turn (Str save).
+Earth Tremor|Tremor within 10 ft; 1d6 bludgeoning, knocks prone, breaks ground (Dex save; +1d6 per slot level above 1st).
+Ensnaring Strike|Next weapon hit wraps the target in thorny vines - restrained, 1d6/turn (Str save; +1d6 per slot level above 1st).
 Entangle|Grasping weeds restrain creatures in a 20-ft square (Str save).
 Expeditious Retreat|Dash as a bonus action every turn.
 Faerie Fire|Outline creatures in glowing light; attacks against them gain advantage (Dex save).
-False Life|Gain 1d4+4 temporary hit points.
+False Life|Gain 1d4+4 temporary hit points (+5 per slot level above 1st).
 Feather Fall|Up to five falling creatures drift down slowly and land unharmed.
 Find Familiar|Summon a spirit familiar in animal form - shares senses, delivers touch spells.
-Fog Cloud|20-ft-radius sphere of fog heavily obscures the area.
-Frost Fingers|15-ft cone of cold; 2d8 cold damage, freezes water (Con half).
+Fog Cloud|20-ft-radius sphere of fog heavily obscures the area (radius +20 ft per slot level above 1st).
+Frost Fingers|15-ft cone of cold; 2d8 cold damage, freezes water (Con half; +1d8 per slot level above 1st).
 Gift of Alacrity|Target adds 1d8 to initiative rolls for 8 hours.
 Goodberry|Ten berries; each heals 1 HP and feeds a creature for a day.
 Grease|10-ft square turns slick; creatures fall prone (Dex save).
-Guiding Bolt|4d6 radiant damage; the next attack on the target has advantage.
-Hail of Thorns|Next ranged hit bursts into thorns - 1d10 piercing around the target (Dex half).
-Healing Word|Heal 1d4 + modifier at range as a bonus action.
-Hellish Rebuke|Reaction: your attacker erupts in flame - 2d10 fire damage (Dex half).
-Heroism|Target is immune to fright and gains your modifier in temp HP each turn.
-Hex|Curse a target - your hits deal +1d6 necrotic; disadvantage on one ability's checks.
-Hunter's Mark|Add 1d6 damage to each weapon hit against the marked target.
-Ice Knife|Thrown ice shard; 1d10 piercing, then bursts for 2d6 cold nearby (Dex save).
+Guiding Bolt|4d6 radiant damage; the next attack on the target has advantage (+1d6 per slot level above 1st).
+Hail of Thorns|Next ranged hit bursts into thorns - 1d10 piercing around the target (Dex half; +1d10 per slot level above 1st, max 6d10).
+Healing Word|Heal 1d4 + modifier at range as a bonus action (+1d4 per slot level above 1st).
+Hellish Rebuke|Reaction: your attacker erupts in flame - 2d10 fire damage (Dex half; +1d10 per slot level above 1st).
+Heroism|Target is immune to fright and gains your modifier in temp HP each turn (+1 target per slot level above 1st).
+Hex|Curse a target - your hits deal +1d6 necrotic; disadvantage on one ability's checks (duration 8 hrs with a 3rd-4th level slot, 24 hrs with a 5th+ level slot).
+Hunter's Mark|Add 1d6 damage to each weapon hit against the marked target (duration 8 hrs with a 3rd-4th level slot, 24 hrs with a 5th+ level slot).
+Ice Knife|Thrown ice shard; 1d10 piercing, then bursts for 2d6 cold nearby (Dex save; +1d6 cold per slot level above 1st).
 Identify|Learn a magic item's properties and how to use them.
 Illusory Script|Write a message only intended readers can understand.
-Inflict Wounds|Touch channels necrotic energy for 3d10 damage.
-Jim's Magic Missile|Three darts that require attack rolls; 2d4 force each, can crit.
+Inflict Wounds|Touch channels necrotic energy for 3d10 damage (+1d10 per slot level above 1st).
+Jim's Magic Missile|Three darts that require attack rolls; 2d4 force each, can crit (+1 dart per slot level above 1st).
 Jump|Target's jump distance triples.
-Longstrider|Target's speed increases by 10 ft.
+Longstrider|Target's speed increases by 10 ft (+1 target per slot level above 1st).
 Mage Armor|Unarmored target's AC becomes 13 + Dex modifier.
-Magic Missile|Three darts hit automatically for 1d4+1 force each.
-Magnify Gravity|10-ft sphere of crushing gravity; 2d8 force, speed halved (Con save).
+Magic Missile|Three darts hit automatically for 1d4+1 force each (+1 dart per slot level above 1st).
+Magnify Gravity|10-ft sphere of crushing gravity; 2d8 force, speed halved (Con save; +1d8 per slot level above 1st).
 Protection from Evil and Good|Warded vs aberrations, celestials, elementals, fey, fiends, undead - they attack at disadvantage and can't charm, frighten, or possess you.
 Purify Food and Drink|Remove poison and disease from food and drink.
-Ray of Sickness|2d8 poison damage; target may be poisoned (Con save).
+Ray of Sickness|2d8 poison damage; target may be poisoned (Con save; +1d8 per slot level above 1st).
 Sanctuary|Attackers must pass a Wis save to target the warded creature.
-Searing Smite|Next hit deals +1d6 fire and ignites the target - 1d6/turn (Con save).
+Searing Smite|Next hit deals +1d6 fire and ignites the target - 1d6/turn (Con save; +1d6 per slot level above 1st).
 Shield|Reaction: +5 AC until your next turn; negates magic missile.
 Shield of Faith|Target gains +2 AC.
 Silent Image|Purely visual illusion up to a 15-ft cube; move it with an action.
 Silvery Barbs|Reaction: force a reroll on a success and give someone else advantage.
-Sleep|5d8 HP worth of creatures fall unconscious, weakest first.
+Sleep|5d8 HP worth of creatures fall unconscious, weakest first (+2d8 per slot level above 1st).
 Snare|Hidden magical trap hoists and restrains the first creature to step in.
 Speak with Animals|Comprehend and verbally communicate with beasts.
-Tasha's Caustic Brew|30-ft line of acid; coated creatures take 2d4 acid each turn (Dex save).
+Tasha's Caustic Brew|30-ft line of acid; coated creatures take 2d4 acid each turn (Dex save; +2d4 per slot level above 1st).
 Tasha's Hideous Laughter|Target collapses laughing - prone and incapacitated (Wis save).
 Tenser's Floating Disk|Floating force disk carries up to 500 lb and follows you.
 Thunderous Smite|Next hit deals +2d6 thunder and can push the target 10 ft and knock it prone.
-Thunderwave|15-ft cube of thunder; 2d8 damage and pushed 10 ft (Con save).
+Thunderwave|15-ft cube of thunder; 2d8 damage and pushed 10 ft (Con save; +1d8 per slot level above 1st).
 Unseen Servant|Invisible force performs simple tasks on command.
-Witch Bolt|1d12 lightning; keep the arc going for 1d12 automatically each turn.
+Witch Bolt|1d12 lightning; keep the arc going for 1d12 automatically each turn (initial damage +1d12 per slot level above 1st).
 Wrathful Smite|Next hit deals +1d6 psychic; target is frightened of you (Wis save).
 Zephyr Strike|Movement does not provoke opportunity attacks. One attack can gain advantage and +1d8 force damage.
-Aganazzar's Scorcher|30-ft line of roaring flame; 3d8 fire damage (Dex half).
-Aid|Up to three creatures gain +5 max HP and current HP for 8 hours.
-Air Bubble|Surround a creature's head with fresh, breathable air.
+Aganazzar's Scorcher|30-ft line of roaring flame; 3d8 fire damage (Dex half; +1d8 per slot level above 2nd).
+Aid|Up to three creatures gain +5 max HP and current HP for 8 hours (+5 HP per slot level above 2nd).
+Air Bubble|Surround a creature's head with fresh, breathable air (+2 creatures per slot level above 2nd).
 Alter Self|Change your appearance, grow natural weapons, or adapt to water.
-Animal Messenger|A tiny beast carries a short spoken message to a place you describe.
+Animal Messenger|A tiny beast carries a short spoken message to a place you describe (message lasts +48 hr per slot level above 2nd).
 Arcane Lock|Magically seal a door, chest, or lock; +10 DC to break or pick.
 Augury|Receive an omen about a plan - weal, woe, both, or neither.
 Barkskin|Target's AC can't be lower than 16.
 Beast Sense|See and hear through a touched beast's senses.
-Blindness/Deafness|Blind or deafen a creature; Con save each turn to shake it off.
+Blindness/Deafness|Blind or deafen a creature; Con save each turn to shake it off (+1 target per slot level above 2nd).
 Blur|Your form wavers - attackers have disadvantage against you.
 Borrowed Knowledge|Gain proficiency in one skill of your choice for 1 hour.
-Branding Smite|Next hit deals +2d6 radiant; target glows and can't turn invisible.
+Branding Smite|Next hit deals +2d6 radiant; target glows and can't turn invisible (+1d6 per slot level above 2nd).
 Calm Emotions|Suppress charm and fear, or cool hostility, in a 20-ft sphere.
-Cloud of Daggers|5-ft cube of spinning blades; 4d4 slashing to anything inside.
+Cloud of Daggers|5-ft cube of spinning blades; 4d4 slashing to anything inside (+2d4 per slot level above 2nd).
 Continual Flame|Permanent, heatless torch flame on an object.
-Cordon of Arrows|Plant four pieces of ammunition to ward an area; 1d6 to intruders.
+Cordon of Arrows|Plant four pieces of ammunition to ward an area; 1d6 to intruders (+2 pieces of ammunition per slot level above 2nd).
 Crown of Madness|Charmed humanoid must attack creatures you choose (Wis save).
 Darkness|15-ft sphere of magical darkness even darkvision can't pierce.
 Darkvision|Touched creature sees in the dark to 60 ft for 8 hours.
 Detect Thoughts|Read surface thoughts; probe deeper with a contested save.
-Dragon's Breath|Touched creature can exhale a 15-ft cone of a chosen element (3d6).
-Dust Devil|Whirlwind of grit pushes creatures and deals 1d8 bludgeoning (Str save).
+Dragon's Breath|Touched creature can exhale a 15-ft cone of a chosen element (3d6; +1d6 per slot level above 2nd).
+Dust Devil|Whirlwind of grit pushes creatures and deals 1d8 bludgeoning (Str save; +1d8 per slot level above 2nd).
 Earthbind|Yank a flying creature 60 ft downward each turn (Str save).
-Enhance Ability|Advantage on one ability's checks, plus a small perk by ability.
+Enhance Ability|Advantage on one ability's checks, plus a small perk by ability (+1 target per slot level above 2nd).
 Enlarge/Reduce|Double or halve a creature's size; 1d4 more or less weapon damage.
 Enthrall|Creatures have disadvantage noticing anyone but you (Wis save).
 Find Steed|Summon an intelligent spirit mount that can share your spells.
 Find Traps|Sense whether any traps are present within line of sight.
-Flame Blade|Fiery scimitar appears in your hand; melee 3d6 fire damage.
-Flaming Sphere|5-ft ball of fire you steer into enemies; 2d6 fire (Dex half).
-Flock of Familiars|Summon up to three temporary familiars at once.
-Fortune's Favor|Gift of luck: reroll one attack, check, or save within 1 hour.
+Flame Blade|Fiery scimitar appears in your hand; melee 3d6 fire damage (+1d6 per two slot levels above 2nd, i.e. at 4th and 6th).
+Flaming Sphere|5-ft ball of fire you steer into enemies; 2d6 fire (Dex half; +1d6 per slot level above 2nd).
+Flock of Familiars|Summon up to three temporary familiars at once (+1 familiar per slot level above 2nd).
+Fortune's Favor|Gift of luck: reroll one attack, check, or save within 1 hour (+1 target per slot level above 2nd).
 Gentle Repose|A corpse can't decay or rise as undead for 10 days.
 Gift of Gab|Magically unsay the last 6 seconds of your own speech.
 Gust of Wind|60-ft line of strong wind pushes creatures 15 ft back (Str save).
-Healing Spirit|Nature spirit heals 1d6 to creatures passing through its space.
-Heat Metal|A metal object glows red-hot; 2d8 fire, holders drop it or suffer.
-Hold Person|Paralyze a humanoid; Wis save each turn to break free.
-Immovable Object|Touched object becomes magically fixed in place.
-Invisibility|Target turns invisible until it attacks or casts a spell.
+Healing Spirit|Nature spirit heals 1d6 to creatures passing through its space (+1d6 per slot level above 2nd).
+Heat Metal|A metal object glows red-hot; 2d8 fire, holders drop it or suffer (+1d8 per slot level above 2nd).
+Hold Person|Paralyze a humanoid; Wis save each turn to break free (+1 target per slot level above 2nd).
+Immovable Object|Touched object becomes magically fixed in place (with a 4th-5th level slot: DC+5, holds 8,000 lb, lasts 24 hr; 6th+ level slot: DC+10, holds 20,000 lb, lasts until dispelled).
+Invisibility|Target turns invisible until it attacks or casts a spell (+1 target per slot level above 2nd).
 Jim's Glowing Coin|Enchanted coin distracts creatures that fail a Wis save.
 Kinetic Jaunt|+10 ft speed, no opportunity attacks, walk through creatures' spaces.
 Knock|Loudly open a locked, barred, or stuck object.
@@ -782,95 +782,95 @@ Levitate|Target floats up to 20 ft off the ground (Con save).
 Locate Animals or Plants|Learn the direction of the nearest beast or plant of a kind within 5 miles.
 Locate Object|Sense the direction of a familiar object within 1,000 ft.
 Magic Mouth|An object delivers a recorded message when a trigger occurs.
-Magic Weapon|Touched weapon becomes a +1 magic weapon.
+Magic Weapon|Touched weapon becomes a +1 magic weapon (+2 with a 4th-5th level slot, +3 with a 6th+ level slot).
 Maximillian's Earthen Grasp|Earthen hand grabs and squeezes - restrained, 2d6 bludgeoning (Str save).
-Melf's Acid Arrow|Acid bolt; 4d4 acid on hit and 2d4 more next turn.
-Mind Spike|3d8 psychic damage; you always know the target's location (Wis half).
+Melf's Acid Arrow|Acid bolt; 4d4 acid on hit and 2d4 more next turn (both +1d4 per slot level above 2nd).
+Mind Spike|3d8 psychic damage; you always know the target's location (Wis half; +1d8 per slot level above 2nd).
 Mirror Image|Three illusory duplicates draw attacks away from you.
 Misty Step|Bonus action: teleport up to 30 ft to a spot you can see.
-Moonbeam|5-ft-radius column of pale light; 2d10 radiant each turn inside (Con half).
+Moonbeam|5-ft-radius column of pale light; 2d10 radiant each turn inside (Con half; +1d10 per slot level above 2nd).
 Nathair's Mischief|A cube of random fey mischief - charms, blinds, or trips each round.
 Nystul's Magic Aura|Falsify an object's or creature's magical aura or creature type.
 Pass Without Trace|+10 to the group's Stealth checks; you can't be tracked.
 Phantasmal Force|Illusion only the target perceives as real; can deal 1d6 psychic per turn.
-Prayer of Healing|Up to six creatures heal 2d8 + modifier over a 10-minute prayer.
+Prayer of Healing|Up to six creatures heal 2d8 + modifier over a 10-minute prayer (+1d8 per slot level above 2nd).
 Protection from Poison|Neutralize one poison; target gains advantage on saves vs poison and resistance to poison damage.
 Pyrotechnics|Turn a flame into blinding fireworks or thick choking smoke.
 Ray of Enfeeblement|Target deals half damage with Strength-based weapon attacks.
-Rime's Binding Ice|30-ft cone of ice; 3d8 cold and frozen in place until the ice is broken (Con save).
+Rime's Binding Ice|30-ft cone of ice; 3d8 cold and frozen in place until the ice is broken (Con save; +1d8 per slot level above 2nd).
 Rope Trick|Create an extradimensional hiding space at the upper end of a rope.
-Scorching Ray|Three rays of fire; 2d6 fire damage per hit.
+Scorching Ray|Three rays of fire; 2d6 fire damage per hit (+1 ray per slot level above 2nd).
 See Invisibility|See invisible creatures and objects, and into the Ethereal Plane.
-Shadow Blade|Sword of solid shadow; 2d8 psychic, advantage in dim light or darkness.
-Shatter|Painful ringing burst in a 10-ft sphere; 3d8 thunder (Con half).
+Shadow Blade|Sword of solid shadow; 2d8 psychic, advantage in dim light or darkness (3d8 with a 3rd-4th level slot, 4d8 with 5th-6th, 5d8 with 7th+).
+Shatter|Painful ringing burst in a 10-ft sphere; 3d8 thunder (Con half; +1d8 per slot level above 2nd).
 Silence|20-ft sphere of total silence; blocks sound and verbal spells.
 Skywrite|Spell out words with clouds in the sky.
-Snilloc's Snowball Swarm|Flurry of snowballs; 3d6 cold in a 5-ft sphere (Dex half).
+Snilloc's Snowball Swarm|Flurry of snowballs; 3d6 cold in a 5-ft sphere (Dex half; +1d6 per slot level above 2nd).
 Spider Climb|Target walks on walls and ceilings with hands free.
 Spike Growth|Hidden spikes in a 20-ft radius; 2d4 per 5 ft moved, difficult terrain.
-Spiritual Weapon|Floating spectral weapon attacks as a bonus action (1d8 + mod).
-Spray Of Cards|Fling a 15-ft cone of magical cards that damage and can blind (Dex save).
+Spiritual Weapon|Floating spectral weapon attacks as a bonus action (1d8 + mod; +1d8 per two slot levels above 2nd).
+Spray Of Cards|Fling a 15-ft cone of magical cards that damage and can blind (Dex save; +1d10 per slot level above 2nd).
 Suggestion|Magically compel a reasonable-sounding course of action (Wis save).
-Summon Beast|Summon a bestial spirit - air, land, or water - that fights for you.
-Tasha's Mind Whip|3d6 psychic; target loses its reaction and most of its turn (Int save).
-Vortex Warp|Teleport another creature up to 90 ft to a spot you can see (Con save).
+Summon Beast|Summon a bestial spirit - air, land, or water - that fights for you (its stat block scales up with a higher slot level).
+Tasha's Mind Whip|3d6 psychic; target loses its reaction and most of its turn (Int save; +1 target within 30 ft of each other per slot level above 2nd).
+Vortex Warp|Teleport another creature up to 90 ft to a spot you can see (Con save; +30 ft range per slot level above 2nd).
 Warding Bond|Bond with an ally: it gains +1 AC and saves plus resistance; you share its pain.
 Warding Wind|Whirling wind around you - deafens, blocks gases, hinders ranged attacks.
 Warp Sense|Detect the presence and recent use of portals nearby.
 Web|20-ft cube of sticky webs restrains creatures (Dex save).
-Wither and Bloom|2d6 necrotic in a 10-ft sphere; one ally spends a Hit Die to heal.
+Wither and Bloom|2d6 necrotic in a 10-ft sphere; one ally spends a Hit Die to heal (+1d6 damage and +1 Hit Die per slot level above 2nd).
 Wristpocket|Flick a touched object into an extradimensional pocket.
 Zone of Truth|Creatures in a 15-ft sphere can't speak a deliberate lie (Cha save).
-Animate Dead|Raise a skeleton or zombie servant from remains.
-Antagonize|4d4 psychic; the target's reaction is spent attacking a creature you pick (Wis save).
-Ashardalon's Stride|+20 ft speed; flames scorch creatures you pass by.
+Animate Dead|Raise a skeleton or zombie servant from remains (+2 undead per slot level above 3rd).
+Antagonize|4d4 psychic; the target's reaction is spent attacking a creature you pick (Wis save; +1d4 per slot level above 3rd).
+Ashardalon's Stride|+20 ft speed; flames scorch creatures you pass by (+5 ft speed and +1d6 fire per slot level above 3rd).
 Aura of Vitality|Healing aura; restore 2d6 to one creature each turn for a minute.
 Beacon of Hope|Allies gain advantage on Wis and death saves, and healing on them is maximized.
 Bestow Curse|Curse a creature - disadvantage, wasted turns, or +1d8 necrotic from your attacks.
 Blinding Smite|Next hit deals +3d8 radiant and blinds the target (Con save).
 Blink|Each turn, 50% chance to vanish to the Ethereal Plane until your next turn.
-Call Lightning|Storm cloud hurls a bolt each turn; 3d10 lightning (Dex half).
+Call Lightning|Storm cloud hurls a bolt each turn; 3d10 lightning (Dex half; +1d10 per slot level above 3rd).
 Catnap|Up to three creatures gain a short rest's benefit in 10 minutes.
 Clairvoyance|Invisible sensor lets you see or hear a familiar distant location.
-Conjure Animals|Summon fey beasts - e.g. eight wolves - that obey your commands.
+Conjure Animals|Summon fey beasts - e.g. eight wolves - that obey your commands (double the count with a 5th-level slot, triple with 7th, quadruple with 9th).
 Conjure Barrage|60-ft cone of duplicated weapon or ammo; 3d8 damage (Dex half).
-Counterspell|Reaction: interrupt and negate another creature's spellcasting.
+Counterspell|Reaction: interrupt and negate another creature's spellcasting (auto-succeeds against a spell of level ≤ the slot you use, from a 4th-level slot up).
 Create Food and Water|Conjure bland food and clean water for fifteen people.
 Crusader's Mantle|Allies within 30 ft deal +1d4 radiant on weapon hits.
 Daylight|60-ft sphere of brilliant light; dispels lower-level magical darkness.
-Dispel Magic|End spells of 3rd level or lower on a target; check to end higher ones.
-Elemental Weapon|Weapon becomes +1 and deals +1d4 of a chosen element.
+Dispel Magic|End spells of 3rd level or lower on a target; check to end higher ones (auto-ends a spell of level ≤ the slot you use, from a 4th-level slot up).
+Elemental Weapon|Weapon becomes +1 and deals +1d4 of a chosen element (+2 attack/+2d4 with a 5th-6th level slot, +3 attack/+3d4 with a 7th+ level slot).
 Enemies Abound|Target sees every creature as an enemy and attacks at random (Int save).
-Erupting Earth|20-ft cube of churning stone; 3d12 bludgeoning, ground becomes difficult (Dex half).
-Fast Friends|Compel a humanoid to helpfully carry out your requests (Wis save).
+Erupting Earth|20-ft cube of churning stone; 3d12 bludgeoning, ground becomes difficult (Dex half; +1d12 per slot level above 3rd).
+Fast Friends|Compel a humanoid to helpfully carry out your requests (Wis save; +1 target within 30 ft of each other per slot level above 3rd).
 Fear|30-ft cone of terror; creatures drop what they hold and flee (Wis save).
 Feign Death|Put a willing creature into a deathlike coma.
-Fireball|20-ft-radius explosion of flame; 8d6 fire damage (Dex half).
-Flame Arrows|Twelve pieces of ammunition deal +1d6 fire on hit.
-Fly|Touched creature gains a 60 ft flying speed.
-Galder's Tower|Conjure a modest two-story stone tower, furnished as you like.
+Fireball|20-ft-radius explosion of flame; 8d6 fire damage (Dex half; +1d6 per slot level above 3rd).
+Flame Arrows|Twelve pieces of ammunition deal +1d6 fire on hit (+2 pieces of ammunition per slot level above 3rd).
+Fly|Touched creature gains a 60 ft flying speed (+1 target per slot level above 3rd).
+Galder's Tower|Conjure a modest two-story stone tower, furnished as you like (+1 story per slot level above 3rd).
 Gaseous Form|Target becomes a misty cloud with a 10 ft fly speed.
-Glyph of Warding|Hidden glyph triggers a stored spell or a 5d8 elemental blast.
+Glyph of Warding|Hidden glyph triggers a stored spell or a 5d8 elemental blast (+1d8 per slot level above 3rd; a spell glyph can store any spell up to the slot's own level).
 Haste|Double speed, +2 AC, one extra limited action; lethargy when it ends.
 Hunger Of Hadar|20-ft sphere of void - blinding darkness, 2d6 cold inside, 2d6 acid leaving.
 Hypnotic Pattern|Twisting colors charm and incapacitate creatures in a 30-ft cube (Wis save).
 Incite Greed|Creatures are drawn helplessly toward your displayed gem (Wis save).
-Intellect Fortress|Resistance to psychic damage; advantage on Int, Wis, and Cha saves.
+Intellect Fortress|Resistance to psychic damage; advantage on Int, Wis, and Cha saves (+1 target within 30 ft of each other per slot level above 3rd).
 Leomund's Tiny Hut|Immobile 10-ft dome shelters up to nine creatures for 8 hours.
-Life Transference|Take 4d8 necrotic damage; heal a creature for twice that.
-Lightning Arrow|Next ranged attack becomes a bolt - 4d8 lightning, bursts around the target.
-Lightning Bolt|100-ft line of lightning; 8d6 damage (Dex half).
-Magic Circle|Warding cylinder vs a chosen creature type - it can't enter, charm, or frighten.
-Major Image|Full sight-sound-smell illusion up to a 20-ft cube.
-Mass Healing Word|Bonus action: up to six creatures heal 1d4 + modifier.
+Life Transference|Take 4d8 necrotic damage; heal a creature for twice that (+1d8 per slot level above 3rd).
+Lightning Arrow|Next ranged attack becomes a bolt - 4d8 lightning, bursts around the target (both damage effects +1d8 per slot level above 3rd).
+Lightning Bolt|100-ft line of lightning; 8d6 damage (Dex half; +1d6 per slot level above 3rd).
+Magic Circle|Warding cylinder vs a chosen creature type - it can't enter, charm, or frighten (+1 hr duration per slot level above 3rd).
+Major Image|Full sight-sound-smell illusion up to a 20-ft cube (with a 6th-level slot, lasts until dispelled with no concentration needed).
+Mass Healing Word|Bonus action: up to six creatures heal 1d4 + modifier (+1d4 per slot level above 3rd).
 Meld into Stone|Step into a stone surface and hide within it.
-Melf's Minute Meteors|Six tiny meteors orbit you; fling two per turn for 2d6 fire each.
-Motivational Speech|Rousing oration: up to five creatures gain temp HP and courage.
+Melf's Minute Meteors|Six tiny meteors orbit you; fling two per turn for 2d6 fire each (+2 meteors per slot level above 3rd).
+Motivational Speech|Rousing oration: up to five creatures gain temp HP and courage (+5 temp HP per slot level above 3rd).
 Nondetection|Hide a target from divination magic and scrying for 8 hours.
 Phantom Steed|Conjure a quasi-real horse with 100 ft speed for an hour.
 Plant Growth|Instantly overgrow an area into thicket, or enrich farmland for a year.
 Protection from Energy|Resistance to acid, cold, fire, lightning, or thunder.
-Pulse Wave|30-ft cone of force; 6d6 damage and pull or push targets 15 ft (Con save).
+Pulse Wave|30-ft cone of force; 6d6 damage and pull or push targets 15 ft (Con save; +1d6 damage and +5 ft push/pull per slot level above 3rd).
 Remove Curse|End all curses afflicting a creature or object.
 Revivify|Return a creature dead less than a minute to life with 1 HP.
 Sending|Send a 25-word telepathic message to anyone, anywhere; they can reply.
@@ -878,18 +878,18 @@ Sleet Storm|40-ft radius of driving sleet - blinding, slick ice, breaks concentr
 Slow|Up to six creatures: halved speed, -2 AC and Dex saves, limited actions (Wis save).
 Speak with Dead|Ask a corpse five questions it must answer.
 Speak with Plants|Talk with plants; ask them to help or hinder.
-Spirit Guardians|Protective spirits swirl 15 ft around you; 3d8 radiant or necrotic, slows enemies.
-Spirit Shroud|Your attacks within 10 ft deal +1d8 and block healing; slows nearby foes.
+Spirit Guardians|Protective spirits swirl 15 ft around you; 3d8 radiant or necrotic, slows enemies (+1d8 per slot level above 3rd).
+Spirit Shroud|Your attacks within 10 ft deal +1d8 and block healing; slows nearby foes (+1d8 per two slot levels above 3rd).
 Stinking Cloud|20-ft sphere of nauseating gas; creatures retch and lose their action (Con save).
-Summon Fey|Summon a fey spirit - fuming, mirthful, or tricksy - to fight for you.
-Summon Lesser Demons|Summon several random minor demons that attack whatever is closest.
-Summon Shadowspawn|Summon a shadow spirit - fury, despair, or fear - to fight for you.
-Summon Undead|Summon an undead spirit - ghostly, putrid, or skeletal - to fight for you.
-Thunder Step|Teleport 90 ft, leaving a 3d10 thunderclap behind (Con save).
+Summon Fey|Summon a fey spirit - fuming, mirthful, or tricksy - to fight for you (its stat block scales up with a higher slot level).
+Summon Lesser Demons|Summon several random minor demons that attack whatever is closest (double the count with a 6th-7th level slot, triple with 8th-9th).
+Summon Shadowspawn|Summon a shadow spirit - fury, despair, or fear - to fight for you (its stat block scales up with a higher slot level).
+Summon Undead|Summon an undead spirit - ghostly, putrid, or skeletal - to fight for you (its stat block scales up with a higher slot level).
+Thunder Step|Teleport 90 ft, leaving a 3d10 thunderclap behind (Con save; +1d10 per slot level above 3rd).
 Tidal Wave|Crashing wave; 4d8 bludgeoning and knocked prone (Dex half).
-Tiny Servant|Animate a tiny object into an obedient servant.
+Tiny Servant|Animate a tiny object into an obedient servant (+2 objects animated per slot level above 3rd).
 Tongues|Understand and be understood in any spoken language.
-Vampiric Touch|Melee 3d6 necrotic; you heal half the damage dealt.
+Vampiric Touch|Melee 3d6 necrotic; you heal half the damage dealt (+1d6 per slot level above 3rd).
 Wall of Sand|30-ft wall of swirling sand - blocks sight, bogs down movement.
 Wall of Water|30-ft wall of water - ranged attacks hindered, fire halved, cold freezes it.
 Water Breathing|Up to ten creatures can breathe underwater for 24 hours.
@@ -898,97 +898,97 @@ Wind Wall|Wall of roaring wind - deflects arrows and gases; 3d8 bludgeoning (Str
 Arcane Eye|Invisible floating eye you see through; flies 30 ft per turn.
 Aura of Life|30-ft aura: resistance to necrotic; allies at 0 HP wake with 1 HP.
 Aura of Purity|30-ft aura: immunity to disease, resistance to poison, advantage vs conditions.
-Banishment|Banish a creature to another plane of existence (Cha save).
-Blight|Drain life; 8d8 necrotic - devastating to plant creatures (Con half).
-Charm Monster|Any creature regards you as a friendly acquaintance (Wis save).
+Banishment|Banish a creature to another plane of existence (Cha save; +1 target per slot level above 4th).
+Blight|Drain life; 8d8 necrotic - devastating to plant creatures (Con half; +1d8 per slot level above 4th).
+Charm Monster|Any creature regards you as a friendly acquaintance (Wis save; +1 target per slot level above 4th).
 Compulsion|Force creatures to dash in a direction you choose each turn (Wis save).
-Confusion|Creatures act randomly - babble, wander, or strike out (Wis save).
-Conjure Minor Elementals|Summon a handful of minor elementals that obey you.
-Conjure Woodland Beings|Summon fey creatures - such as pixies - that obey you.
+Confusion|Creatures act randomly - babble, wander, or strike out (Wis save; radius +5 ft per slot level above 4th).
+Conjure Minor Elementals|Summon a handful of minor elementals that obey you (double the count with a 6th-level slot, triple with 8th).
+Conjure Woodland Beings|Summon fey creatures - such as pixies - that obey you (double the count with a 6th-level slot, triple with 8th).
 Control Water|Flood, part, redirect, or whirlpool a huge volume of water.
 Death Ward|The first time the target would drop to 0 HP, it drops to 1 instead.
 Dimension Door|Teleport yourself and one willing ally up to 500 ft.
 Divination|Ask a deity one question about events within seven days.
-Dominate Beast|Seize telepathic control of a beast's actions (Wis save).
-Elemental Bane|Target loses resistance to a chosen element and takes +2d6 from it (Con save).
+Dominate Beast|Seize telepathic control of a beast's actions (Wis save; duration becomes concentration up to 10 min with a 5th-level slot, 1 hr with 6th, 8 hrs with 7th+).
+Elemental Bane|Target loses resistance to a chosen element and takes +2d6 from it (Con save; +1 target per slot level above 4th).
 Evard's Black Tentacles|20-ft square of grasping tentacles - restrained, 3d6 bludgeoning (Dex save).
 Fabricate|Instantly craft finished goods from raw materials.
 Find Greater Steed|Summon a superior mount - griffon, pegasus, dire wolf, and more.
 Fire Shield|Wreathe yourself in flame - resist fire or cold; melee attackers take 2d8.
 Freedom of Movement|Ignore difficult terrain, paralysis, and restraints; slip any grapple.
-Galder's Speedy Courier|Conjure a spirit that delivers a small package to a distant recipient.
-Gate Seal|Seal an area against portals and planar gates.
+Galder's Speedy Courier|Conjure a spirit that delivers a small package to a distant recipient (with an 8th-level slot, can carry a chest to a recipient on another plane).
+Gate Seal|Seal an area against portals and planar gates (with a 6th-level+ slot, lasts until dispelled instead of a set duration).
 Giant Insect|Grow centipedes, spiders, or wasps into giant obedient versions.
 Grasping Vine|A vine lashes out and pulls a creature 20 ft toward it (Dex save).
-Gravity Sinkhole|20-ft sphere implodes; 5d10 force and pulled to the center (Con save).
+Gravity Sinkhole|20-ft sphere implodes; 5d10 force and pulled to the center (Con save; +1d10 per slot level above 4th).
 Greater Invisibility|Target stays invisible even while attacking or casting.
 Guardian of Faith|Spectral guardian; 20 radiant to enemies that come close (Dex half).
 Guardian of Nature|Become a Primal Beast or Great Tree with combat boons.
 Hallucinatory Terrain|Make terrain look, sound, and smell like other terrain.
-Ice Storm|Hail hammers a 20-ft cylinder; 2d8 bludgeoning + 4d6 cold (Dex half).
+Ice Storm|Hail hammers a 20-ft cylinder; 2d8 bludgeoning + 4d6 cold (Dex half; bludgeoning +1d8 per slot level above 4th).
 Leomund's Secret Chest|Hide a chest on the Ethereal Plane; recall it at will.
 Locate Creature|Sense the direction of a familiar creature within 1,000 ft.
 Mordenkainen's Faithful Hound|Invisible watchdog barks at intruders and bites for 4d8.
-Mordenkainen's Private Sanctum|Secure an area against sound, sight, scrying, and teleportation.
+Mordenkainen's Private Sanctum|Secure an area against sound, sight, scrying, and teleportation (cube +100 ft per side per slot level above 4th).
 Otiluke's Resilient Sphere|Immobile sphere of force traps or protects a creature.
-Phantasmal Killer|Living nightmare; 4d10 psychic each turn while the target stays frightened (Wis save).
+Phantasmal Killer|Living nightmare; 4d10 psychic each turn while the target stays frightened (Wis save; +1d10 per slot level above 4th).
 Polymorph|Transform a creature into a beast of equal or lower CR.
-Raulothim's Psychic Lance|Lance of psychic power; 7d6 and incapacitated - can target a named unseen foe (Int save).
+Raulothim's Psychic Lance|Lance of psychic power; 7d6 and incapacitated - can target a named unseen foe (Int save; +1d6 per slot level above 4th).
 Shadow Of Moil|Shadows veil you - resist radiant; melee attackers take 2d8 necrotic.
 Sickening Radiance|30-ft sphere of sickly light; 4d10 radiant plus mounting exhaustion (Con save).
-Spirit Of Death|Summon a reaper spirit that fights at your command.
+Spirit Of Death|Summon a reaper spirit that fights at your command (its stat block scales up with a higher slot level).
 Staggering Smite|Next hit deals +4d6 psychic; target reels - disadvantage, no reactions.
 Stone Shape|Reshape a stone object or carve a passage through stone.
 Stoneskin|Resistance to nonmagical bludgeoning, piercing, and slashing damage.
-Storm Sphere|20-ft sphere of storm winds; 2d6 bludgeoning inside, hurl 4d6 lightning bolts.
-Summon Aberration|Summon an aberrant spirit - beholderkin, slaad, or star spawn.
-Summon Construct|Summon a construct spirit - clay, metal, or stone - to fight for you.
-Summon Elemental|Summon an elemental spirit - air, earth, fire, or water.
-Summon Greater Demon|Summon a powerful demon that obeys only while you hold control.
-Vitriolic Sphere|20-ft sphere of acid; 10d4 now and 5d4 next turn (Dex save).
-Wall of Fire|Towering wall of flame; 5d8 fire to creatures inside or too close.
+Storm Sphere|20-ft sphere of storm winds; 2d6 bludgeoning inside, hurl 4d6 lightning bolts (each damage effect +1d6 per slot level above 4th).
+Summon Aberration|Summon an aberrant spirit - beholderkin, slaad, or star spawn (its stat block scales up with a higher slot level).
+Summon Construct|Summon a construct spirit - clay, metal, or stone - to fight for you (its stat block scales up with a higher slot level).
+Summon Elemental|Summon an elemental spirit - air, earth, fire, or water (its stat block scales up with a 5th-level+ slot).
+Summon Greater Demon|Summon a powerful demon that obeys only while you hold control (max demon CR +1 per slot level above 4th).
+Vitriolic Sphere|20-ft sphere of acid; 10d4 now and 5d4 next turn (Dex save; initial damage +2d4 per slot level above 4th).
+Wall of Fire|Towering wall of flame; 5d8 fire to creatures inside or too close (+1d8 per slot level above 4th).
 Watery Sphere|Rolling sphere of water engulfs and restrains creatures (Str save).
-Animate Objects|Bring up to ten objects to life to fight for you.
+Animate Objects|Bring up to ten objects to life to fight for you (+2 objects per slot level above 5th).
 Antilife Shell|10-ft shimmering barrier that no living creature can cross.
 Awaken|Grant a beast or plant intelligence, speech, and 30 days of devotion.
 Banishing Smite|Next hit deals +5d10 force; banishes a target under 50 HP.
-Bigby's Hand|Large hand of force - punch (4d8), shove, grasp, or block.
+Bigby's Hand|Large hand of force - punch (4d8), shove, grasp, or block (punch +2d8, grasp +2d6, per slot level above 5th).
 Circle of Power|30-ft aura: advantage on saves vs magic; a success means no damage at all.
-Cloudkill|20-ft sphere of poison fog that creeps forward; 5d8 poison (Con half).
+Cloudkill|20-ft sphere of poison fog that creeps forward; 5d8 poison (Con half; +1d8 per slot level above 5th).
 Commune|Ask your deity three yes-or-no questions.
 Commune with Nature|Learn key facts about the surrounding land within 3 miles.
-Cone of Cold|60-ft cone of frost; 8d8 cold damage (Con half).
-Conjure Elemental|Summon an elemental bound to obey your commands.
+Cone of Cold|60-ft cone of frost; 8d8 cold damage (Con half; +1d8 per slot level above 5th).
+Conjure Elemental|Summon an elemental bound to obey your commands (max elemental CR +1 per slot level above 5th).
 Conjure Volley|Duplicated ammunition rains over a 40-ft radius; 8d8 (Dex half).
 Contact Other Plane|Risky contact with extraplanar intelligence; five one-word answers.
 Contagion|Inflict a crippling disease - blinding sickness, flesh rot, slimy doom, and more.
 Control Winds|Command the winds in a huge cube - gusts, downdrafts, or updrafts.
-Creation|Conjure a temporary object of vegetable or mineral matter.
-Danse Macabre|Raise up to five corpses as empowered skeletons or zombies.
+Creation|Conjure a temporary object of vegetable or mineral matter (cube +5 ft per side per slot level above 5th).
+Danse Macabre|Raise up to five corpses as empowered skeletons or zombies (+2 corpses per slot level above 5th).
 Dawn|30-ft cylinder of dawn light; 4d10 radiant each turn, movable (Con save).
 Destructive Wave|Thunder erupts around you; 5d6 thunder + 5d6 radiant or necrotic, knocks prone.
 Dispel Evil and Good|Extraplanar creatures falter against you; break their enchantments or banish them.
-Dominate Person|Seize telepathic control of a humanoid's actions (Wis save).
+Dominate Person|Seize telepathic control of a humanoid's actions (Wis save; duration becomes concentration up to 10 min with a 6th-level slot, 1 hr with 7th, 8 hrs with 8th+).
 Dream|Shape a distant creature's dreams - or send 3d6 psychic nightmares.
-Enervation|Tether of necrotic energy; 4d8 per turn, healing you for half (Dex save).
+Enervation|Tether of necrotic energy; 4d8 per turn, healing you for half (Dex save; +1d8 per slot level above 5th).
 Far Step|Teleport 60 ft as a bonus action, every turn for a minute.
-Flame Strike|Pillar of divine fire; 4d6 fire + 4d6 radiant (Dex half).
-Geas|Bind a creature to your command - 5d10 psychic per day for disobeying.
+Flame Strike|Pillar of divine fire; 4d6 fire + 4d6 radiant (Dex half; +1d6 to one damage type of your choice per slot level above 5th).
+Geas|Bind a creature to your command - 5d10 psychic per day for disobeying (duration 1 year with a 7th-8th level slot; until ended with a 9th-level slot).
 Greater Restoration|Undo exhaustion, charm, petrification, curses, or ability drain.
 Hallow|Consecrate an area - fiends and undead barred, plus a lasting effect you choose.
-Hold Monster|Paralyze any creature; Wis save each turn to break free.
+Hold Monster|Paralyze any creature; Wis save each turn to break free (+1 target per slot level above 5th).
 Holy Weapon|Weapon deals +2d8 radiant and sheds light; ends in a blinding burst.
 Immolation|Flames engulf a target; 8d6 fire, then 4d6 each turn (Dex save).
-Infernal Calling|Summon an uncontrolled devil; bargain or bully it into service.
-Insect Plague|20-ft sphere of biting locusts; 4d10 piercing, difficult terrain.
+Infernal Calling|Summon an uncontrolled devil; bargain or bully it into service (max devil CR +1 per slot level above 5th).
+Insect Plague|20-ft sphere of biting locusts; 4d10 piercing, difficult terrain (+1d10 per slot level above 5th).
 Legend Lore|Learn the legends and lore of a person, place, or object.
 Maelstrom|30-ft whirlpool; 6d6 bludgeoning and drags creatures toward the center.
-Mass Cure Wounds|Up to six creatures heal 3d8 + modifier.
+Mass Cure Wounds|Up to six creatures heal 3d8 + modifier (+1d8 per slot level above 5th).
 Mislead|Turn invisible while an illusory double walks and talks for you.
-Modify Memory|Rewrite a creature's memory of the last 24 hours.
+Modify Memory|Rewrite a creature's memory of the last 24 hours (reach back 7 days with a 6th-level slot, 30 days with 7th, 1 year with 8th, any time with 9th).
 Negative Energy Flood|5d12 necrotic; creatures killed rise as zombies (Con half).
 Passwall|Open a passage through wood, plaster, or stone.
-Planar Binding|Bind a celestial, elemental, fey, or fiend to your service for a day.
+Planar Binding|Bind a celestial, elemental, fey, or fiend to your service for a day (10 days with a 6th-level slot, 30 with 7th, 180 with 8th, a year and a day with 9th).
 Raise Dead|Return a creature dead up to 10 days to life.
 Rary's Telepathic Bond|Link up to eight creatures in telepathic contact for an hour.
 Reincarnate|Return a dead humanoid to life - in a new random body.
@@ -996,28 +996,28 @@ Scrying|Spy on a distant creature through an invisible sensor (Wis save).
 Seeming|Disguise multiple creatures with illusory appearances for 8 hours.
 Skill Empowerment|Target gains expertise in one skill it's proficient with.
 Steel Wind Strike|Flash between up to five foes, striking each for 6d10 force.
-Summon Celestial|Summon a celestial spirit - avenger or defender - to fight for you.
-Summon Draconic Spirit|Summon a draconic spirit with a breath weapon and resistances.
+Summon Celestial|Summon a celestial spirit - avenger or defender - to fight for you (its stat block scales up with a 6th-level+ slot).
+Summon Draconic Spirit|Summon a draconic spirit with a breath weapon and resistances (its stat block scales up with a 6th-level+ slot).
 Swift Quiver|Your quiver refills itself; two ranged attacks as a bonus action each turn.
 Synaptic Static|20-ft sphere of psychic feedback; 8d6 and -1d6 on attacks and checks (Int save).
 Telekinesis|Move creatures or 1,000-lb objects with your mind, turn after turn.
 Teleportation Circle|Open a portal to a permanent teleportation circle you know.
-Temporal Shunt|Reaction: hurl an attacker or caster forward in time, erasing its turn.
+Temporal Shunt|Reaction: hurl an attacker or caster forward in time, erasing its turn (+1 target per slot level above 5th).
 Transmute Rock|Turn rock to mud, or mud to rock, in a 40-ft cube.
 Tree Stride|Step into one tree and out of another within 500 ft, every turn.
 Wall of Force|Invisible, indestructible wall no attack or spell can breach.
-Wall of Light|Wall of blazing light - blinds and deals 4d8 radiant; fire beams from it.
+Wall of Light|Wall of blazing light - blinds and deals 4d8 radiant; fire beams from it (+1d8 per slot level above 5th).
 Wall of Stone|Raise a wall of solid stone that can become permanent.
 Wrath of Nature|Awaken trees, vines, rocks, and roots to assail your enemies.
 Arcane Gate|Create two linked teleportation portals up to 500 ft apart.
 Blade Barrier|Wall of whirling blades; 6d10 slashing to creatures crossing it (Dex half).
-Bones of the Earth|Six stone pillars erupt from the ground, lifting or pinning creatures.
-Chain Lightning|A bolt arcs to strike up to four targets; 10d8 lightning each (Dex half).
-Circle of Death|60-ft-radius sphere of negative energy; 8d6 necrotic (Con half).
+Bones of the Earth|Six stone pillars erupt from the ground, lifting or pinning creatures (+2 pillars per slot level above 6th).
+Chain Lightning|A bolt arcs to strike up to four targets; 10d8 lightning each (Dex half; +1 bolt per slot level above 6th).
+Circle of Death|60-ft-radius sphere of negative energy; 8d6 necrotic (Con half; +2d6 per slot level above 6th).
 Contingency|Store a spell on yourself that casts itself when a set condition occurs.
 Create Homunculus|Craft a loyal homunculus companion from your own blood.
-Create Undead|Raise up to three ghouls - or mightier undead at higher levels.
-Disintegrate|10d6+40 force damage; a creature reduced to 0 HP turns to dust (Dex save).
+Create Undead|Raise up to three ghouls - or mightier undead at higher levels (4 ghouls with a 7th-level slot; 5 ghouls or 2 ghasts/wights with 8th; 6 ghouls, 3 ghasts/wights, or 2 mummies with 9th).
+Disintegrate|10d6+40 force damage; a creature reduced to 0 HP turns to dust (Dex save; +3d6 per slot level above 6th).
 Drawmij's Instant Summons|Mark an item; summon it to your hand from anywhere.
 Druid Grove|Ward a grove with mists, winds, grasping undergrowth, and guardians.
 Eyebite|Your gaze puts one creature per turn to sleep, to flight, or to sickness.
@@ -1025,45 +1025,45 @@ Find the Path|Know the shortest route to a fixed location you've visited.
 Fizban's Platinum Shield|Movable shield of platinum light: cover, elemental resistances, evasion.
 Flesh to Stone|Petrify a creature over successive failed Con saves.
 Forbiddance|Ward a large area against teleportation; 5d10 to chosen creature types.
-Globe of Invulnerability|10-ft sphere that blocks all spells of 5th level and lower.
-Gravity Fissure|100-ft line of gravitational collapse; 8d8 force, pulls in bystanders (Con save).
+Globe of Invulnerability|10-ft sphere that blocks all spells of 5th level and lower (blocks 1 level higher per slot level above 6th).
+Gravity Fissure|100-ft line of gravitational collapse; 8d8 force, pulls in bystanders (Con save; +1d8 per slot level above 6th).
 Guards and Wards|Fill a stronghold with fog, locked doors, webs, and other defenses.
 Harm|Ravaging disease; 14d6 necrotic and max HP reduced to match (Con half).
-Heal|Restore 70 HP and cure blindness, deafness, and disease.
+Heal|Restore 70 HP and cure blindness, deafness, and disease (+10 HP per slot level above 6th).
 Heroes' Feast|Grand feast - immunity to fear and poison, +2d10 max HP for a day.
 Investiture of Flame|Become fire - immune to it, scorch nearby foes, hurl 4d8 flame lines.
 Investiture of Ice|Become ice - immune to cold, chill the ground, breathe 4d6 frost cones.
 Investiture of Stone|Become stone - resist weapons, quake the ground, glide through earth.
 Investiture of Wind|Become wind - fly 60 ft, foil ranged attacks, exhale 2d10 gusts.
 Magic Jar|Cast your soul into a vessel and possess humanoid bodies.
-Mass Suggestion|Magically suggest a course of action to up to twelve creatures (Wis save).
+Mass Suggestion|Magically suggest a course of action to up to twelve creatures (Wis save; duration 10 days with a 7th-level slot, 30 days with 8th, a year and a day with 9th).
 Mental Prison|Illusory cell; 5d10 psychic, and 10d10 more to break out (Int save).
 Move Earth|Reshape dirt, sand, or clay terrain over hours of work.
-Otiluke's Freezing Sphere|Enormous frost burst; 10d6 cold, freezes water solid (Con half).
+Otiluke's Freezing Sphere|Enormous frost burst; 10d6 cold, freezes water solid (Con half; +1d6 per slot level above 6th).
 Otto's Irresistible Dance|Target capers helplessly - no movement, attacks against it advantaged (Wis to end).
 Planar Ally|Your deity lends an otherworldly ally - for a negotiated price.
 Primordial Ward|Resistance to acid, cold, fire, lightning, and thunder; trade it for one turn of immunity.
 Programmed Illusion|Preset an illusion that performs when its trigger occurs.
 Scatter|Fling up to five creatures 120 ft through the air to spots you choose (Wis save).
 Soul Cage|Trap a dying humanoid's soul; spend it for healing, answers, or spying.
-Summon Fiend|Summon a fiendish spirit - demon, devil, or yugoloth - to fight for you.
+Summon Fiend|Summon a fiendish spirit - demon, devil, or yugoloth - to fight for you (+15 HP to it per slot level above 6th).
 Sunbeam|Re-aimable 60-ft beam of sunlight; 6d8 radiant and blinds (Con save).
 Tasha's Otherworldly Guise|Assume a fiendish or celestial form - flight, immunities, +2 AC, spell-powered strikes.
 Tenser's Transformation|Become a warrior - 50 temp HP, extra attacks, advantage; at a price.
 Transport via Plants|Step into one large plant and out of another anywhere on the plane.
 True Seeing|Truesight 120 ft - pierce illusions, invisibility, and the Ethereal.
-Wall of Ice|Raise a wall of solid ice; 10d6 cold to creatures caught in its path.
-Wall of Thorns|Wall of tangled brush; 7d8 piercing, agonizing to push through.
+Wall of Ice|Raise a wall of solid ice; 10d6 cold to creatures caught in its path (+2d6 forming damage and +1d6 lingering-cold damage per slot level above 6th).
+Wall of Thorns|Wall of tangled brush; 7d8 piercing, agonizing to push through (both damage instances +1d8 per slot level above 6th).
 Wind Walk|Your party becomes cloud mist with a 300 ft flying speed.
 Word of Recall|Instantly teleport your party to a prepared sanctuary.
-Conjure Celestial|Summon a celestial being that obeys your commands.
+Conjure Celestial|Summon a celestial being that obeys your commands (with a 9th-level slot, can summon one of CR 5 or lower).
 Create Magen|Transform an inanimate mannequin into a loyal magen construct.
-Crown of Stars|Seven star-motes orbit your head; hurl them for 4d12 radiant each.
-Delayed Blast Fireball|Plant a growing bead of fire; 12d6+ when it finally detonates (Dex half).
+Crown of Stars|Seven star-motes orbit your head; hurl them for 4d12 radiant each (+2 motes per slot level above 7th).
+Delayed Blast Fireball|Plant a growing bead of fire; 12d6+ when it finally detonates (Dex half; +1d6 per slot level above 7th).
 Divine Word|Divine thunder - deafens, blinds, stuns, or kills by HP; banishes extraplanar foes.
 Draconic Transformation|Become part dragon - blindsight, spectral wings, 6d8 breath weapon.
 Dream of the Blue Veil|Ritual journey to another world of the Material Plane.
-Etherealness|Step into the Ethereal Plane and drift unseen through the living world.
+Etherealness|Step into the Ethereal Plane and drift unseen through the living world (+3 other willing creatures brought along per slot level above 7th).
 Finger of Death|7d8+30 necrotic; slain humanoids rise as zombies under your command (Con half).
 Fire Storm|Sheets of flame in ten connected cubes; 7d10 fire (Dex half).
 Forcecage|Trap creatures in an invisible cage of force; even teleporting out is hard.
@@ -1092,7 +1092,7 @@ Clone|Grow an inert duplicate body; your soul moves into it when you die.
 Control Weather|Reshape the region's weather - temperature, wind, and precipitation.
 Dark Star|Sphere of crushing gravity and silence; 8d10 force, disintegrates the slain.
 Demiplane|Open a door to a 30-ft extradimensional room you can revisit.
-Dominate Monster|Seize telepathic control of any creature's actions (Wis save).
+Dominate Monster|Seize telepathic control of any creature's actions (Wis save; with a 9th-level slot, duration becomes concentration, up to 8 hours).
 Earthquake|Seismic upheaval - fissures, toppled structures, creatures thrown prone.
 Feeblemind|4d6 psychic; the target's Intelligence and Charisma collapse to 1 (Int save).
 Glibness|For an hour, treat any Charisma check below 15 as 15; lies read as truth.
