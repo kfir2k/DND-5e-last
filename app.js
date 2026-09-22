@@ -443,8 +443,8 @@ build:`
       <div class="bCustomBody" id="buildCustomBody" style="display:none"></div>
     </div>
   </div>
-  <div class="panel" id="asiPanel" style="display:none"><h2>Level-Up Choices — ASI &amp; Feats</h2>
-    <p class="prep-note" style="margin:0 0 10px">ASI = two +1s (same ability twice for +2), added automatically. Or pick a Feat.</p>
+  <div class="panel" id="asiPanel" style="display:none"><h2><span>Level-Up Choices <small class="asi-h-sub">ASI &amp; Feats</small></span><span class="asi-pending" id="asiPending" hidden></span></h2>
+    <p class="asi-intro">At each of these levels, raise your ability scores by 2 in total (+2 to one, or +1 to two) or take a feat instead. The bonuses are added to your scores automatically. <span class="asi-next" id="asiNext"></span></p>
     <div id="asiList"></div>
   </div>`,
 
@@ -5701,7 +5701,7 @@ function wireBackgroundSelect(){
 // when it doesn't (a DM-granted feat, house rule, etc.). That entry is the single source of
 // truth from then on: this field just displays/renames it.
 //
-// Two kinds of row share one template (renderAsiRow) and one linking scheme:
+// Two kinds of row share one template (renderAsiCard) and one linking scheme:
 //  - the fixed per-level rows the class rules grant (4/8/12/16/19, extras for Fighter/Rogue) —
 //    identified by ref {L: level number}, always present, can't be removed.
 //  - "bonus" rows in S.asiExtra — a DM handing out "take a feat" or "+2 to an ability" outside
@@ -5735,43 +5735,59 @@ function syncAsiFeat(ref){
   S.features.push(buildFeatFeature(name,ref));
   fxRefresh();
 }
-function asiFeatLinkHTML(ref){
-  if(!asiLinkedFeat(ref)) return '';
-  return `<div class="asi-feat-link-row"><button type="button" class="asi-feat-link" data-asifeatjump="${asiRefKey(ref)}" title="Edit this feat's description, effects, or combat tracking on the Features tab">✓ Added — tap to edit</button></div>`;
-}
 function abOpts(sel){
   return '<option value="">— pick —</option>'+ABILITIES
     .map(([k,l])=>`<option value="${k}" ${sel===k?'selected':''}>${l}</option>`).join('');
 }
-// leadHTML fills the row's left-most slot (a fixed "LV 4" label, or a bonus row's editable
-// name field); trailHTML adds anything after the choice fields (a bonus row's ✕ remove button).
-function renderAsiRow(ref,leadHTML,trailHTML){
+// One card per choice: a level slot (ref {L}) or a bonus pick (ref {id}). The ASI/Feat decision
+// is a two-button toggle (tap the lit one again to clear it), and the top line sums up what the
+// card currently gives, so the whole grid reads at a glance without opening anything. Unmade
+// choices get the "pending" glow. Same asiEntry/asiLinkedFeat/syncAsiFeat plumbing and the same
+// data-asia/-asib/-asifeat fields the Level Up popup uses — only the Build tab's markup differs.
+function asiSummary(ref){
+  const e=asiEntry(ref)||{};
+  if(e.choice==='asi'){
+    if(e.a&&e.a===e.b) return '+2 '+abbr3(e.a);
+    const picks=[e.a,e.b].filter(Boolean).map(k=>'+1 '+abbr3(k));
+    return picks.length===2?picks.join(' · '):picks.length?picks[0]+' · pick one more':'Pick abilities';
+  }
+  if(e.choice==='feat'){
+    const linked=asiLinkedFeat(ref);
+    return ((linked?linked.title:e.feat)||'').trim()||'Pick a feat';
+  }
+  return 'Not chosen yet';
+}
+function asiDone(ref){
+  const e=asiEntry(ref)||{};
+  if(e.choice==='asi') return !!(e.a&&e.b);
+  if(e.choice==='feat') return !!((asiLinkedFeat(ref)||{}).title||e.feat||'').trim();
+  return false;
+}
+function renderAsiCard(ref,headHTML,trailHTML){
   const e=asiEntry(ref); if(!e) return '';
-  const key=asiRefKey(ref);
+  const key=asiRefKey(ref), done=asiDone(ref);
   const linked=asiLinkedFeat(ref);
   const featName=linked?(linked.title||''):(e.feat||'');
+  const seg=(val,label)=>`<button type="button" class="asi-seg-btn ${e.choice===val?'on':''}" data-asiseg="${key}" data-asisegval="${val}" aria-pressed="${e.choice===val}">${label}</button>`;
   return `
-    <div class="list-row asi-row">
-      ${leadHTML}
-      <select class="narrow asi-choice-sel" data-asichoice="${key}">
-        <option value="" ${!e.choice?'selected':''}>— choose —</option>
-        <option value="asi" ${e.choice==='asi'?'selected':''}>Ability Score Improvement</option>
-        <option value="feat" ${e.choice==='feat'?'selected':''}>Feat</option>
-      </select>
+    <div class="asi-card ${done?'done':'pending'}">
+      <div class="asi-card-top">${headHTML}${trailHTML||''}</div>
+      <div class="asi-card-sum">${done?'✓ ':''}${esc(asiSummary(ref))}</div>
+      <div class="asi-seg" role="group" aria-label="Ability increase or feat">${seg('asi','⚔ Ability +2')}${seg('feat','✨ Feat')}</div>
       ${e.choice==='asi'?`
-        <span class="asi-ab-pair">
-          <select class="asi-ab-sel" data-asia="${key}">${abOpts(e.a)}</select>
-          <select class="asi-ab-sel" data-asib="${key}">${abOpts(e.b)}</select>
-        </span>`:''}
+        <div class="asi-card-abs">
+          <select class="asi-ab-sel" data-asia="${key}" aria-label="First +1">${abOpts(e.a)}</select>
+          <span class="asi-plus">+</span>
+          <select class="asi-ab-sel" data-asib="${key}" aria-label="Second +1">${abOpts(e.b)}</select>
+        </div>
+        <div class="asi-card-hint">Same ability twice = +2 to it</div>`:''}
       ${e.choice==='feat'?`
         <span class="sug-wrap asi-feat-wrap"><input type="text" value="${esc(featName)}" data-asifeat="${key}" autocomplete="off" placeholder="Tap to choose a feat…" readonly></span>`:''}
-      ${trailHTML||''}
-    </div>
-    ${e.choice==='feat'?asiFeatLinkHTML(ref):''}`;
+    </div>`;
 }
 function renderAsi(){
   const panel=$('#asiPanel');
-  const lvls=asiLevels(S.classId).filter(L=>L<=num(S.level));
+  const all=asiLevels(S.classId), lvls=all.filter(L=>L<=num(S.level));
   S.asiExtra=S.asiExtra||[];
   if(!S.classId && !S.asiExtra.length){ panel.style.display='none'; return; }
   panel.style.display='';
@@ -5780,68 +5796,75 @@ function renderAsi(){
   closeSuggest();
   // drop stale entries from levels no longer earned (e.g. level lowered)
   Object.keys(S.asi).forEach(L=>{ if(!lvls.includes(+L)) delete S.asi[L]; });
-  const lvlRows=lvls.map(L=>renderAsiRow({L},
-    `<span class="asi-lv">LV ${L}</span>`
-  )).join('');
-  const bonusRows=S.asiExtra.map(e=>renderAsiRow({id:e.id},
-    `<input type="text" class="asi-bonus-label" value="${esc(e.label||'')}" data-asibonuslabel="${e.id}" placeholder="e.g. DM boon">`,
+  const refs=[...lvls.map(L=>({L})),...S.asiExtra.map(e=>({id:e.id}))];
+  const open=refs.filter(r=>!asiDone(r)).length;
+  const badge=$('#asiPending');
+  if(badge){ badge.textContent=open?`${open} to choose`:''; badge.hidden=!open; }
+  const next=all.filter(L=>L>num(S.level));
+  $('#asiNext').textContent=S.classId
+    ?(next.length?`Next at level ${next.join(' · ')}`:'No more ASI levels ahead')+(lvls.length?'':' — none earned yet.'):'';
+  const lvlCards=lvls.map(L=>renderAsiCard({L},`<span class="asi-lv-badge">Level ${L}</span>`)).join('');
+  const bonusCards=S.asiExtra.map(e=>renderAsiCard({id:e.id},
+    `<input type="text" class="asi-bonus-label" value="${esc(e.label||'')}" data-asibonuslabel="${e.id}" placeholder="Bonus pick — e.g. DM boon" aria-label="Bonus pick name">`,
     `<button type="button" class="del-btn" data-asibonusdel="${e.id}" title="Remove this bonus pick">✕</button>`
   )).join('');
-  $('#asiList').innerHTML =
-    (lvls.length?lvlRows:'<p class="prep-note" style="margin:0 0 10px">Bonus picks below still work.</p>')
-    + (S.asiExtra.length?`<div class="asi-bonus-hdr">Bonus picks</div>${bonusRows}`:'')
-    + `<button type="button" class="add-btn" id="asiBonusAdd" style="margin-top:4px">+ Add bonus ASI/Feat</button>`;
-  $$('[data-asichoice]').forEach(s=>s.addEventListener('change',()=>{
-    asiEntry(parseAsiRef(s.dataset.asichoice)).choice=s.value;
-    renderAsi(); recalc(); save();
-  }));
-  $$('[data-asia]').forEach(s=>s.addEventListener('change',()=>{
-    asiEntry(parseAsiRef(s.dataset.asia)).a=s.value; recalc(); save();
-  }));
-  $$('[data-asib]').forEach(s=>s.addEventListener('change',()=>{
-    asiEntry(parseAsiRef(s.dataset.asib)).b=s.value; recalc(); save();
-  }));
-  $$('[data-asifeat]').forEach(inp=>{
-    inp.addEventListener('input',()=>{
-      const ref=parseAsiRef(inp.dataset.asifeat), linked=asiLinkedFeat(ref);
-      // Once linked, this field just renames the real entry in place; until then it's caching
-      // the in-progress name for syncAsiFeat to pick up on blur (see the 'change' listener below).
-      if(linked) linked.title=inp.value; else asiEntry(ref).feat=inp.value;
-      save();
-    });
-    inp.addEventListener('change',()=>{
-      const ref=parseAsiRef(inp.dataset.asifeat), linked=asiLinkedFeat(ref);
-      if(linked && !inp.value.trim()){ delete linked.source.asiLevel; delete linked.source.asiExtraId; save(); } // cleared — unlink, keep the entry itself
+  const list=$('#asiList');
+  list.innerHTML=`<div class="asi-grid">${lvlCards}${bonusCards}
+    <button type="button" class="asi-add-card" id="asiBonusAdd"><b>+ Bonus pick</b><small>A DM boon, epic boon or other extra ASI/feat</small></button></div>`;
+  if(list.dataset.wired) return;
+  // Delegated once on #asiList (never document-wide), so the Level Up popup's own copies of
+  // these fields are never touched by this wiring.
+  list.dataset.wired='1';
+  list.addEventListener('click',ev=>{
+    const t=ev.target;
+    const seg=t.closest('[data-asiseg]');
+    if(seg){
+      const e=asiEntry(parseAsiRef(seg.dataset.asiseg)), v=seg.dataset.asisegval;
+      e.choice=e.choice===v?'':v;
+      renderAsi(); recalc(); save(); return;
+    }
+    const del=t.closest('[data-asibonusdel]');
+    if(del){
+      const id=del.dataset.asibonusdel;
+      // The feat this bonus pick created stays on the Features tab (same paper-trail philosophy as
+      // deleting an attack/spell doesn't retroactively erase a turn-plan step referencing it) —
+      // just unlinked, so removing a bonus pick can't silently delete a feat you've since edited.
+      const linked=S.features.find(f=>f.source&&f.source.kind==='feat'&&f.source.asiExtraId===id);
+      if(linked) delete linked.source.asiExtraId;
+      S.asiExtra=(S.asiExtra||[]).filter(x=>x.id!==id);
+      renderAsi(); recalc(); save(); return;
+    }
+    if(t.closest('#asiBonusAdd')){
+      S.asiExtra=S.asiExtra||[];
+      S.asiExtra.push({id:'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),choice:'',a:'',b:'',feat:'',label:''});
+      renderAsi(); save();
+      const labels=$$('#asiList .asi-bonus-label'); if(labels.length) labels[labels.length-1].focus();
+    }
+  });
+  list.addEventListener('change',ev=>{
+    const t=ev.target;
+    if(t.dataset.asia!=null){ asiEntry(parseAsiRef(t.dataset.asia)).a=t.value; renderAsi(); recalc(); save(); return; }
+    if(t.dataset.asib!=null){ asiEntry(parseAsiRef(t.dataset.asib)).b=t.value; renderAsi(); recalc(); save(); return; }
+    if(t.dataset.asifeat!=null){
+      const ref=parseAsiRef(t.dataset.asifeat), linked=asiLinkedFeat(ref);
+      if(linked && !t.value.trim()){ delete linked.source.asiLevel; delete linked.source.asiExtraId; save(); } // cleared — unlink, keep the entry itself
       else syncAsiFeat(ref);
       renderAsi();
-    });
+    }
   });
-  $$('[data-asifeatjump]').forEach(b=>b.addEventListener('click',()=>{
-    const idx=S.features.findIndex(f=>f===asiLinkedFeat(parseAsiRef(b.dataset.asifeatjump)));
-    showTab('features');
-    if(idx<0) return;
-    const card=$(`#featureList .feature-card[data-featidx="${idx}"]`);
-    if(card){ card.scrollIntoView({behavior:'smooth',block:'center'}); card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),900); }
-  }));
-  $$('[data-asibonuslabel]').forEach(inp=>inp.addEventListener('input',()=>{
-    const e=(S.asiExtra||[]).find(x=>x.id===inp.dataset.asibonuslabel);
-    if(e){ e.label=inp.value; save(); }
-  }));
-  $$('[data-asibonusdel]').forEach(b=>b.addEventListener('click',()=>{
-    const id=b.dataset.asibonusdel;
-    // The feat this bonus row created stays on the Features tab (same paper-trail philosophy as
-    // deleting an attack/spell doesn't retroactively erase a turn-plan step referencing it) —
-    // just unlinked, so removing a bonus pick can't silently delete a feat you've since edited.
-    const linked=S.features.find(f=>f.source&&f.source.kind==='feat'&&f.source.asiExtraId===id);
-    if(linked) delete linked.source.asiExtraId;
-    S.asiExtra=(S.asiExtra||[]).filter(x=>x.id!==id);
-    renderAsi(); recalc(); save();
-  }));
-  $('#asiBonusAdd')?.addEventListener('click',()=>{
-    S.asiExtra=S.asiExtra||[];
-    S.asiExtra.push({id:'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),choice:'',a:'',b:'',feat:'',label:''});
-    renderAsi(); save();
-    $('#asiList .asi-bonus-label:last-of-type')?.focus();
+  list.addEventListener('input',ev=>{
+    const t=ev.target;
+    if(t.dataset.asifeat!=null){
+      const ref=parseAsiRef(t.dataset.asifeat), linked=asiLinkedFeat(ref);
+      // Once linked, this field just renames the real entry in place; until then it's caching
+      // the in-progress name for syncAsiFeat to pick up on blur (see the 'change' listener above).
+      if(linked) linked.title=t.value; else asiEntry(ref).feat=t.value;
+      save(); return;
+    }
+    if(t.dataset.asibonuslabel!=null){
+      const e=(S.asiExtra||[]).find(x=>x.id===t.dataset.asibonuslabel);
+      if(e){ e.label=t.value; save(); }
+    }
   });
 }
 
@@ -5868,7 +5891,7 @@ function levelUpHpLineHTML(){
 // The ASI/Feat choice, as two big tappable cards instead of a cramped native <select> — this is
 // the actual decision the whole popup exists for, so it gets the most prominent, easiest-to-tap
 // real estate. Still reads/writes straight through asiEntry/asiLinkedFeat/syncAsiFeat, exactly
-// like the Build tab's own renderAsiRow — a Feat picked here is the same live-linked Features-tab
+// like the Build tab's own renderAsiCard — a Feat picked here is the same live-linked Features-tab
 // entry, just wrapped in different markup.
 function levelUpAsiCardsHTML(newLevel){
   const ref={L:newLevel}, e=asiEntry(ref), key=asiRefKey(ref);
@@ -5892,8 +5915,7 @@ function levelUpAsiCardsHTML(newLevel){
         <select class="asi-ab-sel" data-asib="${key}">${abOpts(e.b)}</select>
       </div>`:''}
     ${e.choice==='feat'?`
-      <span class="sug-wrap asi-feat-wrap"><input type="text" value="${esc(featName)}" data-asifeat="${key}" autocomplete="off" placeholder="Tap to choose a feat…" readonly></span>
-      ${asiFeatLinkHTML(ref)}`:''}`;
+      <span class="sug-wrap asi-feat-wrap"><input type="text" value="${esc(featName)}" data-asifeat="${key}" autocomplete="off" placeholder="Tap to choose a feat…" readonly></span>`:''}`;
 }
 // Subclass-choice step — shown only when this level is the class's actual pick-a-subclass level
 // (subclassLevel(), app.js) and nothing's picked yet. Cleric/Sorcerer/Warlock pick at level 1
@@ -6096,14 +6118,6 @@ function openLevelUpModal(){
     if(choiceBtn){
       asiEntry(parseAsiRef(choiceBtn.dataset.lvlchoicekey)).choice=choiceBtn.dataset.lvlchoiceval;
       recalc(); save(); paintLevelUpModal(); return;
-    }
-    if(e.target.closest('[data-asifeatjump]')){
-      const key=e.target.closest('[data-asifeatjump]').dataset.asifeatjump;
-      const idx=S.features.findIndex(f=>f===asiLinkedFeat(parseAsiRef(key)));
-      closeLevelUpModal(); showTab('features');
-      if(idx<0) return;
-      const card=$(`#featureList .feature-card[data-featidx="${idx}"]`);
-      if(card){ card.scrollIntoView({behavior:'smooth',block:'center'}); card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),900); }
     }
   });
   wrap.addEventListener('input',e=>{
