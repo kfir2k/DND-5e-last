@@ -132,210 +132,177 @@ body.wide-mode main{max-width:min(1700px,96vw)}
 .g3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 
 /* ---------- Build screen: character-select style class/heritage picker ---------- */
-/* A slim class/heritage menu (left) + a big cinematic hero stage (right), styled after a game's
-   character-select screen — same S.classId/S.raceId state and applyBuild() pipeline underneath,
-   just picking a class now feels like choosing a hero from a roster instead of filling a form.
-   Same width as every other panel (main's 1180px column, same as #asiPanel below it). */
+/* Build = two summary cards (Class, Heritage), each a short art banner over its own details.
+   The full class/heritage lists stay folded away until "Change class/heritage" opens them as a
+   tile grid under the card — no inner scroll boxes and no half-screen art, so the whole page
+   fits a portrait tablet. Side by side on wide screens; stacked (each list right under its own
+   card, via `order`) below 900px. Same S.classId/S.raceId state and applyBuild() underneath. */
 .build-panel{
   --accent:var(--gold); --accent-dim:rgba(201,162,39,.18);
   transition:border-color .25s ease;
 }
-.build-panel .grid.g3,.build-panel .prep-note{position:relative;z-index:1}
+.build-panel .prep-note{position:relative;z-index:1}
+.bCards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;align-items:stretch}
+#bHero{order:1} #bHeroMini{order:2} .bPickerClass{order:3} .bPickerRace{order:4}
 
-/* Class and Heritage now live in one continuous frame — a single rounded card holding both
-   stages, joined by an ornamental seam, rather than two separate boxes with a gap between them. */
-.bHeroGroup{
-  --bHeroH:min(58vh,480px);
-  position:relative;border-radius:18px;overflow:hidden;
-  background:var(--ink);border:1px solid var(--border-lt);margin-bottom:14px;
-  box-shadow:0 14px 32px rgba(0,0,0,.45);
+.bCard{
+  position:relative;display:flex;flex-direction:column;min-width:0;
+  background:var(--ink);border:1px solid var(--border-lt);border-top:2px solid var(--accent);
+  border-radius:14px;overflow:hidden;box-shadow:0 10px 24px rgba(0,0,0,.35);
+  transition:border-color .25s ease;
 }
-.bHero{
-  position:relative;overflow:hidden;
-  background:var(--ink);
-  display:flex;flex-direction:row;align-items:stretch;
-}
-.bHeroMini{height:var(--bHeroH)}
+.bCardRace{border-top-color:var(--gold-dim)}
 
-/* A thin gold seam with a centered gem stitches the two stages into one fluid whole. */
-.bHeroSeam{
-  position:relative;z-index:5;height:1px;
-  background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent);
-}
-.bHeroSeamGem{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
-  border-radius:50%;background:var(--ink);border:1px solid var(--gold-dim);
-  color:var(--gold);font-size:.85rem;
-  box-shadow:0 0 0 5px var(--ink),0 0 16px rgba(201,162,39,.45);
-}
-/* Soft dark bleed at the top/bottom of each stage so the seam reads as a blend, not a hard cut. */
-.bHero::after,.bHeroMini::before{
-  content:'';position:absolute;left:0;right:0;height:56px;z-index:1;pointer-events:none;
-}
-.bHero::after{bottom:0;background:linear-gradient(to bottom,transparent,rgba(8,6,4,.85))}
-.bHeroMini::before{top:0;background:linear-gradient(to top,transparent,rgba(8,6,4,.85))}
-
-.bcsCorner{position:absolute;z-index:6;width:20px;height:20px;pointer-events:none;opacity:.8}
-.bcsCorner::before,.bcsCorner::after{content:'';position:absolute;background:var(--gold-dim)}
-.bcsCorner::before{width:100%;height:2px;top:0;left:0}
-.bcsCorner::after{width:2px;height:100%;top:0;left:0}
-.bcsCornerTl{top:9px;left:9px}
-.bcsCornerTr{top:9px;right:9px;transform:scaleX(-1)}
-.bcsCornerBl{bottom:9px;left:9px;transform:scaleY(-1)}
-.bcsCornerBr{bottom:9px;right:9px;transform:scale(-1,-1)}
-
-/* ---- left column: class/heritage menu ---- */
-.bRailCol{
-  position:relative;z-index:2;flex:0 0 auto;width:250px;min-height:0;
-  display:flex;flex-direction:column;gap:2px;padding:16px 10px 16px 16px;
-  background:linear-gradient(180deg,rgba(0,0,0,.3),rgba(0,0,0,.14));
-  border-right:1px solid rgba(255,255,255,.07);
-}
-.bRailColMini{width:250px}
-.bRailColLbl{
-  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.22em;font-size:.74rem;
-  color:var(--gold-dim);padding:0 2px 8px;flex:0 0 auto;
-}
-.bRail{
-  position:relative;flex:1 1 auto;min-height:0;
-  display:flex;flex-direction:column;gap:2px;
-  overflow-y:auto;overflow-x:hidden;padding-right:4px;
-}
-.bRailGroupLabel{
-  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.14em;
-  font-size:.6rem;color:var(--faint);padding:10px 6px 3px;
-}
-.bRailGroupLabel:first-child{padding-top:0}
-
-/* Each entry is a menu row — small portrait + name — rather than a big grid tile, so the
-   roster stays compact and the stage on the right gets the lion's share of the width. */
-.bRailItem{
-  --c:#c9a227;position:relative;cursor:pointer;display:flex;align-items:center;gap:10px;
-  padding:5px 8px 5px 9px;border-radius:8px;border-left:3px solid transparent;
-  transition:background .15s ease,border-color .15s ease;
-}
-.bRailItem:hover{background:rgba(255,255,255,.05)}
-.bRailItem.active{
-  background:linear-gradient(90deg,color-mix(in srgb,var(--c) 20%,transparent),transparent 85%);
-  border-left-color:var(--c);
-}
-.bThumb{
-  flex:0 0 auto;width:44px;height:44px;background-size:cover;background-position:center top;
-  border-radius:8px;border:2px solid rgba(255,255,255,.14);filter:saturate(.7) brightness(.7);
-  transition:border-color .2s ease,filter .2s ease,box-shadow .2s ease;
-}
-.bThumbSm{width:40px;height:40px;border-radius:7px}
-.bLabel{
-  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.03em;font-size:.82rem;
-  color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  transition:color .2s ease;
-}
-.bLabelSm{font-size:.76rem}
-.bRailItem.active .bThumb{
-  border-color:var(--c);filter:none;
-  box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 55%,transparent),0 6px 14px rgba(0,0,0,.5);
-}
-.bRailItem.active .bLabel{color:var(--gold-lt);font-weight:700}
-
-/* ---- right column: the cinematic hero stage ---- */
-.bStage{position:relative;flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
-/* The photo lives in its own fixed-height box; .bContentBanner is a separate box below it,
-   not an overlay on top of it — text no longer competes with the art for legibility. */
-.bStageArt{position:relative;flex:0 0 auto;height:var(--bHeroH);overflow:hidden}
-.bLayer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;transition:opacity 1s ease}
+/* ---- art banner ---- */
+.bArt{position:relative;flex:0 0 auto;height:170px;overflow:hidden;background:var(--ink)}
+.bLayer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 40%;opacity:0;transition:opacity 1s ease}
 .bLayer.visible{opacity:1}
 .bBgA,.bBgB{filter:saturate(1.05)}
-.bMbgA,.bMbgB{filter:blur(26px) brightness(.4) saturate(1.2)}
-
-.bMiniPortraitWrap{position:absolute;left:50%;top:3%;transform:translateX(-50%);width:min(38%,340px);height:80%;pointer-events:none}
+.bMbgA,.bMbgB{filter:blur(22px) brightness(.45) saturate(1.2)}
+.bMiniPortraitWrap{position:absolute;top:0;bottom:0;right:6%;width:min(48%,250px);pointer-events:none}
 .bMportA,.bMportB{
-  -webkit-mask-image:radial-gradient(ellipse 60% 64% at 50% 36%,#000 52%,transparent 94%);
-  mask-image:radial-gradient(ellipse 60% 64% at 50% 36%,#000 52%,transparent 94%);
+  object-position:center 22%;
+  -webkit-mask-image:radial-gradient(ellipse 58% 70% at 50% 40%,#000 50%,transparent 92%);
+  mask-image:radial-gradient(ellipse 58% 70% at 50% 40%,#000 50%,transparent 92%);
 }
-
 .bScrim{
   position:absolute;inset:0;pointer-events:none;
   background:
-    linear-gradient(to right,rgba(8,6,4,.5) 0%,transparent 14%),
-    radial-gradient(ellipse 68% 55% at 50% 28%,transparent 38%,rgba(8,6,4,.5) 78%,rgba(8,6,4,.85) 100%),
-    linear-gradient(to top,rgba(8,6,4,.96) 0%,rgba(8,6,4,.34) 36%,transparent 60%);
+    linear-gradient(to top,rgba(8,6,4,.94) 0%,rgba(8,6,4,.4) 42%,transparent 72%),
+    linear-gradient(to right,rgba(8,6,4,.6) 0%,transparent 55%);
 }
 .bFlash{position:absolute;inset:0;z-index:1;pointer-events:none;background:var(--c,var(--gold));opacity:0}
 .bFlash.pulse{animation:bFlashPulse .55s ease}
 @keyframes bFlashPulse{0%{opacity:.28}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){.bFlash.pulse{animation:none}}
 
+/* Prev/next sit together top-right, clear of the name — flip through without opening the list. */
+.bArrows{position:absolute;top:10px;right:10px;z-index:3;display:flex;gap:6px}
 .bArrow{
-  position:absolute;top:34%;translate:0 -50%;z-index:3;width:38px;height:38px;border-radius:50%;
-  background:rgba(20,16,10,.55);border:1px solid rgba(255,255,255,.18);color:var(--gold-lt);
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(20,16,10,.6);border:1px solid rgba(255,255,255,.18);color:var(--gold-lt);
   font-size:1.1rem;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
-  cursor:pointer;transition:background .15s,border-color .15s,transform .15s;
+  cursor:pointer;transition:background .15s,border-color .15s;
 }
-.bArrow:hover{background:rgba(20,16,10,.8);border-color:var(--gold-dim);transform:translateY(-50%) scale(1.06)}
-.bArrowSm{width:34px;height:34px;font-size:1rem}
-.bArrowL{left:14px}
-.bArrowR{right:14px}
+.bArrow:hover{background:rgba(20,16,10,.85);border-color:var(--gold-dim)}
 
-.bContent{position:relative;z-index:2;flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-end;text-align:left;padding:0 7% 22px 6%}
-.bContentMini{padding-bottom:22px}
-/* The class hero's content sits in its own box below the art, not overlaid on top of it.
-   It overlaps the art's last 115px but only fades over the first 30px of that (a quicker
-   dissolve), so content starts at 30px — 85px above the art's original bottom edge. The
-   "solid" ground itself is only ~88% opaque, so inside that overlapped 115px the art keeps
-   bleeding through faintly even once the fade is done; below the art's old edge (nothing
-   behind it but the card's own matching ink background) that translucency is invisible. */
-.bContentBanner{
-  flex:0 0 auto;justify-content:flex-start;
-  margin-top:-115px;padding-top:30px;
-  background:linear-gradient(to bottom,transparent,color-mix(in srgb,var(--ink) 88%,transparent) 30px,color-mix(in srgb,var(--ink) 88%,transparent) 100%);
-}
-.bEyebrow{font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.24em;font-size:.8rem;color:var(--gold)}
-.bName{
+.bArtCap{position:absolute;left:18px;right:18px;bottom:12px;z-index:2}
+.bEyebrow{font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.22em;font-size:.72rem;color:var(--gold)}
+.build-panel .bName{
   font-family:'Cinzel',serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em;
-  font-size:clamp(1.7rem,3.9vw,2.5rem);color:var(--gold-lt);margin:4px 0 4px;line-height:1.05;
-  text-shadow:0 8px 30px rgba(0,0,0,.85);
+  font-size:clamp(1.2rem,2.3vw,1.55rem);color:var(--gold-lt);margin:2px 0 0;line-height:1.15;
+  text-shadow:0 4px 18px rgba(0,0,0,.9);border:none;padding:0;display:block;
 }
-.bNameMini{font-size:clamp(1.5rem,3.3vw,2.15rem);margin:3px 0 0}
-.bLevelStars{color:var(--gold-dim);font-size:.95rem;letter-spacing:1px;margin-bottom:4px;min-height:1.1em}
 
-.bStatBars{display:flex;flex-direction:column;gap:5px;max-width:340px;margin:2px 0 10px}
+/* ---- details ---- */
+.bBody{display:flex;flex-direction:column;gap:12px;padding:14px 18px 16px;flex:1 1 auto}
+.bMeta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px}
+.bLevelStars:empty,.bStatBars:empty{display:none}
+.bLevelStars{color:var(--gold-dim);font-size:.92rem;letter-spacing:1px;white-space:nowrap}
+.bStatBars{flex:1 1 220px;display:flex;flex-direction:column;gap:4px;max-width:320px}
 .bStatBar{display:grid;grid-template-columns:78px 1fr;align-items:center;gap:8px}
-.bStatBarLbl{font-family:'Cinzel',serif;text-transform:uppercase;font-size:.68rem;letter-spacing:.08em;color:var(--muted)}
+.bStatBarLbl{font-family:'Cinzel',serif;text-transform:uppercase;font-size:.64rem;letter-spacing:.08em;color:var(--muted)}
 .bStatBarTrack{height:6px;background:rgba(255,255,255,.09);border-radius:4px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.3)}
 .bStatBarFill{display:block;height:100%;background:linear-gradient(90deg,var(--accent-dim),var(--accent));border-radius:4px;transition:width .4s ease}
+.bFlavor{color:var(--muted);font-style:italic;font-size:.95rem;line-height:1.45;margin:0}
 
-.bFlavor{color:var(--muted);font-style:italic;font-size:1rem;line-height:1.5;max-width:520px;margin:0 0 12px}
+.bFields{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:end}
+.bBody label.fld,.bBody div.fld{margin:0;text-align:left}
+.bBody div.fld>span:first-child{
+  display:block;color:var(--muted);font-size:.78rem;letter-spacing:1.2px;
+  text-transform:uppercase;margin-bottom:3px;font-family:'Cinzel',serif;
+}
+/* label.fld span would otherwise style the stepper wrapper like a caption */
+label.fld span.bStepper{
+  display:flex;align-items:stretch;margin:0;font:inherit;letter-spacing:0;text-transform:none;
+  border:1px solid var(--border-lt);border-radius:8px;overflow:hidden;background:var(--panel2);
+}
+.bStep{flex:0 0 38px;background:transparent;border:none;color:var(--gold);font-size:1.15rem;cursor:pointer}
+.bStep:hover{background:var(--panel3);color:var(--gold-lt)}
+.bStepper #levelIn{
+  width:48px;text-align:center;border:none;border-left:1px solid var(--border);border-right:1px solid var(--border);
+  border-radius:0;background:transparent;-moz-appearance:textfield;appearance:textfield;
+}
+.bStepper #levelIn::-webkit-inner-spin-button,.bStepper #levelIn::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 
-/* Heritage trait chips read as the mini stage's main payoff — sized up and anchored to the
-   bottom edge (via .bContent's justify-content:flex-end) rather than floating mid-portrait. */
-.bChipRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.bChangeBtn{
+  margin-top:auto;align-self:flex-start;
+  background:transparent;border:1px solid var(--border-lt);color:var(--gold);
+  border-radius:8px;padding:8px 14px;min-height:38px;cursor:pointer;font-size:.8rem;
+  font-family:'Cinzel',serif;letter-spacing:1px;
+}
+.bChangeBtn:hover{border-color:var(--gold-dim);background:var(--panel2)}
+.bChangeBtn[aria-expanded="true"]{border-color:var(--gold);background:var(--panel2)}
+
+.bChipRow{display:flex;flex-wrap:wrap;gap:6px}
+.bChipRow:empty{display:none}
 .bChip{
-  background:rgba(0,0,0,.4);border:1px solid var(--border-lt);border-radius:999px;
-  padding:6px 16px;font-size:.95rem;color:var(--text);white-space:nowrap;
+  background:var(--panel2);border:1px solid var(--border-lt);border-radius:999px;
+  padding:4px 12px;font-size:.88rem;color:var(--text);white-space:nowrap;
 }
 
-.bFields{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
-.bFld{min-width:140px;text-align:left}
-.bFld span{color:var(--muted)}
-
-.bSelectedPill{
-  display:none;align-self:flex-start;margin-top:12px;
-  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.2em;font-size:.7rem;
-  color:var(--ink);background:linear-gradient(180deg,var(--gold-lt),var(--gold));
-  border-radius:7px;padding:7px 22px;box-shadow:0 6px 14px rgba(0,0,0,.4);
-}
-.bSelectedPill.show{display:inline-block}
-
-.bPillRow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.bFlexGroup{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0}
-.bFlexGroupLbl{font-size:.76rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.bPillRow{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.bFlexGroup{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:2px 0}
+.bFlexGroupLbl{font-size:.76rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;min-width:44px}
 .bPill{
   background:var(--panel2);border:1px solid var(--border);border-radius:999px;color:var(--muted);
-  padding:6px 14px;font-size:.86rem;cursor:pointer;transition:background .15s,color .15s,border-color .15s;
+  padding:6px 12px;min-height:34px;font-size:.84rem;cursor:pointer;transition:background .15s,color .15s,border-color .15s;
 }
 .bPill:hover{border-color:var(--gold-dim);color:var(--text)}
 .bPill.active{background:var(--gold-dim);border-color:var(--gold);color:var(--ink);font-weight:700}
+
+/* ---- on-demand pickers ---- */
+.bPicker{
+  grid-column:1/-1;background:var(--panel2);border:1px solid var(--border-lt);border-radius:12px;
+  padding:12px 14px 14px;animation:fadein .15s ease;
+}
+.bPicker[hidden]{display:none}
+.bPickerHead{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.bPickerHead>span{font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.16em;font-size:.76rem;color:var(--gold-dim)}
+.bPickerFilter{flex:1 1 160px;max-width:280px;padding:6px 10px}
+.bPickerClose{
+  margin-left:auto;background:transparent;border:1px solid var(--border-lt);color:var(--muted);
+  border-radius:8px;width:34px;height:34px;cursor:pointer;
+}
+.bPickerClose:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
+.bPicker .bRail{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.bRailGroupLabel{
+  grid-column:1/-1;font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.14em;
+  font-size:.62rem;color:var(--faint);padding:8px 2px 0;
+}
+.bRailGroupLabel:first-child{padding-top:0}
+.bRailItem[hidden],.bRailGroupLabel[hidden]{display:none}
+.bRailItem{
+  --c:#c9a227;position:relative;cursor:pointer;display:flex;align-items:center;gap:9px;min-width:0;
+  padding:5px 8px;border-radius:9px;border:1px solid var(--border);background:rgba(0,0,0,.18);
+  transition:background .15s ease,border-color .15s ease;
+}
+.bRailItem:hover{background:rgba(255,255,255,.05);border-color:var(--border-lt)}
+.bRailItem.active{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--c) 22%,transparent),transparent 90%);
+  border-color:var(--c);
+}
+.bThumb{
+  flex:0 0 auto;width:38px;height:38px;background-size:cover;background-position:center top;
+  border-radius:7px;border:1px solid rgba(255,255,255,.14);filter:saturate(.75) brightness(.8);
+}
+.bRailItem.active .bThumb{filter:none;border-color:var(--c)}
+.bLabel{
+  font-family:'Cinzel',serif;text-transform:uppercase;letter-spacing:.03em;font-size:.76rem;
+  color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.bRailItem.active .bLabel{color:var(--gold-lt);font-weight:700}
+
+@media (max-width:900px){
+  .bCards{grid-template-columns:1fr}
+  #bHero{order:1} .bPickerClass{order:2} #bHeroMini{order:3} .bPickerRace{order:4}
+  .bArt{height:150px}
+}
+@media (max-width:640px){
+  .bArt{height:130px}
+  .bBody{padding:12px 14px 14px}
+  .bPicker .bRail{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+}
 
 /* ---------- Build ▸ Customize defaults ---------- */
 /* The summary line above stays the everyday view; this is the "actually, mine is different"
@@ -399,24 +366,6 @@ body.wide-mode main{max-width:min(1700px,96vw)}
    than the real options so it never reads as one of them. */
 .sel-opt-clear span{color:var(--muted)}
 
-@media (max-width:900px){
-  .bHero{flex-direction:column}
-  .bRailCol{width:auto;max-height:220px;border-right:none;border-bottom:1px solid rgba(255,255,255,.07)}
-  .bStageArt{height:400px}
-  .bHeroMini .bStage{height:400px;overflow:hidden}
-  .bContent{text-align:center;align-items:center;padding:0 6% 18px}
-  .bStatBars{margin-left:auto;margin-right:auto}
-  .bFlavor{margin-left:auto;margin-right:auto}
-  .bChipRow{justify-content:center}
-  .bSelectedPill{align-self:center}
-}
-@media (max-width:640px){
-  .bStageArt{height:360px}
-  .bHeroMini .bStage{height:360px}
-  .bName{font-size:1.5rem}
-  .bNameMini{font-size:1.35rem}
-  .bArrow{width:32px;height:32px;font-size:1rem}
-}
 
 /* ---------- Inputs ---------- */
 input[type=text],input[type=number],textarea,select{
@@ -4433,3 +4382,6 @@ body.hp-zero .fx-vignette:not(.hit):not(.heal){
 .rest-veil.short .rest-veil-card b{color:#a9b9f0}
 .rest-veil-card span{font-family:'Crimson Pro',serif;font-style:italic;color:var(--muted);font-size:.98rem;line-height:1.35}
 @keyframes restCard{0%{opacity:0;transform:translateY(14px) scale(.96)}18%{opacity:1;transform:none}70%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-8px)}}
+/* Nothing chosen yet: no art to show, so the banner shrinks to a slim title bar. */
+.bCard.empty .bArt{height:64px}
+.bCard.empty .bName{display:none}

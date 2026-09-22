@@ -362,48 +362,49 @@ overview:`
 
 build:`
   <div class="panel build-panel" id="buildPanel">
-    <div class="bHeroGroup">
-    <section class="bHero bcsHero" id="bHero">
-      <div class="bcsCorner bcsCornerTl"></div><div class="bcsCorner bcsCornerTr"></div>
-      <div class="bcsCorner bcsCornerBl"></div><div class="bcsCorner bcsCornerBr"></div>
-      <div class="bRailCol">
-        <div class="bRailColLbl">Class</div>
-        <div class="bRail" id="classRail"></div>
-      </div>
-      <div class="bStage">
-        <div class="bStageArt">
-          <img class="bLayer bBgA visible" id="bBgA" alt="">
-          <img class="bLayer bBgB" id="bBgB" alt="">
-          <div class="bScrim"></div>
-          <div class="bFlash" id="bFlash"></div>
-          <button class="bArrow bArrowL" id="classPrevBtn" type="button" aria-label="Previous class">‹</button>
-          <button class="bArrow bArrowR" id="classNextBtn" type="button" aria-label="Next class">›</button>
+    <div class="bCards">
+    <section class="bCard" id="bHero">
+      <div class="bArt">
+        <img class="bLayer bBgA visible" id="bBgA" alt="">
+        <img class="bLayer bBgB" id="bBgB" alt="">
+        <div class="bScrim"></div>
+        <div class="bFlash" id="bFlash"></div>
+        <div class="bArrows">
+          <button class="bArrow" id="classPrevBtn" type="button" aria-label="Previous class">‹</button>
+          <button class="bArrow" id="classNextBtn" type="button" aria-label="Next class">›</button>
         </div>
-        <div class="bContent bContentBanner">
+        <div class="bArtCap">
           <div class="bEyebrow" id="bEyebrow">Choose your class</div>
           <h2 class="bName" id="bName">—</h2>
+        </div>
+      </div>
+      <div class="bBody">
+        <div class="bMeta">
           <div class="bLevelStars" id="bLevelStars"></div>
           <div class="bStatBars" id="bStatBars"></div>
-          <p class="bFlavor" id="bFlavor">Pick a class from the roster to see how they fight.</p>
-          <div class="bFields">
-            <label class="fld bFld"><span>Level</span><input type="number" id="levelIn" min="1" max="20" value="1"></label>
-            <label class="fld bFld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="Tap to choose — e.g. Gloom Stalker" readonly></label>
-          </div>
-          <div class="bSelectedPill" id="bSelectedPill">Selected</div>
         </div>
+        <p class="bFlavor" id="bFlavor">Pick a class from the roster to see how they fight.</p>
+        <div class="bFields">
+          <label class="fld bFld bFldLvl" for="levelIn"><span>Level</span>
+            <span class="bStepper">
+              <button type="button" class="bStep" data-lvlstep="-1" aria-label="Level down">−</button>
+              <input type="number" id="levelIn" min="1" max="20" value="1">
+              <button type="button" class="bStep" data-lvlstep="1" aria-label="Level up">+</button>
+            </span>
+          </label>
+          <label class="fld bFld sug-wrap"><span>Subclass</span><input type="text" id="subclassIn" data-bind="subclass" autocomplete="off" placeholder="Tap to choose — e.g. Gloom Stalker" readonly></label>
+        </div>
+        <button type="button" class="bChangeBtn" data-bpick="classPicker" aria-controls="classPicker" aria-expanded="false">⇄ <span>Change class</span></button>
       </div>
     </section>
 
-    <div class="bHeroSeam"><span class="bHeroSeamGem">✦</span></div>
+    <div class="bPicker bPickerClass" id="classPicker" hidden>
+      <div class="bPickerHead"><span>Choose a class</span><button type="button" class="bPickerClose" data-bpick="classPicker" aria-label="Close class list">✕</button></div>
+      <div class="bRail" id="classRail"></div>
+    </div>
 
-    <section class="bHero bcsHero bHeroMini" id="bHeroMini">
-      <div class="bcsCorner bcsCornerTl"></div><div class="bcsCorner bcsCornerTr"></div>
-      <div class="bcsCorner bcsCornerBl"></div><div class="bcsCorner bcsCornerBr"></div>
-      <div class="bRailCol bRailColMini">
-        <div class="bRailColLbl">Heritage</div>
-        <div class="bRail bRailMini" id="raceRail"></div>
-      </div>
-      <div class="bStage">
+    <section class="bCard bCardRace" id="bHeroMini">
+      <div class="bArt">
         <img class="bLayer bMbgA visible" id="bMbgA" alt="">
         <img class="bLayer bMbgB" id="bMbgB" alt="">
         <div class="bMiniPortraitWrap">
@@ -411,21 +412,31 @@ build:`
           <img class="bLayer bMportB" id="bMportB" alt="">
         </div>
         <div class="bScrim"></div>
-        <button class="bArrow bArrowL bArrowSm" id="racePrevBtn" type="button" aria-label="Previous heritage">‹</button>
-        <button class="bArrow bArrowR bArrowSm" id="raceNextBtn" type="button" aria-label="Next heritage">›</button>
-        <div class="bContent bContentMini">
+        <div class="bArrows">
+          <button class="bArrow" id="racePrevBtn" type="button" aria-label="Previous heritage">‹</button>
+          <button class="bArrow" id="raceNextBtn" type="button" aria-label="Next heritage">›</button>
+        </div>
+        <div class="bArtCap">
           <div class="bEyebrow">Heritage</div>
-          <h3 class="bName bNameMini" id="bRaceName">—</h3>
-          <div class="bChipRow" id="bRaceChips"></div>
+          <h2 class="bName" id="bRaceName">—</h2>
         </div>
       </div>
+      <div class="bBody">
+        <div class="bChipRow" id="bRaceChips"></div>
+        <div class="fld" id="subraceFld" style="display:none"><span>Subrace</span><div class="bPillRow" id="subracePills"></div></div>
+        <div class="fld flex-fld" id="flexFld" style="display:none"><span id="flexLbl">Flexible Bonus</span><div class="bPillRow" id="flexPills"></div></div>
+        <button type="button" class="bChangeBtn" data-bpick="racePicker" aria-controls="racePicker" aria-expanded="false">⇄ <span>Change heritage</span></button>
+      </div>
     </section>
+
+    <div class="bPicker bPickerRace" id="racePicker" hidden>
+      <div class="bPickerHead"><span>Choose a heritage</span>
+        <input type="text" class="bPickerFilter" id="racePickFilter" placeholder="Filter heritages…" autocomplete="off">
+        <button type="button" class="bPickerClose" data-bpick="racePicker" aria-label="Close heritage list">✕</button></div>
+      <div class="bRail" id="raceRail"></div>
+    </div>
     </div>
 
-    <div class="grid g3" id="subDetails">
-      <label class="fld" id="subraceFld" style="display:none"><span>Subrace</span><div class="bPillRow" id="subracePills"></div></label>
-      <label class="fld flex-fld" id="flexFld" style="display:none"><span id="flexLbl">Flexible Bonus</span><div class="bPillRow" id="flexPills"></div></label>
-    </div>
     <p class="prep-note" id="buildNote">Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses. Subclass features are searchable in the Features tab once picked here.</p>
     <div class="bCustom">
       <button type="button" class="bCustomBtn" id="buildCustomBtn" title="Override any of the values your class and heritage set — they stop being overwritten once you do">✎ Customize defaults</button>
@@ -5442,9 +5453,31 @@ function crossfadeImg(prefix,from,to,src){
   show.classList.add('visible'); hide.classList.remove('visible');
 }
 
+function setBuildPicker(id,open,scroll){
+  const p=$('#'+id); if(!p) return;
+  p.hidden=!open;
+  $$(`.bChangeBtn[data-bpick="${id}"]`).forEach(b=>b.setAttribute('aria-expanded',open?'true':'false'));
+  if(id==='racePicker'&&!open){ const f=$('#racePickFilter'); if(f&&f.value){ f.value=''; filterRacePicker(''); } }
+  if(open&&scroll) p.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+// Hides heritages whose name doesn't match, and any group label left with nothing under it.
+function filterRacePicker(q){
+  q=q.trim().toLowerCase();
+  let label=null, any=false;
+  const close=()=>{ if(label) label.hidden=!any; };
+  [...$('#raceRail').children].forEach(el=>{
+    if(el.classList.contains('bRailGroupLabel')){ close(); label=el; any=false; return; }
+    const hit=!q||el.textContent.toLowerCase().includes(q);
+    el.hidden=!hit; if(hit) any=true;
+  });
+  close();
+}
 function renderBuildSelectors(){
   renderClassRail();
   renderRaceRail();
+  // A fresh sheet has nothing to summarise yet — open the lists instead of an empty card.
+  setBuildPicker('classPicker',!S.classId);
+  setBuildPicker('racePicker',!S.raceId);
   $('#levelIn').value=S.level||1;
   renderSubraceAndFlex();
   renderSubclassField();
@@ -5542,7 +5575,6 @@ function renderBuildTheme(){
       <span class="bStatBarTrack"><span class="bStatBarFill" style="width:${b.pct}%"></span></span></div>`).join(''):'';
 
   $('#bFlavor').textContent=c?(CLASS_FLAVOR[S.classId]||''):'Pick a class from the roster to see how they fight.';
-  $('#bSelectedPill').classList.toggle('show',!!c);
 
   const ri=raceInfo();
   if(ri&&S.raceId!==bLastRaceId){
@@ -5561,6 +5593,10 @@ function renderBuildTheme(){
   $('#bRaceName').textContent=ri?((ri.sub&&ri.sub.name)||ri.r.name):'—';
   $('#bRaceChips').innerHTML=ri?liveRaceChips().map(t=>`<span class="bChip">${esc(t)}</span>`).join(''):'';
 
+  const cb=$('.bChangeBtn[data-bpick="classPicker"] span'), rb=$('.bChangeBtn[data-bpick="racePicker"] span');
+  $('#bHero').classList.toggle('empty',!c); $('#bHeroMini').classList.toggle('empty',!ri);
+  if(cb) cb.textContent=c?'Change class':'Choose a class';
+  if(rb) rb.textContent=ri?'Change heritage':'Choose a heritage';
   renderClassRail();
   renderRaceRail();
 }
@@ -5592,7 +5628,7 @@ function renderSubraceAndFlex(){
       const label=motm?(i===0?'+2 to':'+1 to'):'+1 (choice '+(i+1)+')';
       return `<div class="bFlexGroup"><span class="bFlexGroupLbl">${label}</span>`+
         ABILITIES.filter(([k])=>!fixed(k)&&S.flexBonus[1-i]!==k).map(([k,l])=>
-          `<button type="button" class="bPill ${S.flexBonus[i]===k?'active':''}" data-flexi="${i}" data-flexab="${k}">${l}</button>`).join('')+
+          `<button type="button" class="bPill ${S.flexBonus[i]===k?'active':''}" data-flexi="${i}" data-flexab="${k}" title="${l}">${abbr3(k)}</button>`).join('')+
         `</div>`;
     }).join('');
     $$('#flexPills [data-flexab]').forEach(b=>b.addEventListener('click',()=>{
@@ -6621,6 +6657,21 @@ function wireBuild(){
     S.level=Math.max(1,Math.min(20,num(e.target.value)||1));
     e.target.value=S.level; applyBuild();
   });
+  // −/+ around the level box: big tap targets on a tablet, same change path as typing a number.
+  $$('[data-lvlstep]').forEach(b=>b.addEventListener('click',()=>{
+    const inp=$('#levelIn');
+    inp.value=Math.max(1,Math.min(20,(num(inp.value)||1)+num(b.dataset.lvlstep)));
+    inp.dispatchEvent(new Event('change'));
+  }));
+  // The class/heritage lists only open on demand ("Change class"), so the page stays short.
+  // Picking an entry applies it (the rail's own listener) and folds the list away again.
+  $$('[data-bpick]').forEach(b=>b.addEventListener('click',()=>{
+    const p=$('#'+b.dataset.bpick); setBuildPicker(b.dataset.bpick,p.hidden,true);
+  }));
+  ['classPicker','racePicker'].forEach(id=>$('#'+id).addEventListener('click',e=>{
+    if(e.target.closest('.bRailItem')) setBuildPicker(id,false);
+  }));
+  $('#racePickFilter').addEventListener('input',e=>filterRacePicker(e.target.value));
   $('#classPrevBtn').addEventListener('click',()=>stepClass(-1));
   $('#classNextBtn').addEventListener('click',()=>stepClass(1));
   $('#racePrevBtn').addEventListener('click',()=>stepRace(-1));
