@@ -266,7 +266,6 @@ function combatHudHTML(){
       <div class="hp-bar chud-bar"><div class="hp-fill"></div><span class="hp-temp-fill"></span></div>
       <span class="ckv-formula" data-fxform="hpmax"></span>
     </div>
-    <span class="ck-conc"></span>
     <span class="ck-topstates"></span>
     </div>
     <div class="chud-senses">
@@ -451,6 +450,7 @@ build:`
 combat:`
   ${combatHudHTML()}
   <div class="ck-cond-row" id="ckCondRow">
+    <span class="ck-conc ck-conc-chip"></span>
     <div class="ck-states-list" id="ckStates"></div>
     <button class="ck-tbtn" id="ckAddConditionBtn" title="Add a condition">+ Condition</button>
   </div>
@@ -514,10 +514,10 @@ combat:`
         <div class="ck-atk-body ck-collapsible-body">
           <button type="button" class="atk-legend-btn" id="atkLegendBtn">ⓘ How to read this</button>
           <div class="atk-legend" id="atkLegend" hidden>
-            <p><b>Hit</b> is your attack roll bonus; <b>Damage</b> is the formula you roll if it lands.</p>
-            <p><b>Magic</b> is a magic weapon's flat +N, added to both Hit and Damage. <b>Atk misc</b> only changes whether you hit (Bless, a fighting style); <b>Dmg misc</b> only changes how much you deal (Dueling, a DM boost) — split apart so one doesn't silently affect the other.</p>
+            <p><b>To hit</b> is your attack roll bonus; <b>Damage</b> is the formula you roll if it lands.</p>
+            <p><b>Magic bonus</b> is a magic weapon's flat +N, added to both To hit and Damage. <b>Extra to hit</b> only changes whether you hit (Bless, a fighting style); <b>Extra damage</b> only changes how much you deal (Dueling, a DM boost) — split apart so one doesn't silently affect the other.</p>
             <p>Tags under the weapon's name (Finesse, Versatile, Heavy, ...) describe its built-in rules — tap one to read what it means. The Versatile tag also switches your die between one- and two-handed.</p>
-            <p><b>+ Add buff…</b> below the Hit/Damage numbers layers on anything extra — its <i>Quick add</i> group is a one-tap magic bonus or elemental damage type, its <i>Presets</i> group covers named effects (Sneak Attack, Hunter's Mark, ...), and Custom lets you build your own. Whatever you add shows up as its own on/off switch, never deleted just by disabling it.</p>
+            <p><b>+ Add buff…</b> in the Buffs section layers on anything extra — its <i>Quick add</i> group is a one-tap magic bonus or elemental damage type, its <i>Presets</i> group covers named effects (Sneak Attack, Hunter's Mark, ...), and Custom lets you build your own. Whatever you add shows up as its own on/off switch, never deleted just by disabling it.</p>
           </div>
           <div id="attackList"></div>
           <button class="add-btn" data-add="attacks">+ Add attack</button>
@@ -1628,18 +1628,29 @@ function atkCondBonusHTML(a){
   }).join('');
 }
 // ---------- Dynamic list renderers ----------
+// Damage text color for data lines (attack cards, Do Something grid): elemental types keep their
+// own DMG_COLOR; the physical three are a deliberately muted tan there (so a buff pill reads as
+// "extra"), which is too dim for the headline number — they read as a clear damage red instead.
+const DMG_RED='#ee8a76';
+const PHYS_DMG=['bludgeoning','piercing','slashing'];
+function dmgTextColor(type){ return (!type||PHYS_DMG.includes(type))?DMG_RED:(DMG_COLOR[type]||DMG_RED); }
+function dmgTypeIconHTML(type,cls){ return type?giHTML(`dmg-${type}.svg`,cls||'atk-dmgicon',dmgTextColor(type)):''; }
 function buffPill(a,i,b,j){
   const c=DMG_COLOR[b.type]||'';
   return `
-  <span class="buff-pill ${b.on?'on':''}" ${c?`style="--rider-c:${c}"`:''}>
-    <input type="checkbox" ${b.on?'checked':''} data-buffon="${i}.${j}" title="Active this turn">
-    ${b.conc?`<span class="buff-conc" title="Requires concentration">◉C</span>`:''}
-    <input type="text" class="buff-name" value="${esc(b.name)}" placeholder="Buff name" data-buffname="${i}.${j}">
-    <input type="text" class="buff-dice" value="${esc(b.dice)}" placeholder="dice" data-buffdice="${i}.${j}" title="Dice reminder — fold this into your physical roll">
-    <input type="number" class="buff-flat" value="${num(b.flat)}" data-buffflat="${i}.${j}" title="Flat bonus — added automatically">
-    <select data-bufftype="${i}.${j}">${DMG_TYPES.map(([v,l])=>`<option value="${v}" ${b.type===v?'selected':''}>${l}</option>`).join('')}</select>
-    <button class="rider-del" data-buffdel="${i}.${j}" title="Remove this buff">✕</button>
-  </span>`;
+  <div class="buff-pill ${b.on?'on':''}" ${c?`style="--rider-c:${c}"`:''}>
+    <label class="buff-toggle" title="${b.on?'Active this turn — tap to switch off':'Off — tap to switch on for this turn'}">
+      <input type="checkbox" ${b.on?'checked':''} data-buffon="${i}.${j}"><span class="buff-switch" aria-hidden="true"></span>
+    </label>
+    <span class="buff-namecell">
+      <input type="text" class="buff-name" value="${esc(b.name)}" placeholder="Buff name" data-buffname="${i}.${j}" aria-label="Buff name">
+      ${b.conc?`<span class="buff-conc" title="Requires concentration">Conc.</span>`:''}
+    </span>
+    <input type="text" class="buff-dice" value="${esc(b.dice)}" placeholder="dice" data-buffdice="${i}.${j}" title="Extra dice — roll them with your weapon's damage" aria-label="Extra dice">
+    <span class="buff-flatcell"><span class="buff-plus">+</span><input type="number" class="buff-flat" value="${num(b.flat)}" data-buffflat="${i}.${j}" title="Flat bonus — added automatically" aria-label="Flat bonus"></span>
+    <select class="buff-type" data-bufftype="${i}.${j}" aria-label="Damage type">${DMG_TYPES.map(([v,l])=>`<option value="${v}" ${b.type===v?'selected':''}>${l}</option>`).join('')}</select>
+    <button class="rider-del" data-buffdel="${i}.${j}" title="Remove this buff" aria-label="Remove this buff">✕</button>
+  </div>`;
 }
 // Weapon-table categories for the picker's grouping + the Simple/Martial badge on a picked
 // weapon — reuses the exact same category lists data-libraries.js already built for the
@@ -1702,11 +1713,12 @@ function refocusNameInput(i,cursor){
 function attackRowHTML(a,i){
   const c=atkSummary(a);
   const isCustom=a.weapon==='custom'||!WEAPONS[a.weapon];
-  const icon=isCustom?'✏':giHTML(c.w&&c.w.rng?'class-ranger.svg':'class-fighter.svg');
+  const icon=giHTML(isCustom?'sp-attack.svg':(c.w&&c.w.rng?'class-ranger.svg':'class-fighter.svg'));
   const open=ATK_OPEN.has(i)||!(a.name||'').trim();
+  const dCol=dmgTextColor(c.dmgType), dIcon=dmgTypeIconHTML(c.dmgType);
   const roll=`
     <div class="atk-roll">
-      <input type="number" value="${esc(a.rolled)}" placeholder="roll" data-rolled="${i}" title="What you rolled on the weapon's damage dice">
+      <input type="number" value="${esc(a.rolled)}" placeholder="roll" data-rolled="${i}" title="What you rolled on the weapon's damage dice" aria-label="Damage roll">
       ${(a.buffs||[]).map((b,j)=>({b,j})).filter(({b})=>b.on&&(b.dice||'').trim()).map(({b,j})=>`
       <span class="atk-plus">+</span>
       <input type="number" class="atk-buffroll" value="${esc(b.rolled)}" placeholder="${esc(b.dice)}" data-buffrolled="${i}.${j}" title="What you rolled on ${esc(b.name||'this buff')}'s ${esc(b.dice)} damage dice">`).join('')}
@@ -1722,86 +1734,88 @@ function attackRowHTML(a,i){
       <div class="atk-mini-head" data-atkopen="${i}" title="Tap for full editing">
         <span class="atk-icon">${icon}</span>
         <span class="atk-mini-name">${esc(a.name)}</span>
-        <span class="atk-mini-hit"><span class="atk-label">Hit</span><span class="big" data-atkview="${i}">${c.bonus}</span></span>
-        <span class="atk-mini-dmg"><span class="atk-label">Damage</span><span class="atk-mini-dmg-row"><span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span>${atkCondBonusHTML(a)}</span></span>
+        <span class="atk-mini-hit"><span class="atk-label">To hit</span><span class="big" data-atkview="${i}">${c.bonus}</span></span>
+        <span class="atk-mini-dmg" style="--dc:${dCol}"><span class="atk-label">Damage</span><span class="atk-mini-dmg-row">${dIcon}<span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span>${atkCondBonusHTML(a)}</span></span>
         <span class="atk-chevron">▸</span>
       </div>
       ${roll}
       <button class="del-btn" data-del="attacks.${i}" title="Remove this attack">✕</button>
     </div>`;
   }
+  // Open = the setup form, laid out top-down as one story: which weapon (name, tags) → what it
+  // does right now (the live Hit/Damage result + roll) → how it's built (setup fields) → what's
+  // boosting it (buffs) → notes. Plain-text labels throughout, same field names as the legend.
   const statOpts=ATK_STATS.map(([v,l])=>`<option value="${v}" ${(a.dmgStat||'auto')===v?'selected':''}>${l}</option>`).join('');
   const buffs=a.buffs||[];
+  const cat=!isCustom?weaponCategory(a.weapon):'';
+  const tags=(cat?wpnTag(cat,
+      cat==='Simple'?'Every class is proficient with Simple weapons, or none are, per your training.':'Needs martial weapon proficiency to add your proficiency bonus — check your class/background.',
+      'wpn-cat'):'')
+    +c.propTags.map(t=>t.key==='ver'
+      ? `<button type="button" class="wpn-tag wpn-tag-ver ${c.isTwoHanded?'on':''}" data-verstoggle="${i}">⇄ ${c.isTwoHanded?`One-handed (${c.w.d})`:`Two-handed (${c.w.ver})`}</button>`
+      : wpnTag(t.label,t.title)).join('');
+  const fld=(label,control)=>`<label class="atk-f"><span>${label}</span>${control}</label>`;
   return `
   <div class="atk-card atk-open">
-  <div class="atk-row">
-    <button class="atk-collapse" data-atkopen="${i}" title="Collapse to a summary strip">▾</button>
-    <span class="atk-icon" title="${isCustom?'Custom weapon':(c.w&&c.w.rng?'Ranged weapon':'Melee weapon')}">${icon}</span>
-    <div class="atk-id">
-      <div class="atk-namerow">
-        <input type="text" class="atk-combo" autocomplete="off" value="${esc(a.name)}" data-nameinput="${i}"
-          placeholder="Weapon name — browse or type your own" title="Type any name for a custom weapon, or browse the PHB weapon table">
-        <button type="button" class="wpn-browse-btn" data-wpnbrowse="${i}" title="Browse the full weapon table">📖 Browse</button>
+    <div class="atk-head">
+      <button class="atk-collapse" data-atkopen="${i}" title="Collapse to a summary strip" aria-label="Collapse">▾</button>
+      <span class="atk-icon" title="${isCustom?'Custom weapon':(c.w&&c.w.rng?'Ranged weapon':'Melee weapon')}">${icon}</span>
+      <input type="text" class="atk-combo" autocomplete="off" value="${esc(a.name)}" data-nameinput="${i}"
+        placeholder="Weapon name — browse or type your own" title="Type any name for a custom weapon, or browse the PHB weapon table">
+      <button type="button" class="wpn-browse-btn" data-wpnbrowse="${i}" title="Browse the full weapon table">Browse</button>
+      <button class="del-btn" data-del="attacks.${i}" title="Remove this attack" aria-label="Remove this attack">✕</button>
+    </div>
+    ${tags?`<div class="atk-props">${tags}</div>`:''}
+    <div class="atk-result">
+      <div class="atk-hit">
+        <span class="atk-label">To hit</span>
+        <span class="big" data-atkview="${i}">${c.bonus}</span>
+        <span class="atk-breakdown" data-atkbreak="${i}">${c.breakdown}</span>
       </div>
-      ${!isCustom&&weaponCategory(a.weapon)?wpnTag(weaponCategory(a.weapon),
-        weaponCategory(a.weapon)==='Simple'?'Every class is proficient with Simple weapons, or none are, per your training.':'Needs martial weapon proficiency to add your proficiency bonus — check your class/background.',
-        'wpn-cat'):''}
-      <div class="atk-config">
-        <div class="atk-config-grp">
-          <span class="cfg-pair"><span class="cfg-lbl">🧬 Stat</span>
-            <select class="atk-stat-sel" data-ssel="${i}">${statOpts}</select></span>
-          <span class="cfg-pair"><span class="cfg-lbl">🎲 Die</span>
-            <input type="text" class="atk-die" value="${esc(c.die)}" data-diein="${i}" placeholder="1d8"></span>
-          ${isCustom?`<span class="cfg-pair"><span class="cfg-lbl">💥 Type</span>
-            <select class="atk-dtype-sel" data-dtsel="${i}">${DMG_TYPES.map(([v,l])=>`<option value="${v}" ${(a.dmgType||'')===v?'selected':''}>${l}</option>`).join('')}</select></span>`:''}
-        </div>
-        <div class="atk-config-grp">
-          <span class="cfg-pair"><span class="cfg-lbl">✨ Magic</span>
-            <input type="number" class="atk-tiny" value="${num(a.magic)}" data-wnum="attacks.${i}.magic"></span>
-          <span class="cfg-pair"><span class="cfg-lbl">± Atk misc</span>
-            <input type="number" class="atk-tiny" value="${num(a.miscAtk)}" data-wnum="attacks.${i}.miscAtk"></span>
-          <span class="cfg-pair"><span class="cfg-lbl">± Dmg misc</span>
-            <input type="number" class="atk-tiny" value="${num(a.miscDmg)}" data-wnum="attacks.${i}.miscDmg"></span>
-        </div>
+      <div class="atk-dmg" style="--dc:${dCol}">
+        <span class="atk-label">Damage</span>
+        <span class="atk-formula-row">${dIcon}<span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span>${atkCondBonusHTML(a)}</span>
+        <span class="atk-breakdown" data-atkdmgbreak="${i}">${c.dmgBreakdown}</span>
+        ${roll}
       </div>
-      ${c.propTags.length?`<div class="atk-props">
-        ${c.propTags.map(t=>t.key==='ver'
-          ? `<button type="button" class="wpn-tag wpn-tag-ver ${c.isTwoHanded?'on':''}" data-verstoggle="${i}">⇄ ${c.isTwoHanded?`One-handed (${c.w.d})`:`Two-handed (${c.w.ver})`}</button>`
-          : wpnTag(t.label,t.title)
-        ).join('')}
-      </div>`:''}
     </div>
-    <div class="atk-hit">
-      <span class="atk-label">Hit</span>
-      <span class="big" data-atkview="${i}">${c.bonus}</span>
-      <span class="atk-breakdown" data-atkbreak="${i}">${c.breakdown}</span>
+    ${a.legacyNote?`<span class="atk-legacy">Converted from an older version — was: ${esc(a.legacyNote)}. Rebuild it with the fields below.</span>`:''}
+    <div class="atk-sec">
+      <div class="atk-sec-h">Setup</div>
+      <div class="atk-setup">
+        ${fld('Ability',`<select class="atk-stat-sel" data-ssel="${i}">${statOpts}</select>`)}
+        ${fld('Damage die',`<input type="text" class="atk-die" value="${esc(c.die)}" data-diein="${i}" placeholder="1d8">`)}
+        ${isCustom?fld('Damage type',`<select class="atk-dtype-sel" data-dtsel="${i}">${DMG_TYPES.map(([v,l])=>`<option value="${v}" ${(a.dmgType||'')===v?'selected':''}>${l}</option>`).join('')}</select>`):''}
+        ${fld('Magic bonus',`<input type="number" class="atk-tiny" value="${num(a.magic)}" data-wnum="attacks.${i}.magic">`)}
+        ${fld('Extra to hit',`<input type="number" class="atk-tiny" value="${num(a.miscAtk)}" data-wnum="attacks.${i}.miscAtk">`)}
+        ${fld('Extra damage',`<input type="number" class="atk-tiny" value="${num(a.miscDmg)}" data-wnum="attacks.${i}.miscDmg">`)}
+      </div>
     </div>
-    <div class="atk-dmg">
-      <span class="atk-label">Damage</span>
-      <span class="atk-formula-row"><span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span>${atkCondBonusHTML(a)}</span>
-      <span class="atk-breakdown" data-atkdmgbreak="${i}">${c.dmgBreakdown}</span>
-      ${roll}
+    <div class="atk-sec">
+      <div class="atk-sec-h">Buffs <small>switch on what's active this turn</small>
+        <select class="add-btn atk-addbuff" data-bpreset="${i}" aria-label="Add a buff">
+          <option value="">+ Add buff…</option>
+          <optgroup label="Quick add">
+            <option value="magic1">Magic Weapon +1</option>
+            <option value="magic2">Magic Weapon +2</option>
+            <option value="magic3">Magic Weapon +3</option>
+            ${ENHANCE_TYPES.map(([v,l])=>`<option value="dmg:${v}">${l} damage</option>`).join('')}
+          </optgroup>
+          <optgroup label="Presets">
+            ${BUFF_PRESETS.map((p,k)=>`<option value="${k}">${p.n}${p.conc?' (concentration)':''}</option>`).join('')}
+          </optgroup>
+          <option value="custom">Custom buff…</option>
+        </select>
+      </div>
+      ${buffs.length?`<div class="buff-row">
+        <div class="buff-colhead" aria-hidden="true"><span></span><span>Name</span><span>Dice</span><span>Flat</span><span>Type</span><span></span></div>
+        ${buffs.map((b,j)=>buffPill(a,i,b,j)).join('')}
+      </div>`:`<p class="atk-empty">No buffs yet — add Hunter's Mark, Hex, Rage, a magic bonus and so on.</p>`}
     </div>
-    <button class="del-btn" data-del="attacks.${i}" title="Remove this attack">✕</button>
-  </div>
-  ${a.legacyNote?`<span class="atk-legacy">Converted from an older version — was: ${esc(a.legacyNote)}. Rebuild it with the fields above.</span>`:''}
-  <div class="buff-row">
-    ${buffs.map((b,j)=>buffPill(a,i,b,j)).join('')}
-    <select class="add-btn" data-bpreset="${i}">
-      <option value="">+ Add buff…</option>
-      <optgroup label="Quick add">
-        <option value="magic1">✨ Magic Weapon +1</option>
-        <option value="magic2">✨ Magic Weapon +2</option>
-        <option value="magic3">✨ Magic Weapon +3</option>
-        ${ENHANCE_TYPES.map(([v,l])=>`<option value="dmg:${v}">${l} damage</option>`).join('')}
-      </optgroup>
-      <optgroup label="Presets">
-        ${BUFF_PRESETS.map((p,k)=>`<option value="${k}">${p.n}${p.conc?' ◉C':''}</option>`).join('')}
-      </optgroup>
-      <option value="custom">✏ Custom buff…</option>
-    </select>
-  </div>
-  <textarea class="atk-note" data-li="attacks.${i}.note" placeholder="✎ notes — reach, thrown 20/60, silvered, two-handed, or anything else worth writing down…">${esc(a.note||'')}</textarea>
+    <div class="atk-sec">
+      <div class="atk-sec-h">Notes</div>
+      <textarea class="atk-note" data-li="attacks.${i}.note" placeholder="Reach, thrown 20/60, silvered, two-handed, or anything else worth writing down…">${esc(a.note||'')}</textarea>
+    </div>
   </div>`;
 }
 function renderAttacks(){
@@ -2886,10 +2900,10 @@ function cockpitCards(){
   cards.forEach(x=>{ x.pin=c.pins.includes(x.key); });
   return cards;
 }
-function ckSlotPips(L){
+function ckSlotPips(L,spellKey){
   const lv=S.spellLevels[L]; if(!lv||!lv.total) return '';
   return `<span class="pips ck-pips">${Array.from({length:lv.total},(_,k)=>
-    `<button class="pip ${k<lv.used?'used':''}" data-ckslot="${L}.${k}"></button>`).join('')}</span>`;
+    `<button class="pip ${k<lv.used?'used':''}" data-ckslot="${L}.${k}"${spellKey?` data-ckslotspell="${spellKey}"`:''}></button>`).join('')}</span>`;
 }
 // The "cast with a free slot" row — used by the popover's full card body (ckCardOpenHTML).
 function ckSpellCastRowHTML(card){
@@ -2898,7 +2912,7 @@ function ckSpellCastRowHTML(card){
   return L===0
     ? `<span class="cf-tag">at will</span>`
     : castable.length
-      ? `<span class="ck-castlbl">Cast with slot:</span>`+castable.map(k=>`<button class="ck-cast" data-ckcast="${card.key}:${k}">${ordinalLevel(k)}</button>`).join('')
+      ? `<span class="ck-castlbl">Cast with slot:</span>`+castable.map(k=>{ const left=S.spellLevels[k].total-S.spellLevels[k].used; return `<button class="ck-cast" data-ckcast="${card.key}:${k}" title="Spend one ${ordinalLevel(k)}-level slot">${ordinalLevel(k)}<small>${left} left</small></button>`; }).join('')
       : `<span class="prep-note" style="margin:0">No free slots of ${ordinalLevel(L)}+</span>`;
 }
 // Structured pieces of a spell's "what you need to know" line — used by ckSubHTML's 'sp' branch.
@@ -2949,7 +2963,7 @@ function ckGearRow(card,stepIdx){
   return `<div class="ck-gear">
     <div class="ck-typepick">${label?`<span class="ck-gear-label">${label}</span>`:''}${typePicker}</div>
     <input type="text" value="${esc(obj.cond||'')}" data-ckcond="${card.key}" placeholder="Condition — e.g. first turn of combat, once per turn">
-    <button data-ckpin="${card.key}">${card.pin?'📌 Unpin':'📌 Pin'}</button>
+    <button data-ckpin="${card.key}">${card.pin?'Unpin':'Pin to top'}</button>
   </div>`;
 }
 function ckCardOpenHTML(card,stepIdx){
@@ -3025,12 +3039,12 @@ function ckSubHTML(card,withRoll){
     const i=card.i, a=S.attacks[i], cSum=atkSummary(a);
     // withRoll (plan steps): type what the damage dice showed, the total auto-calcs live —
     // same S.attacks[i].rolled the attack editor uses, so the two stay in sync.
-    const roll=withRoll?` <span class="ck-roll">🎲<input type="number" value="${esc(a.rolled)}" data-ckroll="${i}" placeholder="${esc(cSum.die||'roll')}" title="What the damage dice showed — total adds your modifiers and active buffs">= <b data-atkfinal="${i}">${cSum.finalDamage!=null?cSum.finalDamage:'—'}</b></span>`:'';
+    const roll=withRoll?` <span class="ck-roll"><span class="ck-k">Roll</span><input type="number" value="${esc(a.rolled)}" data-ckroll="${i}" placeholder="${esc(cSum.die||'roll')}" title="What the damage dice showed — total adds your modifiers and active buffs">= <b data-atkfinal="${i}">${cSum.finalDamage!=null?cSum.finalDamage:'—'}</b></span>`:'';
     // Damage and its condition-bonus badge (Rage etc.) travel together in one inline-flex group
     // (ck-atkdmg-wrap) — an atomic unit that wraps as a whole onto this line's next row if it has
     // to, rather than a bare badge splitting away from "1d10+8 bludgeoning" mid-formula.
     const condBonus=atkCondBonusHTML(a);
-    return `Hit <b class="ck-atkhit" data-atkview="${i}">${esc(cSum.bonus)}</b> · <span class="ck-atkdmg-wrap"><span class="ck-atkdmg" data-atkdmg="${i}">${esc(cSum.dmg)}</span>${condBonus}</span>${roll}`;
+    return `<span class="ck-atkhit-wrap"><span class="ck-k">Hit</span> <b class="ck-atkhit" data-atkview="${i}">${esc(cSum.bonus)}</b></span> <span class="ck-atkdmg-wrap" style="--dc:${dmgTextColor(cSum.dmgType)}">${dmgTypeIconHTML(cSum.dmgType,'ck-dmgicon')}<span class="ck-atkdmg" data-atkdmg="${i}">${esc(cSum.dmg)}</span>${condBonus}</span>${roll}`;
   }
   if(card.kind==='sp'){
     // Headline first, own line, bolded and color-split like the weapon-attack branch's Hit/Damage
@@ -3043,7 +3057,7 @@ function ckSubHTML(card,withRoll){
     const resolvePart=(savatk||dmg)?`<span class="ck-spell-resolve">${savatk}${savatk&&dmg?' · ':''}${dmg}</span>`:'';
     const capBits=[p.timeFlag,p.range].filter(Boolean);
     const capPart=capBits.length?`<span class="ck-spell-cap">${capBits.join(' · ')}</span>`:'';
-    return resolvePart+capPart+(card.L>0?' '+ckSlotPips(card.L):'');
+    return resolvePart+capPart+(card.L>0?' '+ckSlotPips(card.L,card.key):'');
   }
   if(card.kind==='ft'){
     const f=ckRef(card.key), max=num(f.usesMax), used=Math.min(num(f.usesUsed),max);
@@ -3088,17 +3102,19 @@ function ckCardHTML(card){
   // Spell level as its own badge in the header — the sub-line already carries it, but buried
   // among DC/damage text it's easy to miss when scanning a full grid at a glance.
   const lvlBadge=card.kind==='sp'?`<span class="ck-lvl-badge">${card.L===0?'Cantrip':'Lv '+card.L}</span>`:'';
+  // Name gets the whole top line (wrapping in full, never clipped) with ⤵ fixed in the corner, and
+  // every tag — spell level, economy pills, Pinned, Concentration — sits on its own row under it,
+  // so a card with two pills is no taller in the head than one with a single pill.
+  const flags=(card.pin?`<span class="ck-flag">Pinned</span>`:'')+(card.conc?`<span class="ck-flag ck-flag-conc">Concentration</span>`:'');
   return `<div class="ck-card ck-card-${card.type||'other'} ${card.kind==='sp'?'ck-card-spell':''} ${card.isFeat?'ck-card-feat':''} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${active?'ck-active':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
     <div class="ck-card-head">
       <span class="ck-drag-handle" data-ckdraghandle title="Drag to place in your turn plan">⠿</span>
-      <span class="ck-card-name">${card.pin?'📌 ':''}${card.conc?'◉ ':''}${esc(card.name)}</span>
-      ${lvlBadge}
-      <span class="ck-pillgroup">${pills}</span>
-      ${card.kind==='it'&&!card.out?`<button class="ck-quickuse" data-ckituse="${card.i}" title="Use one — no need to open the card">Use</button>`:''}
+      <span class="ck-card-name">${esc(card.name)}</span>
       <button class="ck-plan-add" data-ckplan="${card.key}" title="Add to end of turn plan (or drag the ⠿ handle to place it precisely)">⤵</button>
     </div>
+    <div class="ck-card-tags">${lvlBadge}<span class="ck-pillgroup">${pills}</span>${flags}${card.kind==='it'&&!card.out?`<button class="ck-quickuse" data-ckituse="${card.i}" title="Use one — no need to open the card">Use</button>`:''}</div>
     ${sub?`<div class="ck-card-sub">${sub}</div>`:''}
-    ${card.cond?`<div class="ck-card-cond">⏱ ${esc(card.cond)}</div>`:''}
+    ${card.cond?`<div class="ck-card-cond"><span class="ck-k">When</span> ${esc(card.cond)}</div>`:''}
   </div>`;
 }
 function renderCockpitCards(){
@@ -3166,42 +3182,42 @@ function renderCockpitCards(){
 // the condition field, pin, action-type tags, feature-use pips, custom-card editing, item use),
 // just relocated, so nothing that used to live in the expanded card is lost.
 function ckPopEl(){ return $('#ckPop'); }
+// The detail used to float beside its card, positioned with position:fixed from inside the Combat
+// page — but .tab-page animates with a transform, and a fixed element inside a transformed
+// ancestor is placed relative to that ancestor, not the screen, so it could open partly or wholly
+// off-screen. It's now a centered modal (a bottom sheet on phones) living directly under <body>,
+// created once on first use; the #ckPop element from the Combat template is moved into it.
+function ckPopBg(){
+  let bg=$('#ckPopBg');
+  if(!bg){
+    bg=document.createElement('div'); bg.className='ck-pop-bg'; bg.id='ckPopBg';
+    document.body.appendChild(bg);
+    const pop=ckPopEl(); if(pop){ bg.appendChild(pop); pop.setAttribute('role','dialog'); pop.setAttribute('aria-modal','true'); }
+  }
+  return bg;
+}
 function closeCkPop(){
   CK_OPEN_KEY=null;
   const pop=ckPopEl(); if(pop){ pop.classList.remove('open'); pop.innerHTML=''; }
+  ckPopBg().classList.remove('open');
   $$('.ck-card.ck-active').forEach(el=>el.classList.remove('ck-active'));
 }
-function positionCkPop(anchorEl){
-  const pop=ckPopEl(); if(!pop||!anchorEl) return;
-  const r=anchorEl.getBoundingClientRect();
-  const popW=pop.offsetWidth||300, popH=pop.offsetHeight||120;
-  const spaceBelow=window.innerHeight-r.bottom;
-  let top,caret;
-  if(spaceBelow>=popH+14 || spaceBelow>=r.top){ top=r.bottom+10; caret='ck-pop-up'; }
-  else{ top=Math.max(10,r.top-popH-10); caret='ck-pop-down'; }
-  const left=Math.min(Math.max(10,r.left),window.innerWidth-popW-10);
-  pop.style.top=top+'px'; pop.style.left=left+'px';
-  pop.classList.remove('ck-pop-up','ck-pop-down'); pop.classList.add(caret);
-  const caretX=Math.min(Math.max(18,r.left+r.width/2-left),popW-18);
-  pop.style.setProperty('--ckpopx',caretX+'px');
-}
-function openCkPop(key,anchorEl){
-  const card=cockpitCards().find(x=>x.key===key); if(!card) return;
+function openCkPop(key){
+  const card=cockpitCards().find(x=>x.key===key); if(!card){ closeCkPop(); return; }
+  const bg=ckPopBg(), pop=ckPopEl();
+  const same=CK_OPEN_KEY===key&&bg.classList.contains('open'), keep=same?pop.scrollTop:0;
   CK_OPEN_KEY=key;
-  const pop=ckPopEl();
-  pop.innerHTML=`<button class="ck-pop-close" data-ckpopclose title="Close">✕</button><div class="ck-pop-name">${card.conc?'◉ ':''}${esc(card.name)}</div>${ckCardOpenHTML(card)}`;
-  pop.classList.add('open');
+  pop.innerHTML=`<button class="ck-pop-close" data-ckpopclose title="Close" aria-label="Close">✕</button><div class="ck-pop-name">${esc(card.name)}</div>${ckCardOpenHTML(card)}`;
+  pop.classList.add('open'); bg.classList.add('open');
+  pop.scrollTop=keep; // a re-render (cast, pip, pin) keeps your place instead of jumping to the top
   $$('.ck-card').forEach(el=>el.classList.toggle('ck-active',el.dataset.ckopen===key));
-  positionCkPop(anchorEl);
 }
-// Called at the end of every cockpit re-render so a control used inside the open popover (cast
+// Called at the end of every cockpit re-render so a control used inside the open modal (cast
 // with slot, a pip, the condition field) sees its own effect immediately, same as the rest of
-// the sheet — and so the popover closes cleanly if its source card just got deleted.
+// the sheet — and so it closes cleanly if its source card just got deleted.
 function renderCkPopover(){
   if(!CK_OPEN_KEY) return;
-  const anchorEl=document.querySelector(`[data-ckopen="${CSS.escape(CK_OPEN_KEY)}"]`);
-  if(!anchorEl){ closeCkPop(); return; }
-  openCkPop(CK_OPEN_KEY,anchorEl);
+  openCkPop(CK_OPEN_KEY);
 }
 // The turn-plan timeline — the cockpit's main stage. Each step is a full-information row:
 // name, action-type pill, the same live sub-line as its grid card (hit/damage, slot pips, use
@@ -3257,7 +3273,7 @@ function renderCockpitPlan(){
     ? cur.steps.map((p,i)=>{
         const card=all.find(x=>x.key===p.key);
         const open=CK_PLAN_OPEN.has(i);
-        const noteIn=`<input type="text" class="ck-ps-note" value="${esc(p.note||'')}" data-plannote="${i}" placeholder="✎ quick note…" title="Free text for this step — e.g. 'only if he saves', 'target the caster'">`;
+        const noteIn=`<input type="text" class="ck-ps-note" value="${esc(p.note||'')}" data-plannote="${i}" placeholder="Quick note…" title="Free text for this step — e.g. 'only if he saves', 'target the caster'">`;
         if(!card) return `<div class="ck-plan-step ck-ps-gone" data-planstep="${i}">
           <span class="ck-drag-handle" data-ckdraghandle title="Drag to reorder">⠿</span>
           <i>${i+1}</i>
@@ -3273,13 +3289,14 @@ function renderCockpitPlan(){
           <i>${i+1}</i>
           <div class="ck-ps-main">
             <div class="ck-ps-head">
-              <span class="ck-ps-name">${card.conc?'◉ ':''}${esc(card.name)}</span>
+              <span class="ck-ps-name">${esc(card.name)}</span>
               ${card.kind==='sp'?`<span class="ck-lvl-badge">${card.L===0?'Cantrip':'Lv '+card.L}</span>`:''}
+              ${card.conc?`<span class="ck-flag ck-flag-conc">Concentration</span>`:''}
               <span class="sp-pill ${CK_PILL[stepType]||'pill-cast'}">${tl[stepType]||'Other'}</span>
             </div>
             ${noteIn}
             <div class="ck-ps-sub">${ckSubHTML(card,true)}</div>
-            ${card.cond?`<div class="ck-card-cond">⏱ ${esc(card.cond)}</div>`:''}
+            ${card.cond?`<div class="ck-card-cond"><span class="ck-k">When</span> ${esc(card.cond)}</div>`:''}
             ${open?ckCardOpenHTML(card,i):''}
           </div>
           <button data-plandel="${i}" title="Remove step">✕</button>
@@ -3526,7 +3543,12 @@ function renderCockpitExtras(){
   const concHtml = S.concentration
     ? `◉ Concentrating: <b>${esc(S.concentration.name)}</b> <button data-ckconcdrop title="Drop concentration">✕</button><span class="ck-conc-tip">CON save when you take damage — DC 10 or half the damage, whichever is higher</span>`
     : '';
-  $$('.ck-conc').forEach(el=>el.innerHTML=concHtml);
+  // Combat shows it as a chip in the conditions row, alongside the other "what's on me right now"
+  // states (it used to sit inside the HP/AC strip); Overview keeps its inline line.
+  const concChip = S.concentration
+    ? `<span class="ck-conc-main"><span class="ck-conc-lbl">Concentrating</span><b>${esc(S.concentration.name)}</b><button data-ckconcdrop title="Drop concentration" aria-label="Drop concentration">✕</button></span><span class="ck-conc-tip">Taking damage: CON save, DC 10 or half the damage (whichever is higher)</span>`
+    : '';
+  $$('.ck-conc').forEach(el=>el.innerHTML=el.classList.contains('ck-conc-chip')?concChip:concHtml);
   const abChips=ABILITIES.filter(([k])=>tempAbilityDelta(k)).map(([k])=>
     `<span class="ck-state ${tempAbilityDelta(k)<0?'down':'up'}" title="Temporary adjustment — clear it from the Ability Scores card on Overview">${giHTML(AB_ICON[k])} ${k.toUpperCase()} ${fmt(tempAbilityDelta(k))}</span>`);
   const topHtml=[...abChips,...S.states.map(s=>{
@@ -3551,7 +3573,7 @@ function renderCockpitExtras(){
           ${p&&p.blurb?`<span class="ck-cond-blurb">${esc(p.blurb)}</span>`:''}
         </span>`;
       }).join('')
-    : '<p class="prep-note" style="margin:0">Nothing active — tap + Add to pick a condition.</p>';
+    : (S.concentration?'':'<p class="prep-note" style="margin:0">Nothing active — tap + Add to pick a condition.</p>');
   $$('.ck-states-list').forEach(el=>el.innerHTML=listHtml);
   // Active-condition reminders float to the top and glow (condActive) — the whole point of this
   // feed during a fight is "what applies to me right now", not just "what could ever apply".
@@ -3595,7 +3617,18 @@ function wireCombatFeatures(){
     const t=e.target;
     const slot=t.closest('[data-ckslot]');
     if(slot){ const [L,k]=slot.dataset.ckslot.split('.').map(Number);
-      const lv=S.spellLevels[L]; lv.used=(k<lv.used)?k:k+1;
+      const lv=S.spellLevels[L], prevUsed=lv.used, spending=k>=lv.used;
+      lv.used=spending?k+1:k;
+      // A circle tapped on a spell's own card is a cast of THAT spell — same as its "Cast with slot"
+      // button: a concentration spell becomes what you're concentrating on, with the same Undo.
+      // Un-marking a circle never touches concentration; plain slot trackers carry no spell key.
+      const sp=spending&&slot.dataset.ckslotspell?ckRef(slot.dataset.ckslotspell):null;
+      if(sp&&spellIsConc(sp)){
+        const prevConc=S.concentration;
+        S.concentration={name:sp.name};
+        CK_UNDO={msg:`Cast ${sp.name} — spent a ${ordinalLevel(L)}-level slot.`,slot:L,prevUsed,prevConc};
+        renderSpellLevels(); renderCombatFeatures(); save(); return;
+      }
       renderSpellLevels(); save(); return; }
     const use=t.closest('[data-ckuse]');
     if(use){ const [gi,k]=use.dataset.ckuse.split('.').map(Number);
@@ -3631,7 +3664,7 @@ function wireCombatFeatures(){
           CK_UNDO=null;
           renderEquipment(); renderCombatFeatures(); save();
         }else{
-          const lv=S.spellLevels[CK_UNDO.slot]; lv.used=Math.max(0,lv.used-1);
+          const lv=S.spellLevels[CK_UNDO.slot]; lv.used=CK_UNDO.prevUsed!=null?CK_UNDO.prevUsed:Math.max(0,lv.used-1);
           S.concentration=CK_UNDO.prevConc||null; CK_UNDO=null;
           renderSpellLevels(); renderCombatFeatures(); save();
         }
@@ -3718,7 +3751,7 @@ function wireCombatFeatures(){
     if(t.closest('input,select,textarea,button,a,.pips,.ck-body')) return;
     const cardEl=t.closest('[data-ckopen]');
     if(cardEl){ const key=cardEl.dataset.ckopen;
-      CK_OPEN_KEY===key ? closeCkPop() : openCkPop(key,cardEl);
+      CK_OPEN_KEY===key ? closeCkPop() : openCkPop(key);
       return; }
     const pstep=t.closest('[data-planstep]');
     if(pstep){ const i=+pstep.dataset.planstep;
@@ -3730,7 +3763,7 @@ function wireCombatFeatures(){
   });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape' && CK_OPEN_KEY) closeCkPop(); });
   // Typing fields save without re-rendering (keeps focus); selects re-render (they re-sort).
-  $('#page-combat').addEventListener('input',e=>{
+  const ckInput=e=>{
     const t=e.target;
     if(t.dataset.cktplname!=null){ ckPlan().name=t.value; save(); return; }
     if(t.dataset.plannote!=null){ const p=ckPlan().steps[+t.dataset.plannote]; if(p){p.note=t.value; save();} return; }
@@ -3741,13 +3774,16 @@ function wireCombatFeatures(){
     if(t.dataset.ccb!=null){ S.customCards[+t.dataset.ccb].body=t.value; save(); return; }
     if(t.dataset.ccu!=null){ const cc=S.customCards[+t.dataset.ccu];
       cc.usesMax=Math.max(0,num(t.value)); cc.usesUsed=Math.min(num(cc.usesUsed),cc.usesMax); save(); return; }
-  });
+  };
+  $('#page-combat').addEventListener('input',ckInput);
+  // The card detail is a modal under <body> (see openCkPop), outside #page-combat — its condition
+  // and custom-card fields need the same typing handler.
+  ckPopBg().addEventListener('input',ckInput);
   $('#ckAddCustom').addEventListener('click',()=>{
     ck(); S.customCards.push({title:'',body:'',actionTypes:['action'],cond:'',usesMax:0,usesUsed:0});
     const key='cc:'+(S.customCards.length-1);
     renderCockpitCards(); save();
-    const anchorEl=document.querySelector(`[data-ckopen="${CSS.escape(key)}"]`);
-    if(anchorEl) openCkPop(key,anchorEl);
+    openCkPop(key);
   });
   // Collapsing Turn Plan to a slim tab hands its width back to "Do Something" — a wide screen
   // has room for a card grid many columns deep, and Turn Plan doesn't need to compete with it
