@@ -5893,9 +5893,8 @@ function levelUpPoolPickerHTML(ent,newLevel){
   const cap=poolCapAt(ent,newLevel); if(!cap) return '';
   const opts=poolOptions(ent.pool), chosen=poolChosenCount(ent.pool), label=ent.poolLabel||'Options';
   const src=poolSourceFor(ent);
-  const keyFor=o=>(src.kind==='class'?['class',S.classId,o.n]:['sub',S.classId,S.subclass,o.n]).join(GRANT_SEP);
   const chips=opts.map(o=>{
-    const key=keyFor(o);
+    const key=poolKeyFor(src,o.n);
     const on=!!S.features.find(f=>(f.source||{}).grantKey===key);
     const eligible=poolOptionEligible(o);
     const title=eligible?(o.d||''):`${o.d||''} — ${poolOptionLockReason(o)}`;
@@ -6042,7 +6041,7 @@ function openLevelUpModal(){
       else{
         const ent=grantLibEntry(key);
         const umbrella=ent?poolUmbrella(ent.pool):null;
-        if(ent) quickAddFeature(ent,umbrella?poolSourceFor(umbrella):{kind:'subclass',classId:S.classId,className:(CLASSES[S.classId]||{}).name+' — '+S.subclass,subclassName:S.subclass},key);
+        if(ent) quickAddFeature(ent,umbrella?poolSourceFor(umbrella):{kind:'subclass',classId:S.classId,className:(CLASSES[S.classId]||{}).name+' — '+S.subclass,subclassName:S.subclass},key,RACE_LIB.includes(ent)?'race':undefined);
       }
       fxRefresh(); paintLevelUpModal(); return;
     }
@@ -6462,7 +6461,7 @@ function grantedPlan(atLevel){
   if(ri){
     const g=ri.r.name, subName=(ri.sub&&ri.sub.name)||'';
     RACE_LIB.forEach(e=>{
-      if(e.g===g && num(e.l||1)<=L && raceTraitApplies(e.n,subName))
+      if(e.g===g && num(e.l||1)<=L && notPoolOnly(e) && raceTraitApplies(e.n,subName))
         out.push({key:['race',g,e.n].join(GRANT_SEP),ent:e,lib:'race',source:{kind:'race',raceName:g}});
     });
   }
@@ -6547,10 +6546,14 @@ function quickRemoveFeature(key){
   if(featureIsPristine(S.features[idx])) S.features.splice(idx,1);
   else delete S.features[idx].source.grantKey; // edited — keep the card, just stop managing it
 }
-// ----- "Choose N from a pool" features (Battle Master maneuvers today; same tags — `pool` on
-// each option, `pool`+`pickCap` on the umbrella feature that introduces them — work for any
-// future subclass's similar mechanic, e.g. Metamagic or Invocations, with no code changes here.
-function poolOptions(poolId){ return FEATURE_LIB.filter(e=>e.pool===poolId && !e.pickCap); }
+// ----- "Choose N from a pool" features (Battle Master maneuvers, Fighting Style, Invocations,
+// Totem Warrior's per-tier animal picks, Aasimar's Celestial Revelation, ... — same tags — `pool`
+// on each option, `pool`+`pickCap` on the umbrella feature that introduces them — work for any
+// class OR race feature with this shape, with no code changes here. Options can live in either
+// FEATURE_LIB (class/subclass) or RACE_LIB (race/subrace), so both libs are searched.
+function poolOptions(poolId){
+  return FEATURE_LIB.filter(e=>e.pool===poolId && !e.pickCap).concat(RACE_LIB.filter(e=>e.pool===poolId && !e.pickCap));
+}
 function poolCapAt(ent,level){
   if(!ent||!ent.pickCap) return 0;
   const at=Object.keys(ent.pickCap).map(Number).filter(L=>L<=level);
@@ -6565,15 +6568,26 @@ function poolChosenCount(poolId){
 }
 // The umbrella entry (the one carrying `pickCap`) that introduces a given pool id — e.g. looking
 // up "Fighting Style" from one of its "Archery"/"Dueling"/... options' `pool` tag.
-function poolUmbrella(poolId){ return FEATURE_LIB.find(e=>e.pool===poolId && e.pickCap); }
-// Base-class pool (Fighting Style, Metamagic, Invocations, Pact Boon) vs. subclass pool (Battle
-// Master maneuvers) — same branch grantedPlan() already uses for ordinary features, so a pool
-// option's grant key/source is tagged correctly either way instead of always assuming subclass.
+function poolUmbrella(poolId){
+  return FEATURE_LIB.find(e=>e.pool===poolId && e.pickCap) || RACE_LIB.find(e=>e.pool===poolId && e.pickCap);
+}
+// Base-class pool (Fighting Style, Metamagic, Invocations, Pact Boon), subclass pool (Battle
+// Master maneuvers, Totem Warrior's animal picks), or race pool (Aasimar's Celestial Revelation) —
+// same branches grantedPlan() already uses for ordinary features, so a pool option's grant
+// key/source is tagged correctly instead of always assuming subclass.
 function poolSourceFor(ent){
   const c=CLASSES[S.classId]||{};
-  return ent.g===c.name
-    ? {kind:'class',classId:S.classId,className:c.name}
-    : {kind:'subclass',classId:S.classId,className:ent.g,subclassName:S.subclass};
+  if(ent.g===c.name) return {kind:'class',classId:S.classId,className:c.name};
+  const ri=raceInfo();
+  if(ri && ent.g===ri.r.name) return {kind:'race',raceName:ent.g};
+  return {kind:'subclass',classId:S.classId,className:ent.g,subclassName:S.subclass};
+}
+// Same grant-key shape grantedPlan() uses per source kind, so a pool pick and an ordinary granted
+// feature with the same name/source always resolve to the same key.
+function poolKeyFor(src,name){
+  if(src.kind==='race') return ['race',src.raceName,name].join(GRANT_SEP);
+  if(src.kind==='class') return ['class',src.classId,name].join(GRANT_SEP);
+  return ['sub',src.classId,src.subclassName,name].join(GRANT_SEP);
 }
 // Advisory-only prerequisite check for a pool option's optional `req` tag ({level:N} and/or
 // {feature:'Exact Title'}) — never blocks tapping the chip, just greys it out with a reason, per
