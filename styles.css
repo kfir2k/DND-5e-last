@@ -3397,6 +3397,9 @@ label.fld-paper input:focus{border-bottom-style:solid;border-bottom-color:var(--
 }
 .lvlup-pool-chip:hover{border-color:var(--gold-dim)}
 .lvlup-pool-chip.on{border-color:var(--gold);background:rgba(201,162,39,.16);color:var(--gold-lt)}
+.lvlup-pool-chip.locked{opacity:.55;border-style:dashed}
+.lvlup-pool-chip.locked.on{opacity:.85}
+.lvlup-pool-note{font-size:.72rem;color:var(--muted);margin-top:6px;font-style:italic}
 /* Subclass-choice step — more, smaller cards than the 2-up ASI/Feat grid (Fighter alone offers
    10 Martial Archetypes), so it wraps instead of forcing a fixed column count. */
 .lvlup-subclass-grid{display:flex;flex-wrap:wrap;gap:8px}

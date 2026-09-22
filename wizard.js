@@ -563,7 +563,7 @@ function sceneFeatures(){
   if(WIZ.classId==='fighter'){
     html+=`<div class="wiz-subhead">Choose a Fighting Style</div>
       <div class="wiz-optgrid">
-        ${FEATURE_LIB.filter(e=>e.pool==='fs-fighter').map(s=>`<button class="wiz-optcard wiz-tilt ${WIZ.fightingStyle===s.n?'sel':''}" data-style="${esc(s.n)}" type="button">
+        ${poolOptions('fs-fighter').map(s=>`<button class="wiz-optcard wiz-tilt ${WIZ.fightingStyle===s.n?'sel':''}" data-style="${esc(s.n)}" type="button">
           <span class="nm">${esc(s.n)}</span><span class="sub">${esc(s.d)}</span>${WIZ_GLARE}
         </button>`).join('')}
       </div>`;

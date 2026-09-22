@@ -994,6 +994,7 @@ function load(){
   migrateRaceSkillPicks();
   migrateFeatureLevels();
   migrateStates();
+  migrateRaceTraitSplits();
 }
 // S.states used to be a flat array of free-text strings ("Raging", "Hidden"...); it's now an
 // array of {id,name,key,dur} so conditions can carry an icon/blurb (via STATE_PRESETS) and an
@@ -1101,6 +1102,26 @@ function migrateFeatureLevels(){
       return;
     }
     f.levelAt=null;
+  });
+}
+// "Infernal Legacy" (Tiefling) and "Drow Magic (Drow)" (Elf) used to be a single card whose
+// description covered all three tiers at once (1st-level cantrip + 3rd-level spell + 5th-level
+// spell); each is now three separate RACE_LIB entries so the 3rd/5th-level unlock actually shows
+// up as its own "What You Gain" card at the level-up screen. The base entry keeps the same name,
+// so an existing character's card is still linked (same grantKey) but its stored description is
+// the old combined text — rewrite it to match the new cantrip-only entry so it stops showing
+// stale "cast Hellish Rebuke/Darkness" text on what's now a 1st-level-only card. The two newly
+// split higher-tier cards aren't created here — they're backfilled the normal way, either by
+// syncGrantedFeatures() if S.autoGrant is on, or by the player adding them from Features search.
+function migrateRaceTraitSplits(){
+  if(S.raceTraitSplitsMigrated) return;
+  S.raceTraitSplitsMigrated=true;
+  const splitKeys=['race'+GRANT_SEP+'Tiefling'+GRANT_SEP+'Infernal Legacy','race'+GRANT_SEP+'Elf'+GRANT_SEP+'Drow Magic (Drow)'];
+  (S.features||[]).forEach(f=>{
+    const key=(f.source||{}).grantKey;
+    if(!splitKeys.includes(key)) return;
+    const ent=grantLibEntry(key);
+    if(ent && f.desc!==ent.d) f.desc=ent.d;
   });
 }
 // Notes predate tags/session (the Session Timeline layout) — backfill both on any older save
@@ -3898,8 +3919,11 @@ function raceEntryToFeature(ent,source){
   // so their max uses stay synced to that stat automatically as you level up.
   const usesScale=ent.usesScale||'';
   const usesMax = usesScale ? usesScaleValue(usesScale,ent.usesScaleBonus) : (ent.usesMax||0);
-  // Race traits aren't level-gated in RACE_LIB (no l field) — they're always there from creation.
-  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,levelAt:1,source};
+  // Most race traits are granted at creation (no `l` field, so this defaults to 1); a handful
+  // (e.g. Tiefling/Drow's later-tier spell-like traits) carry a real `l` and unlock at that level,
+  // same convention as libEntryToFeature's class-feature levelAt.
+  const levelAt = ent.l!=null && ent.l!=='' ? num(ent.l) : 1;
+  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,levelAt,source};
 }
 // Same job for BACKGROUND_LIB entries — no level-scaling special case exists for any background.
 function backgroundEntryToFeature(ent,source){
@@ -5860,14 +5884,20 @@ function levelUpFeatCardHTML(p,newLevel){
 function levelUpPoolPickerHTML(ent,newLevel){
   const cap=poolCapAt(ent,newLevel); if(!cap) return '';
   const opts=poolOptions(ent.pool), chosen=poolChosenCount(ent.pool), label=ent.poolLabel||'Options';
+  const src=poolSourceFor(ent);
+  const keyFor=o=>(src.kind==='class'?['class',S.classId,o.n]:['sub',S.classId,S.subclass,o.n]).join(GRANT_SEP);
   const chips=opts.map(o=>{
-    const key=['sub',S.classId,S.subclass,o.n].join(GRANT_SEP);
+    const key=keyFor(o);
     const on=!!S.features.find(f=>(f.source||{}).grantKey===key);
-    return `<button type="button" class="lvlup-pool-chip ${on?'on':''}" data-lvlpoolkey="${esc(key)}" title="${esc(o.d||'')}">${esc(o.n)}</button>`;
+    const eligible=poolOptionEligible(o);
+    const title=eligible?(o.d||''):`${o.d||''} — ${poolOptionLockReason(o)}`;
+    return `<button type="button" class="lvlup-pool-chip ${on?'on':''} ${eligible?'':'locked'}" data-lvlpoolkey="${esc(key)}" title="${esc(title)}">${esc(o.n)}</button>`;
   }).join('');
+  const swapNote=ent.n==='Eldritch Invocations'?`<div class="lvlup-pool-note">You can swap one known invocation for a different one each time you gain a warlock level — untap it above, then tap a new one.</div>`:'';
   return `<div class="lvlup-pool">
     <div class="lvlup-pool-count">${esc(label)} known: <b>${chosen} of ${cap}</b> chosen</div>
     <div class="lvlup-pool-chips">${chips}</div>
+    ${swapNote}
   </div>`;
 }
 // "New this level" (always open — the collapsed toggle here was the #1 reported way a fresh
@@ -5895,9 +5925,18 @@ function levelUpBodyHTML(){
   const hd=c.hd, avg=levelUpHitDieAvg(hd);
   const isAsiLevel=asiLevels(S.classId).includes(newLevel);
   const needSubclass=subclassLevel(S.classId)===newLevel && !S.subclass;
-  const plan=grantedPlan(newLevel).filter(p=>p.lib==='feature'&&num(p.ent.l)===newLevel);
+  // A pool umbrella (Eldritch Invocations, Combat Superiority, ...) only unlocks once (its own
+  // `l`), but its pick cap keeps growing at later levels (e.g. Invocations at 5/7/9/12/15/18) —
+  // resurface its card (picker included) at each of those growth levels too, not just the level
+  // it first appeared, or the extra picks it allows would never get a place to be made.
+  const plan=grantedPlan(newLevel).filter(p=>{
+    const capGrowth=p.ent.pickCap && p.ent.pickCap[newLevel]!=null;
+    if(p.lib==='feature') return num(p.ent.l)===newLevel || capGrowth;
+    if(p.lib==='race') return (num(p.ent.l!=null&&p.ent.l!==''?p.ent.l:1)===newLevel) || capGrowth;
+    return false;
+  });
   const ri=raceInfo();
-  const raceFeats=ri?RACE_LIB.filter(raceEntryIsMine):[];
+  const raceFeats=ri?RACE_LIB.filter(e=>raceEntryIsMine(e)&&num(e.l||1)<=num(S.level)):[];
   const raceSlug=ri?spellSlug(ri.r.name):'';
   return `
     <div class="lvlup-head">
@@ -5974,7 +6013,7 @@ function openLevelUpModal(){
       const key=addBtn.dataset.lvladdkey, ent=grantLibEntry(key);
       if(ent){
         const plan=grantedPlan(levelUpNewLevel()).find(p=>p.key===key);
-        quickAddFeature(ent,plan?plan.source:{kind:'class',classId:S.classId,className:(CLASSES[S.classId]||{}).name},key);
+        quickAddFeature(ent,plan?plan.source:{kind:'class',classId:S.classId,className:(CLASSES[S.classId]||{}).name},key,plan&&plan.lib);
         fxRefresh(); paintLevelUpModal();
       }
       return;
@@ -5985,7 +6024,8 @@ function openLevelUpModal(){
       if(poolChip.classList.contains('on')) quickRemoveFeature(key);
       else{
         const ent=grantLibEntry(key);
-        if(ent) quickAddFeature(ent,{kind:'subclass',classId:S.classId,className:(CLASSES[S.classId]||{}).name+' — '+S.subclass,subclassName:S.subclass},key);
+        const umbrella=ent?poolUmbrella(ent.pool):null;
+        if(ent) quickAddFeature(ent,umbrella?poolSourceFor(umbrella):{kind:'subclass',classId:S.classId,className:(CLASSES[S.classId]||{}).name+' — '+S.subclass,subclassName:S.subclass},key);
       }
       fxRefresh(); paintLevelUpModal(); return;
     }
@@ -6405,7 +6445,7 @@ function grantedPlan(atLevel){
   if(ri){
     const g=ri.r.name, subName=(ri.sub&&ri.sub.name)||'';
     RACE_LIB.forEach(e=>{
-      if(e.g===g && raceTraitApplies(e.n,subName))
+      if(e.g===g && num(e.l||1)<=L && raceTraitApplies(e.n,subName))
         out.push({key:['race',g,e.n].join(GRANT_SEP),ent:e,lib:'race',source:{kind:'race',raceName:g}});
     });
   }
@@ -6469,12 +6509,14 @@ function syncGrantedFeatures(){
 // customize everything, so a card they've edited — even just the description — is their own
 // thing now, and "+ Add" here adds a fresh independent copy alongside it instead of silently
 // claiming it.
-function quickAddFeature(ent,source,key){
+function quickAddFeature(ent,source,key,lib){
   const have=S.features.find(f=>(f.source||{}).grantKey===key);
   if(have) return have;
   const dup=S.features.find(f=>!(f.source&&f.source.grantKey)&&(f.title||'')===ent.n&&(f.desc||'')===(ent.d||''));
   if(dup){ dup.source={...(dup.source||{}),...source,grantKey:key}; return dup; }
-  const f=libEntryToFeature(ent,source);
+  const f = lib==='race' ? raceEntryToFeature(ent,source)
+    : lib==='background' ? backgroundEntryToFeature(ent,source)
+    : libEntryToFeature(ent,source);
   f.source.grantKey=key;
   S.features.push(f);
   // Same blank-seed-row sweep as syncGrantedFeatures — a real card just landed, so the empty row
@@ -6503,6 +6545,33 @@ function poolCapAt(ent,level){
 function poolChosenCount(poolId){
   const names=new Set(poolOptions(poolId).map(e=>e.n));
   return S.features.filter(f=>names.has((f.title||'').trim())).length;
+}
+// The umbrella entry (the one carrying `pickCap`) that introduces a given pool id — e.g. looking
+// up "Fighting Style" from one of its "Archery"/"Dueling"/... options' `pool` tag.
+function poolUmbrella(poolId){ return FEATURE_LIB.find(e=>e.pool===poolId && e.pickCap); }
+// Base-class pool (Fighting Style, Metamagic, Invocations, Pact Boon) vs. subclass pool (Battle
+// Master maneuvers) — same branch grantedPlan() already uses for ordinary features, so a pool
+// option's grant key/source is tagged correctly either way instead of always assuming subclass.
+function poolSourceFor(ent){
+  const c=CLASSES[S.classId]||{};
+  return ent.g===c.name
+    ? {kind:'class',classId:S.classId,className:c.name}
+    : {kind:'subclass',classId:S.classId,className:ent.g,subclassName:S.subclass};
+}
+// Advisory-only prerequisite check for a pool option's optional `req` tag ({level:N} and/or
+// {feature:'Exact Title'}) — never blocks tapping the chip, just greys it out with a reason, per
+// this app's existing "annotate, don't block" philosophy (see subclassLevel's comment above).
+function poolOptionEligible(o){
+  const req=o.req; if(!req) return true;
+  if(req.level!=null && num(S.level)<num(req.level)) return false;
+  if(req.feature && !S.features.some(f=>(f.title||'').trim()===req.feature)) return false;
+  return true;
+}
+function poolOptionLockReason(o){
+  const req=o.req||{};
+  if(req.level!=null && num(S.level)<num(req.level)) return `usually taken at level ${req.level}+`;
+  if(req.feature) return `usually requires ${req.feature}`;
+  return 'an unusual pick for your build';
 }
 
 function wireBuild(){
