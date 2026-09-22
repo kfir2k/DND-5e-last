@@ -40,9 +40,11 @@
     <button type="button" class="chud-wide-btn" data-widetoggle aria-label="Toggle wide layout" title="Widen the layout for more room" aria-pressed="false">⤢</button>
     <button class="icon-btn" id="charsBtn" aria-label="Characters" title="Choose or manage characters">🎭 <span class="btn-lbl">Characters</span></button>
     <button class="icon-btn" id="mapBtn" aria-label="Map" title="Open the map">🗺 <span class="btn-lbl">Map</span></button>
-    <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Export, import or reset this character">⚙ <span class="btn-lbl">Settings</span></button>
+    <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Back up, import or reset characters">⚙ <span class="btn-lbl">Settings</span></button>
   </div>
 </header>
+
+<div class="safety-bar" id="safetyBar" role="status" aria-live="polite" hidden></div>
 
 <nav id="tabs" role="tablist" aria-label="Character sheet sections"></nav>
 
@@ -120,10 +122,12 @@
   <div class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <button class="close-x" id="settingsClose" aria-label="Close settings">✕</button>
     <h2 id="settingsTitle">Settings</h2>
-    <p>Your character auto-saves in this browser. Export a copy to back it up or move it to another device.</p>
+    <p>Your characters auto-save in this browser only, and the browser can clear that storage. Back up now and then to keep them safe, or to move them to another device.</p>
+    <p class="backup-info" id="backupInfo"></p>
     <div class="settings-group">
-      <button class="icon-btn settings-row" id="exportBtn"><span class="settings-ico">⇩</span><span class="settings-txt"><b>Export character</b><small>Download this sheet as a .json file</small></span></button>
-      <button class="icon-btn settings-row" id="importBtn"><span class="settings-ico">⇧</span><span class="settings-txt"><b>Import character</b><small>Adds the file as a new hero on your roster</small></span></button>
+      <button class="icon-btn settings-row" id="exportBtn"><span class="settings-ico">⇩</span><span class="settings-txt"><b>Back up this character</b><small>Save this sheet as a dated .json file</small></span></button>
+      <button class="icon-btn settings-row" id="exportAllBtn"><span class="settings-ico">⇊</span><span class="settings-txt"><b>Back up all characters</b><small>Every hero on this device in one file</small></span></button>
+      <button class="icon-btn settings-row" id="importBtn"><span class="settings-ico">⇧</span><span class="settings-txt"><b>Import / restore</b><small>A character or full backup file — added as new heroes, nothing overwritten</small></span></button>
       <input type="file" id="importFile" accept=".json,application/json" style="display:none">
     </div>
     <div class="settings-group settings-danger">

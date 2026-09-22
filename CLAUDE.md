@@ -193,10 +193,18 @@ Everything is `localStorage`, no backend:
 - `dnd5e-binder-map-v2` — the campaign map
 - `dnd5e-binder-wide-v1` — UI-only wide-layout preference, independent of character/roster
 - `dnd5e-binder-tab-v1` — UI-only last-open tab (restored at boot by `lastTab()`), independent of character/roster
+- `dnd5e-binder-backup-v1` — backup bookkeeping only (last-export time per character id, nudge
+  snooze, iOS tip dismissed); drives the backup nudge bar. Never written into `S` or any export.
+- `dnd5e-binder-rescue-<id>-<ts>` — raw text of a save that failed to parse, parked by `load()`
+  before a blank sheet replaces it
 
 Characters can be exported/imported as standalone `.json` files (Settings, or the character-select
 screen) — see the `Characters/` folder for example exports. Import always creates a *new* roster
-entry rather than overwriting the current sheet.
+entry rather than overwriting the current sheet. **The single-character export format is exactly
+`S` as JSON and must stay that way** — players have these files on disk. "Back up all" writes a
+separate bundle shape, `{format:'dnd5e-binder-bundle', version, exported, chars:[<plain character
+files>]}`; `parseImport()` recognises a bundle only by that `format` marker, so any other object is
+treated as a single character, exactly as before.
 
 ## End-of-task changelog line
 

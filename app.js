@@ -982,11 +982,22 @@ function save(){
 // switching mid-debounce would otherwise write hero A's sheet into hero B's key.
 function flushSave(){ if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; saveNow(); } }
 function load(){
+  let raw=null;
   try{
-    const raw=localStorage.getItem(charKey(ROSTER.active));
+    raw=localStorage.getItem(charKey(ROSTER.active));
     if(raw){ S=Object.assign(defaultState(),JSON.parse(raw)); }
     else S=defaultState();
-  }catch(e){ /* corrupt data -> start fresh */ }
+  }catch(e){
+    // Corrupt save: this used to leave S as the PREVIOUS hero, whose sheet the next autosave then
+    // wrote over the damaged slot. Park the raw text first, then start a blank sheet.
+    S=defaultState();
+    if(raw!=null){
+      let kept=false;
+      try{ localStorage.setItem(RESCUE_PREFIX+ROSTER.active+'-'+Date.now(),raw); kept=true; }catch(err){}
+      PENDING_RESCUE={raw,kept};
+      setTimeout(showRescue,0);
+    }
+  }
   migrateAttacks();
   migrateNotes();
   migrateBuild();
@@ -7313,9 +7324,10 @@ function renderCharSelect(){
       <div class="cs-name">${esc(c.name)}</div>
       <div class="cs-line">${esc(line)||'A blank sheet'}</div>
       ${c.hpMax>0?`<div class="cs-hp ${hpPct<=25?'low':''}"><div style="width:${hpPct}%"></div></div><div class="cs-hpnum">${c.hp} / ${c.hpMax} HP</div>`:''}
+      ${(()=>{ const bt=lastBackupAt(id); return `<div class="cs-backup ${backupDue(id)?'due':''}">${bt?'Backed up '+relTime(bt):'Never backed up'}</div>`; })()}
       <div class="cs-actions">
         <button data-csdup="${id}" title="Duplicate this character">⧉ Copy</button>
-        <button data-csexp="${id}" title="Download as JSON backup">⬇ Export</button>
+        <button data-csexp="${id}" title="Save this hero as a dated .json backup">⬇ Back up</button>
         <button class="cs-del" data-csdel="${id}" title="Delete this character">✕</button>
       </div>
     </div>`;
@@ -7327,7 +7339,10 @@ function renderCharSelect(){
       <span class="cs-icon">🧙</span><span class="cs-name">Smart Wizard</span><span class="cs-line">Guided creation, step by step</span>
     </button>
     <button class="cs-card cs-new" data-csimportbtn>
-      <span class="cs-icon">⬆</span><span class="cs-name">Import</span><span class="cs-line">From a JSON export</span>
+      <span class="cs-icon">⬆</span><span class="cs-name">Import</span><span class="cs-line">A character or a full backup file</span>
+    </button>
+    <button class="cs-card cs-new" data-csbackupall>
+      <span class="cs-icon">⬇</span><span class="cs-name">Back Up All</span><span class="cs-line">Every hero here in one file</span>
     </button>`;
 }
 function openCharSelect(){ renderCharSelect(); $('#charSelect').classList.add('open'); }
@@ -7350,14 +7365,215 @@ function createChar(data){
   showTab(data?'overview':'build'); // fresh hero → Build tab; imported hero is complete → Overview
   closeCharSelect();
 }
-function exportChar(id){
-  const raw=localStorage.getItem(charKey(id)); if(!raw) return;
-  let name='character';
-  try{ name=(JSON.parse(raw).name||'character').replace(/[^\w\- ]/g,'').trim()||'character'; }catch(e){}
-  const blob=new Blob([raw],{type:'application/json'});
+// ---------- Backups & storage safety ----------
+// Every hero lives only in this browser's localStorage, which the browser is allowed to clear:
+// Safari (not installed to the Home Screen) after about a week away, Chrome under disk pressure.
+// So: ask for persistent storage, remember when each hero was last exported, and nudge when a
+// hero has changed and has no recent backup. The bookkeeping lives in its OWN key, like wide
+// mode and last tab — nothing here ever goes into S or into an exported character file, so the
+// .json format players already have on disk is exactly what it always was.
+const BACKUP_KEY='dnd5e-binder-backup-v1';   // {chars:{id:{t:lastBackup,seen:firstSeen}}, snooze, iosTip}
+const BUNDLE_FORMAT='dnd5e-binder-bundle';    // "Back up all" file: {format,version,exported,chars:[plain character files]}
+const DAY_MS=86400000;
+const BACKUP_STALE_MS=14*DAY_MS;              // backed-up hero changed and backup older than this → nudge
+const NEW_CHAR_GRACE_MS=2*DAY_MS;             // never-backed-up hero: give it a couple of days first
+let STORAGE_PERSISTED=null;                   // null = unknown / API missing
+function backupStore(){
+  let b=null;
+  try{ b=JSON.parse(localStorage.getItem(BACKUP_KEY)||'null'); }catch(e){}
+  if(!b||typeof b!=='object'||Array.isArray(b)) b={};
+  if(!b.chars||typeof b.chars!=='object') b.chars={};
+  return b;
+}
+function saveBackupStore(b){ try{ localStorage.setItem(BACKUP_KEY,JSON.stringify(b)); }catch(e){} }
+// First sight of each hero starts its grace period; heroes no longer on the roster are forgotten.
+function initBackupStore(){
+  const b=backupStore(), now=Date.now();
+  ROSTER.list.forEach(id=>{ if(!b.chars[id]) b.chars[id]={t:0,seen:now}; });
+  Object.keys(b.chars).forEach(id=>{ if(!ROSTER.list.includes(id)) delete b.chars[id]; });
+  saveBackupStore(b);
+}
+function markBackedUp(ids){
+  const b=backupStore(), now=Date.now();
+  ids.forEach(id=>{ b.chars[id]=Object.assign({seen:now},b.chars[id],{t:now}); });
+  saveBackupStore(b);
+  renderSafetyBar();
+  if($('#charSelect').classList.contains('open')) renderCharSelect();
+}
+function lastBackupAt(id){ return (backupStore().chars[id]||{}).t||0; }
+function backupDue(id){
+  const e=backupStore().chars[id]||{}, now=Date.now();
+  const edited=(ROSTER.meta[id]||{}).t||0;
+  if(e.t&&edited<=e.t) return false;          // nothing has changed since the last backup
+  return e.t ? now-e.t>=BACKUP_STALE_MS : now-(e.seen||now)>=NEW_CHAR_GRACE_MS;
+}
+function relTime(ts){
+  const d=Math.floor((Date.now()-ts)/DAY_MS);
+  if(d<=0) return 'today';
+  if(d===1) return 'yesterday';
+  if(d<14) return d+' days ago';
+  if(d<60) return Math.floor(d/7)+' weeks ago';
+  return Math.floor(d/30)+' months ago';
+}
+// Local date, so two backups of the same hero sort by name and never collide as "Hero (1).json".
+function dateStamp(){
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+const safeFileName=s=>String(s||'').replace(/[^\w\- ]/g,'').trim();
+function charFileName(name){ return (safeFileName(name)||'character')+' '+dateStamp()+'.json'; }
+function downloadBlob(blob,filename){
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download=name+'.json';
-  a.click(); URL.revokeObjectURL(a.href);
+  a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+// Hands a backup file to the player. On a tablet/phone, the OS share sheet ("Save to Files",
+// Drive, a chat with yourself) is far easier than a download that opens as a preview; on
+// desktop, a plain download. Resolves false only when the player closed the share sheet.
+function deliverFile(text,filename){
+  const blob=new Blob([text],{type:'application/json'});
+  const touch=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+  if(touch&&navigator.canShare&&navigator.share&&window.File){
+    let file=null;
+    try{ file=new File([blob],filename,{type:'application/json'}); }catch(e){}
+    let ok=false; try{ ok=!!file&&navigator.canShare({files:[file]}); }catch(e){}
+    if(ok) return navigator.share({files:[file],title:filename}).then(()=>true,err=>{
+      if(err&&err.name==='AbortError') return false;
+      downloadBlob(blob,filename); return true;
+    });
+  }
+  downloadBlob(blob,filename);
+  return Promise.resolve(true);
+}
+function exportChar(id){
+  if(id===ROSTER.active) flushSave();   // a pending debounced edit belongs in the file too
+  const raw=localStorage.getItem(charKey(id)); if(!raw) return;
+  let name='';
+  try{ name=JSON.parse(raw).name; }catch(e){}
+  deliverFile(raw,charFileName(name)).then(ok=>{ if(ok) markBackedUp([id]); });
+}
+function exportAllChars(){
+  flushSave();
+  const chars=[], ids=[], bad=[];
+  ROSTER.list.forEach(id=>{
+    try{
+      const d=JSON.parse(localStorage.getItem(charKey(id)));
+      if(d&&typeof d==='object'&&!Array.isArray(d)){ chars.push(d); ids.push(id); } else bad.push(id);
+    }catch(e){ bad.push(id); }
+  });
+  if(!chars.length){ uiAlert('There are no readable characters to back up.','Nothing to back up'); return; }
+  const bundle={format:BUNDLE_FORMAT,version:1,exported:new Date().toISOString(),chars};
+  deliverFile(JSON.stringify(bundle),`All characters ${dateStamp()}.json`).then(ok=>{
+    if(ok) markBackedUp(ids);
+    if(bad.length) uiAlert(`${bad.length} save${bad.length>1?'s':''} could not be read and ${bad.length>1?'were':'was'} left out of the backup.`,'Partly backed up');
+  });
+}
+// Accepts both file shapes: a plain character export (what every existing .json is) and the
+// "Back up all" bundle, recognised only by its explicit format marker — a character sheet has
+// no top-level `format` field, so an old export can never be mistaken for a bundle.
+function parseImport(text){
+  const d=JSON.parse(text);
+  if(!d||typeof d!=='object'||Array.isArray(d)) throw new Error('not a character');
+  if(d.format===BUNDLE_FORMAT&&Array.isArray(d.chars)){
+    const chars=d.chars.filter(c=>c&&typeof c==='object'&&!Array.isArray(c));
+    if(!chars.length) throw new Error('empty bundle');
+    return {bundle:true,chars};
+  }
+  return {bundle:false,chars:[d]};
+}
+// Import never overwrites: a single hero lands as a new roster entry (and opens), a bundle adds
+// every hero in it as new entries alongside the existing ones.
+function importCharFile(file,onDone){
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    let parsed;
+    try{ parsed=parseImport(r.result); }
+    catch(err){ uiAlert('That file is not a valid character JSON.','Import failed'); return; }
+    if(!parsed.bundle){
+      const before=ROSTER.active;
+      createChar(Object.assign(defaultState(),parsed.chars[0]));
+      if(ROSTER.active!==before) markBackedUp([ROSTER.active]); // it already exists as a file
+      if(onDone) onDone();
+      return;
+    }
+    const names=parsed.chars.map(c=>(c.name||'').trim()||'Unnamed hero');
+    uiConfirm(`This backup holds ${names.length} character${names.length>1?'s':''}: ${names.join(', ')}. They will be added as new heroes — the ones already here stay untouched.`,
+      {title:'Restore backup',ok:`Add ${names.length} hero${names.length>1?'es':''}`}).then(ok=>{
+      if(!ok) return;
+      flushSave();
+      const added=[];
+      for(const c of parsed.chars){
+        const id=newCharId();
+        try{ localStorage.setItem(charKey(id),JSON.stringify(Object.assign(defaultState(),c))); }
+        catch(e){ break; }
+        ROSTER.list.push(id); ROSTER.meta[id]={t:Date.now()}; added.push(id);
+      }
+      saveRoster();
+      if(added.length) markBackedUp(added);
+      if(onDone) onDone();
+      openCharSelect();
+      if(added.length<parsed.chars.length)
+        uiAlert(`Only ${added.length} of ${parsed.chars.length} heroes fit — browser storage is full.`,'Storage problem');
+    });
+  };
+  r.readAsText(file);
+}
+function requestPersistentStorage(){
+  const st=navigator.storage;
+  if(!st||!st.persist||!st.persisted) return;
+  st.persisted().then(p=>p||st.persist()).then(p=>{ STORAGE_PERSISTED=!!p; renderBackupInfo(); }).catch(()=>{});
+}
+function isIOS(){ return /iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1); }
+function isInstalledApp(){ return navigator.standalone===true||!!(window.matchMedia&&matchMedia('(display-mode: standalone)').matches); }
+// One thin bar under the header, one message at a time: a backup nudge for the hero on screen,
+// otherwise (once) the iOS "Add to Home Screen" tip. Dismissing the nudge snoozes it 3 days.
+function renderSafetyBar(){
+  const bar=$('#safetyBar'); if(!bar) return;
+  const b=backupStore(), id=ROSTER.active, now=Date.now();
+  const real=!!((S.name||'').trim()||S.classId);
+  let html='';
+  if(real&&!(b.snooze>now)&&backupDue(id)){
+    const t=lastBackupAt(id), who=esc((S.name||'').trim()||'This hero');
+    html=`<span class="sb-ico">⚠</span><span class="sb-msg">${t?`<b>${who}</b> was last backed up ${relTime(t)} and has changed since.`:`<b>${who}</b> has never been backed up.`} Saves live only in this browser, which can clear them.</span>
+      <button class="sb-btn primary" data-sb="backup">⬇ Back up now</button><button class="sb-btn" data-sb="snooze">Later</button>`;
+  }else if(isIOS()&&!isInstalledApp()&&!b.iosTip){
+    html=`<span class="sb-ico">📱</span><span class="sb-msg">Safari can clear this site's saved characters if it isn't opened for about a week. Tap <b>Share → Add to Home Screen</b> and open the binder from there to keep them safe.</span>
+      <button class="sb-btn" data-sb="iosok">Got it</button>`;
+  }
+  bar.innerHTML=html; bar.hidden=!html;
+}
+function renderBackupInfo(){
+  const el=$('#backupInfo'); if(!el) return;
+  const t=lastBackupAt(ROSTER.active), who=esc((S.name||'').trim()||'This hero');
+  const store=STORAGE_PERSISTED===true?'<span class="bi-ok">✓ protected from automatic clearing</span>'
+    :STORAGE_PERSISTED===false?'<span class="bi-warn">may be cleared by the browser — keep backups</span>':'';
+  el.innerHTML=`<span>${who}: ${t?`last backed up <b>${relTime(t)}</b>`:'<b class="bi-warn">never backed up</b>'}</span>${store?`<span>Browser storage: ${store}</span>`:''}`;
+}
+function wireBackups(){
+  initBackupStore();
+  requestPersistentStorage();
+  renderSafetyBar();
+  $('#safetyBar').addEventListener('click',e=>{
+    const btn=e.target.closest('[data-sb]'); if(!btn) return;
+    const b=backupStore();
+    if(btn.dataset.sb==='backup'){ exportChar(ROSTER.active); return; }
+    if(btn.dataset.sb==='snooze') b.snooze=Date.now()+3*DAY_MS;
+    if(btn.dataset.sb==='iosok') b.iosTip=1;
+    saveBackupStore(b); renderSafetyBar();
+  });
+}
+// A save that won't parse must never be silently replaced: load() parks the raw text under its
+// own key before opening a blank sheet, then this offers it as a download for repair.
+const RESCUE_PREFIX='dnd5e-binder-rescue-';
+let PENDING_RESCUE=null;
+function showRescue(){
+  const r=PENDING_RESCUE; PENDING_RESCUE=null; if(!r) return;
+  uiConfirm(`A saved character couldn't be read, so a blank sheet was opened in its place.${r.kept?' The damaged save has been kept aside, untouched.':''} Download it so it can be repaired — or restore your latest backup with Import.`,
+    {title:'Save could not be read',ok:'Download damaged save',cancel:'Not now'}).then(ok=>{
+    if(ok) downloadBlob(new Blob([r.raw],{type:'application/json'}),`damaged save ${dateStamp()}.json`);
+  });
 }
 function wireCharSelect(){
   $('#charsBtn').addEventListener('click',openCharSelect);
@@ -7403,53 +7619,34 @@ function wireCharSelect(){
     if(t.closest('[data-csnew]')){ createChar(); return; }
     if(t.closest('[data-cswizard]')){ closeCharSelect(); openWizard(); return; }
     if(t.closest('[data-csimportbtn]')){ $('#csImportFile').click(); return; }
+    if(t.closest('[data-csbackupall]')){ exportAllChars(); return; }
     const play=t.closest('[data-csplay]');
     if(play){ switchChar(play.dataset.csplay); return; }
   });
   $('#csImportFile').addEventListener('change',e=>{
-    const file=e.target.files[0]; if(!file) return;
-    const r=new FileReader();
-    r.onload=()=>{
-      try{
-        const d=Object.assign(defaultState(),JSON.parse(r.result));
-        createChar(d);
-      }catch(err){ uiAlert('That file is not a valid character JSON.','Import failed'); }
-      e.target.value='';
-    };
-    r.readAsText(file);
+    importCharFile(e.target.files[0]);
+    e.target.value='';
   });
 }
 
 function wireSettings(){
-  $('#settingsBtn').addEventListener('click',()=>$('#settingsModal').classList.add('open'));
+  $('#settingsBtn').addEventListener('click',()=>{ renderBackupInfo(); $('#settingsModal').classList.add('open'); });
   $('#settingsClose').addEventListener('click',()=>$('#settingsModal').classList.remove('open'));
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#settingsModal').classList.contains('open')) $('#settingsModal').classList.remove('open'); });
   $('#settingsModal').addEventListener('click',e=>{
     if(e.target.id==='settingsModal') $('#settingsModal').classList.remove('open');
   });
   $('#exportBtn').addEventListener('click',()=>{
-    const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download=(S.name||'character').replace(/[^\w\- ]/g,'').trim()||'character';
-    a.download+='.json';
-    a.click(); URL.revokeObjectURL(a.href);
+    const id=ROSTER.active;
+    deliverFile(JSON.stringify(S,null,2),charFileName(S.name)).then(ok=>{ if(ok){ markBackedUp([id]); renderBackupInfo(); } });
   });
+  $('#exportAllBtn').addEventListener('click',()=>exportAllChars());
   $('#importBtn').addEventListener('click',()=>$('#importFile').click());
   // Import never overwrites the sheet you're on anymore — it lands as a NEW character on the
   // roster and switches to it, so a mis-click can't wipe hours of play.
   $('#importFile').addEventListener('change',e=>{
-    const file=e.target.files[0]; if(!file) return;
-    const r=new FileReader();
-    r.onload=()=>{
-      try{
-        const d=Object.assign(defaultState(),JSON.parse(r.result));
-        createChar(d);
-        $('#settingsModal').classList.remove('open');
-      }catch(err){ uiAlert('That file is not a valid character JSON.','Import failed'); }
-      e.target.value='';
-    };
-    r.readAsText(file);
+    importCharFile(e.target.files[0],()=>$('#settingsModal').classList.remove('open'));
+    e.target.value='';
   });
   $('#resetBtn').addEventListener('click',()=>{
     const who=(S.name||'').trim()||'this character';
@@ -7472,7 +7669,7 @@ function renderAll(){
   renderAttacks(); renderEquipment(); renderFeatures(); renderNotes();
   renderSpellLevels(); renderOverview(); renderCombatFeatures(); renderLanguages(); renderProficiencies();
   renderBuildSelectors(); renderAsi(); renderHudControls(); renderCharacterPortrait(); renderBackstoryEditor();
-  renderBackgroundInfo();
+  renderBackgroundInfo(); renderSafetyBar();
   bindAll(); syncBound(); recalc();
 }
 // Tablet-first: skill-badge "when" tooltips open on TAP, not hover. One delegated listener on
@@ -7560,7 +7757,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireQuickRefPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireQuickRefPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode(); wireBackups();
 showTab(lastTab());
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 if(ROSTER.list.length>1) openCharSelect();

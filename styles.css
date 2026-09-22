@@ -4332,6 +4332,34 @@ input.ov-xp-in:hover{border-bottom-color:var(--gold-dim)}
 .settings-credit{margin-top:14px;font-size:.72rem;color:var(--faint);line-height:1.5}
 .settings-credit a{color:var(--gold-dim)}
 
+/* Backups: the nudge bar under the header, the status line in Settings, and each roster card's
+   "backed up …" line. Amber, not red — a reminder, not an error. */
+.safety-bar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:8px 22px;background:rgba(201,162,39,.09);
+  border-bottom:1px solid var(--gold-dim);font-size:.95rem;line-height:1.35;
+}
+.safety-bar[hidden]{display:none}
+.sb-ico{flex:0 0 auto;font-size:1.05rem}
+.sb-msg{flex:1 1 260px;min-width:0;color:var(--text)}
+.sb-msg b{color:var(--gold-lt);font-weight:600}
+.sb-btn{
+  background:transparent;border:1px solid var(--border-lt);border-radius:8px;color:var(--muted);
+  font-family:'Cinzel',serif;font-size:.74rem;letter-spacing:.5px;padding:6px 12px;min-height:34px;cursor:pointer;
+}
+.sb-btn:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
+.sb-btn.primary{border-color:var(--gold-dim);color:var(--gold-lt);background:rgba(201,162,39,.12)}
+.sb-btn.primary:hover{border-color:var(--gold);background:rgba(201,162,39,.2)}
+@media (max-width:600px){ .safety-bar{padding:8px 16px} .sb-msg{flex-basis:100%} }
+.backup-info{display:flex;flex-direction:column;gap:2px;font-size:.88rem;color:var(--muted);margin:-4px 0 12px}
+.backup-info:empty{display:none}
+.backup-info b{color:var(--gold-lt);font-weight:600}
+.backup-info .bi-ok{color:var(--green)}
+.backup-info .bi-warn{color:var(--ember-lt)}
+.cs-backup{color:var(--faint);font-size:.72rem;font-style:italic;margin-top:6px}
+.cs-backup.due{color:var(--ember-lt);font-style:normal}
+.cs-backup.due::before{content:'⚠ '}
+
 /* ---------- Immersion pass: class ambience, leather grain, hit/heal, rest ceremonies ---------- */
 /* --class / --class-dim are set on :root by applyClassAmbience(); gold is the no-class default so
    a blank sheet looks exactly as before. */
