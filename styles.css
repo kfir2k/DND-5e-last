@@ -4496,3 +4496,33 @@ body.hp-zero .fx-vignette:not(.hit):not(.heal){
 /* Nothing chosen yet: no art to show, so the banner shrinks to a slim title bar. */
 .bCard.empty .bArt{height:64px}
 .bCard.empty .bName{display:none}
+
+/* ---------- Hebrew UI language (see i18n.js) ---------- */
+/* Cinzel and Crimson Pro have no Hebrew glyphs. These faces reuse the same family names but cover only
+   the Hebrew block, so every existing font-family stack picks Hebrew up automatically. The weight and
+   style descriptors deliberately mirror the faces the Google Fonts <link> in index.html defines
+   (Cinzel 500/700, Crimson Pro 400/600 and 400 italic): the browser first chooses a weight/style set
+   and only then looks glyphs up inside it, so a Hebrew face with different descriptors would be picked
+   for Latin text too and leave it without glyphs. Matching them keeps English text rendering exactly
+   as before. Bundled (not Google-hosted) so it also works offline; the file is the upright Frank Ruhl
+   Libre Hebrew subset, so italic text is upright rather than a synthesized slant. SIL Open Font
+   License 1.1 — see fonts/README.md. */
+@font-face{font-family:'Cinzel';font-weight:500;font-style:normal;src:url('fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
+@font-face{font-family:'Cinzel';font-weight:700;font-style:normal;src:url('fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
+@font-face{font-family:'Crimson Pro';font-weight:400;font-style:normal;src:url('fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
+@font-face{font-family:'Crimson Pro';font-weight:600;font-style:normal;src:url('fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
+@font-face{font-family:'Crimson Pro';font-weight:400;font-style:italic;src:url('fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
+
+/* Settings → Language: a label plus a two-button segmented control. */
+.settings-row.lang-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--panel2);border:1px solid var(--border-lt);border-radius:8px}
+.lang-seg{margin-left:auto;display:flex;flex-shrink:0;border:1px solid var(--border-lt);border-radius:9px;overflow:hidden}
+.lang-opt{background:transparent;border:0;color:var(--muted);font-family:'Cinzel',serif;font-size:.84rem;letter-spacing:.4px;padding:8px 16px;min-height:40px;cursor:pointer;transition:background .15s ease,color .15s ease}
+.lang-opt+.lang-opt{border-left:1px solid var(--border-lt)}
+.lang-opt:hover{color:var(--gold-lt)}
+.lang-opt.on{background:rgba(201,162,39,.16);color:var(--gold-lt);cursor:default}
+/* Hebrew titles sit right-aligned, up against a modal's right-floated ✕ — give them some air. */
+html[lang="he"] .modal .close-x{margin-left:14px}
+/* Hebrew button labels are shorter than the English ones, so at tablet widths the header's controls
+   now fit beside the title block and squeeze the character name to a clipped sliver. A larger floor
+   makes the header wrap exactly as it does in English when there isn't room for both. */
+html[lang="he"] .title-block{min-width:360px}

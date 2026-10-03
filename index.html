@@ -124,6 +124,18 @@
     <h2 id="settingsTitle">Settings</h2>
     <p>Your characters auto-save in this browser only, and the browser can clear that storage. Back up now and then to keep them safe, or to move them to another device.</p>
     <p class="backup-info" id="backupInfo"></p>
+    <!-- The one place the UI language is switched. translate="no" + fixed bilingual text, so it reads
+         the same in either language and the Hebrew overlay (i18n.js) never touches it. -->
+    <div class="settings-group lang-group" translate="no">
+      <div class="settings-row lang-row">
+        <span class="settings-ico">🌐</span>
+        <span class="settings-txt"><b>Language · שפה</b></span>
+        <span class="lang-seg" role="group" aria-label="Language / שפה">
+          <button type="button" class="lang-opt" data-lang="en" lang="en" aria-pressed="false">English</button>
+          <button type="button" class="lang-opt" data-lang="he" lang="he" aria-pressed="false">עברית</button>
+        </span>
+      </div>
+    </div>
     <div class="settings-group">
       <button class="icon-btn settings-row" id="exportBtn"><span class="settings-ico">⇩</span><span class="settings-txt"><b>Back up this character</b><small>Save this sheet as a dated .json file</small></span></button>
       <button class="icon-btn settings-row" id="exportAllBtn"><span class="settings-ico">⇊</span><span class="settings-txt"><b>Back up all characters</b><small>Every hero on this device in one file</small></span></button>
@@ -144,6 +156,8 @@
 <script src="data-equipment.js"></script>
 <script src="data-libraries.js"></script>
 <script src="data-backgrounds.js"></script>
+<script src="i18n-he.js"></script>
+<script src="i18n.js"></script>
 <script src="app.js"></script>
 <script src="wizard.js"></script>
 <script src="map.js"></script>

@@ -31,10 +31,14 @@ before it:
 6. `data-libraries.js` — `FEATURE_LIB` (class features/feats with mechanical effects pre-attached), race trait library
 7. `data-backgrounds.js` — `BACKGROUNDS` (skills/tools/languages/gold/equipment per background) and
    `BACKGROUND_LIB` (the searchable trait library — skill-grant + signature-feature entries)
-8. `app.js` — all application state, rendering, and event wiring (the bulk of the logic, ~5700 lines)
-9. `wizard.js` — guided step-by-step character creation; reuses `app.js` globals, keeps its own
-   isolated draft (`WIZ`) and only touches real storage via `createChar()` at the end
-10. `map.js` — campaign map (upload image, pin party/waypoints/quests); own localStorage key,
+8. `i18n-he.js` — `I18N_HE` (English UI text → Hebrew), `I18N_HE_RX` (patterns for sentences with
+   numbers/names inside), `I18N_HE_KEEP`; plain data, no logic. See "UI language (Hebrew)" below.
+9. `i18n.js` — the `I18N` engine and the language preference (`LANG_KEY`); in English mode it
+   installs nothing. Must load before `app.js`, which calls `I18N.t()` while it boots.
+10. `app.js` — all application state, rendering, and event wiring (the bulk of the logic, ~7900 lines)
+11. `wizard.js` — guided step-by-step character creation; reuses `app.js` globals, keeps its own
+    isolated draft (`WIZ`) and only touches real storage via `createChar()` at the end
+12. `map.js` — campaign map (upload image, pin party/waypoints/quests); own localStorage key,
     independent of character state
 
 All data files are plain `const` declarations in global scope (no modules, no exports) — grepping
@@ -193,6 +197,9 @@ Everything is `localStorage`, no backend:
 - `dnd5e-binder-map-v2` — the campaign map
 - `dnd5e-binder-wide-v1` — UI-only wide-layout preference, independent of character/roster
 - `dnd5e-binder-tab-v1` — UI-only last-open tab (restored at boot by `lastTab()`), independent of character/roster
+- `dnd5e-binder-lang-v1` — UI-only language, `'en'` (default) or `'he'`; read by `i18n.js` before `app.js`
+  runs, written only by the Settings → Language control. Never in `S` or any export.
+  (`dnd5e-binder-lang-reload` in `sessionStorage` is a one-shot flag set across that switch's reload.)
 - `dnd5e-binder-backup-v1` — backup bookkeeping only (last-export time per character id, nudge
   snooze, iOS tip dismissed); drives the backup nudge bar. Never written into `S` or any export.
 - `dnd5e-binder-rescue-<id>-<ts>` — raw text of a save that failed to parse, parked by `load()`
@@ -205,6 +212,57 @@ entry rather than overwriting the current sheet. **The single-character export f
 separate bundle shape, `{format:'dnd5e-binder-bundle', version, exported, chars:[<plain character
 files>]}`; `parseImport()` recognises a bundle only by that `format` marker, so any other object is
 treated as a single character, exactly as before.
+
+## UI language (Hebrew)
+
+The app is written in English; Hebrew is an overlay. `i18n.js` runs a `MutationObserver` over
+`document.body` and swaps UI text that **exactly matches** a key in `I18N_HE` (text nodes, plus the
+`placeholder`/`title`/`aria-label`/`alt`/`data-placeholder`/option-label attributes). Anything without an
+entry simply stays English, so nothing can break and translation can grow a piece at a time. It is
+switched **only** from Settings → Language (a bilingual `translate="no"` row in `index.html`); the switch
+saves, writes `dnd5e-binder-lang-v1` and reloads. English mode installs no observer and does no work.
+
+**Scope is UI chrome only.** Game data (spell/feature/item/class/race names and descriptions, the
+`RULES_DB` rule texts) is deliberately *not* translated — never edit `data-*.js` for this, and never
+translate by changing the strings the app copies into `S` (`grantKey`, `featureIsPristine`, library
+joins and `S.classLevel` etc. all compare English text). Translation is display-time only; the engine
+skips `contenteditable` (the backstory editor's `innerText` is saved straight into `S`), `textarea`,
+`translate="no"`, and the containers that show game-data names (see `SKIP` in `i18n.js`).
+
+**Adding or changing UI text:**
+- A new static label/placeholder/tooltip: add `'English exactly as rendered': 'עברית'` to `I18N_HE`
+  (keys are whitespace-collapsed; HTML entities are decoded, so write `&`, not `&amp;`). Split text sits
+  in separate DOM nodes where the app splits it — a paragraph with `<b>`/`<i>` needs one entry per piece.
+- A sentence with a number or name in it: add a `[regex, (m, tr) => hebrew]` to `I18N_HE_RX`
+  (`tr()` translates a captured piece through the dictionary; `heN(n, one, many)` picks singular/plural).
+- A sentence the JS assembles from several fixed words (the Build summary line): wrap those words in
+  `I18N.t('…')` — the identity in English — and give each an entry. Don't rely on regexing the result.
+- A word that means something else elsewhere (weapon tag "Light" vs the cantrip): key it
+  `'<first class of its parent>|Light'` (see `wpn-tag|Light`) so it only applies in that element.
+- Keep HP/AC/DC, the ability abbreviations, dice notation and the formula tokens PROF/LVL/STR… in Latin —
+  the formula fields parse those tokens.
+- Find what's still untranslated by running the app in Hebrew and calling `I18N.missing()` in the console
+  (`copy(I18N.missingSkeleton())` gives paste-ready dictionary lines). Game-data text will show up in it too.
+
+**Layout stays left-to-right** (no `dir="rtl"` on the page — that would mean mirroring ~200 left/right CSS
+rules, the tab strip's scroll math, drawers, the wizard's 3D scenes and the map). After translating a node
+the engine puts `dir="auto"` (or `rtl` when a line opens with an English name but is mostly Hebrew) on its
+*text box* — never on a flex/grid container, which `dir` would mirror — so Hebrew sentences read and
+align right-to-left. Each run of Latin/number text inside Hebrew becomes an LTR island (U+2066/U+2069),
+so `1d4+4` / `+2` / `Bard 6` stay in one piece. Keep invisible bidi characters out of source: write them as
+`\u2066` escapes.
+
+**Fonts:** Cinzel and Crimson Pro have no Hebrew. `fonts/frank-ruhl-libre-hebrew.woff2` is aliased to both
+family names in `styles.css` with `unicode-range` limited to the Hebrew block. **Those `@font-face` weight/
+style descriptors must mirror the Google Fonts `<link>` in `index.html`** (Cinzel 500/700; Crimson Pro 400,
+600, 400 italic): the browser picks a weight/style set first and only then looks glyphs up inside it, so a
+Hebrew face with different descriptors gets chosen for Latin text too and strips it of glyphs. If you change
+the `<link>`, change those rules to match.
+
+**Verifying:** there's no test runner, so check in a browser: English must look exactly as before (the only
+intended difference is that Hebrew text already in the app now uses the bundled font); in Hebrew, click
+every tab/modal and check `I18N.missing()`, watch for clipped labels and Hebrew-only overflow at tablet
+widths, and confirm no translated text appears in a saved character (the export is still exactly `S`).
 
 ## End-of-task changelog line
 

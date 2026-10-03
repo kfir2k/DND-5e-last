@@ -6264,7 +6264,7 @@ const BUILD_FIELDS=[
    rules:()=>CLASSES[S.classId].saves.slice(),
    get:()=>ABILITIES.filter(([k])=>S.saveProf[k]).map(([k])=>k),
    set:v=>{const on=v||[];ABILITIES.forEach(([k])=>S.saveProf[k]=on.includes(k));},
-   show:v=>(v&&v.length)?v.map(abbr3).join('/')+' saves':'no save proficiencies'},
+   show:v=>(v&&v.length)?v.map(abbr3).join('/')+' '+I18N.t('saves'):I18N.t('no save proficiencies')},
   // Spellcasting is offered whatever your class is. Plenty of characters cast without their class
   // table saying so — Eldritch Knight, Arcane Trickster, a multiclass dip, a race or item that
   // grants slots, homebrew — and gating these two on CLASSES[...].cast meant those players had no
@@ -6280,7 +6280,7 @@ const BUILD_FIELDS=[
    rules:rulesSlots,
    get:()=>Array.from({length:9},(_,i)=>num(S.spellLevels[i+1].total)),
    set:v=>{for(let L=1;L<=9;L++){const lv=S.spellLevels[L];lv.total=Math.max(0,num((v||[])[L-1]));lv.used=Math.min(num(lv.used),lv.total);}},
-   show:v=>{const on=(v||[]).map((n,i)=>n?`${n}×L${i+1}`:'').filter(Boolean);return on.length?on.join(' '):'none';}},
+   show:v=>{const on=(v||[]).map((n,i)=>n?`${n}×L${i+1}`:'').filter(Boolean);return on.length?on.join(' '):I18N.t('none');}},
   {key:'race',label:'Race',type:'text',hint:'The name shown in the header — rename it freely, e.g. "Tiefling (Bloodline of Dispater)".',
    avail:()=>!!raceInfo(),
    rules:raceDisplayName,
@@ -6353,11 +6353,14 @@ function renderBuildNote(){
   const mark=key=>bovHas(key)?'✎':'';
   const val=key=>{const f=buildField(key);return f.show(f.get());};
   const c=CLASSES[S.classId], notes=[];
+  // The sentence is assembled here from fixed English words, so each goes through I18N.t (the
+  // identity in English; the Hebrew overlay can't match a line built from this many parts).
+  const T=I18N.t;
   if(c){
-    const bits=[`proficiency ${val('profBonus')}${mark('profBonus')}`,`hit dice ${val('hdTotal')}${mark('hdTotal')}`,`${val('saves')}${mark('saves')}`];
+    const bits=[`${T('proficiency')} ${val('profBonus')}${mark('profBonus')}`,`${T('hit dice')} ${val('hdTotal')}${mark('hdTotal')}`,`${val('saves')}${mark('saves')}`];
     // Mentioned for a non-casting class too once you've set slots or an ability yourself.
     if(c.cast||bovHas('slots')||bovHas('spellAbility'))
-      bits.push(`${c.name==='Warlock'?'pact magic':'spell'} slots set (${val('spellAbility')}${mark('spellAbility')})${mark('slots')}`);
+      bits.push(`${T(c.name==='Warlock'?'pact magic slots set':'spell slots set')} (${T(val('spellAbility'))}${mark('spellAbility')})${mark('slots')}`);
     notes.push(`${val('classLevel')||c.name+' '+S.level}${mark('classLevel')}: ${bits.join(', ')}`);
   }
   const ri=raceInfo();
@@ -6365,8 +6368,8 @@ function renderBuildNote(){
     const bs=ABILITIES.filter(([k])=>racialBonus(k)>0).map(([k])=>`+${racialBonus(k)} ${abbr3(k)}`);
     const dv=val('vision');
     notes.push(`${val('race')||raceDisplayName()}${mark('race')}: ${val('speed')}${mark('speed')}${ri.r.move?' ('+ri.r.move+')':''}`+
-      `${dv&&dv!=='None'?', darkvision '+dv+mark('vision'):''}${bs.length?', '+bs.join(' '):''}`+
-      (flexCount()>0&&S.flexBonus.filter(Boolean).length<flexCount()?' — pick your bonus abilities above!':''));
+      `${dv&&dv!=='None'?', '+T('darkvision')+' '+dv+mark('vision'):''}${bs.length?', '+bs.join(' '):''}`+
+      (flexCount()>0&&S.flexBonus.filter(Boolean).length<flexCount()?' — '+T('pick your bonus abilities above!'):''));
   }
   el.textContent=notes.join('  ·  ')||'Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses.';
 }
@@ -6406,7 +6409,7 @@ function bcEditorHTML(f){
 // latter reads like a rule about spellcasting instead of the absence of one.
 function bcRulesLabel(f){
   if(f.noRules&&f.noRules()) return 'not granted by your class';
-  return 'rules: '+f.show(f.rules());
+  return I18N.t('rules:')+' '+f.show(f.rules());
 }
 function renderBuildCustom(){
   const box=$('#buildCustomBody'), btn=$('#buildCustomBtn'); if(!box||!btn) return;
@@ -7521,7 +7524,8 @@ function dateStamp(){
   const d=new Date(), p=n=>String(n).padStart(2,'0');
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
 }
-const safeFileName=s=>String(s||'').replace(/[^\w\- ]/g,'').trim();
+// Keeps Hebrew letters (U+0590–05FF) so a Hebrew hero's backup is named after them, not just "character".
+const safeFileName=s=>String(s||'').replace(/[^\w\- \u0590-\u05FF]/g,'').trim();
 function charFileName(name){ return (safeFileName(name)||'character')+' '+dateStamp()+'.json'; }
 function downloadBlob(blob,filename){
   const a=document.createElement('a');
@@ -7854,12 +7858,29 @@ function wireWideMode(){
     try{ localStorage.setItem(WIDE_KEY,on?'1':'0'); }catch(e){}
   }));
 }
+// ---------- Language ----------
+// UI-only preference (key, engine and Hebrew dictionary live in i18n.js / i18n-he.js), switched
+// only from the Settings dialog. Changing it saves the sheet first, then reloads — see I18N.setLang.
+function wireLanguage(){
+  $$('[data-lang]').forEach(b=>{
+    const on=b.dataset.lang===I18N.lang;
+    b.classList.toggle('on',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+    b.addEventListener('click',()=>{
+      if(b.dataset.lang===I18N.lang) return;
+      flushSave();
+      I18N.setLang(b.dataset.lang);
+    });
+  });
+}
 initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireQuickRefPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode(); wireBackups();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireQuickRefPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode(); wireLanguage(); wireBackups();
 showTab(lastTab());
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
-if(ROSTER.list.length>1) openCharSelect();
+// The one exception is the reload that follows a language switch: that puts you back in Settings.
+if(I18N.consumeReload()){ renderBackupInfo(); $('#settingsModal').classList.add('open'); }
+else if(ROSTER.list.length>1) openCharSelect();
 
