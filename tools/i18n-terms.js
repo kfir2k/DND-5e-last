@@ -60,7 +60,7 @@ module.exports=[
   {say:'שטח קשה',     en:/\bdifficult terrain\b/i, has:/שטח קשה/},
   // --- targets
   {say:'יצור',        en:/\bcreatures?\b/i, has:/יצור|יצורים|יצורי/},
-  {say:'חפץ',         en:/\bobjects?\b/i, has:/חפץ|חפצ/},
+  {say:'חפץ',         en:/\bobjects?\b(?! of fascination)/i, has:/חפץ|חפצ/},
   // --- shapes & units (the numbers themselves are checked separately)
   {say:'רגל',         en:/\b\d+[- ]?(ft|feet|foot)\b\.?/i, has:/רגל|רגליים/},
   {say:'רדיוס',       en:/\bradius\b/i, has:/רדיוס/},
