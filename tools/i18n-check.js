@@ -48,9 +48,19 @@ SPELLS.forEach(s=>{ const g=String(s.lv); add('spells',g,'name',s.n); add('spell
 get('FEATURE_LIB').forEach(e=>{ const g=e.g.split(' — ')[0]; add('features',g,'name',e.n); add('features',g,'desc',e.d); });
 get('RACE_LIB').forEach(e=>{ add('races',e.g,'name',e.n); add('races',e.g,'desc',e.d); });
 get('BACKGROUND_LIB').forEach(e=>{ add('backgrounds',e.g,'name',e.n); add('backgrounds',e.g,'desc',e.d); });
+// the labels that sit on top of the entries: class / subclass / race / subrace / background names
+Object.values(get('CLASSES')).forEach(c=>add('names','classes','name',c.name));
+get('FEATURE_LIB').forEach(e=>{ const [cls,sub]=e.g.split(' — '); if(sub) add('subclass-names',cls,'name',sub); });
+Object.values(get('RACES')).forEach(r=>{ add('names','races','name',r.name); Object.values(r.subs||{}).forEach(s=>add('names','subraces','name',s.name)); });
+Object.values(get('BACKGROUNDS')).forEach(b=>{ add('names','backgrounds','name',b.name); if(b.featureName) add('names','backgrounds','name',b.featureName); });
 const T=(o)=>Object.values(o).forEach(v=>add('spell-facts','tables','name',v));
 T(get('SP_SCHOOL')); T(get('SP_TIME')); T(get('SP_DUR'));
 
+// names a description can refer to; short one-word names are skipped (too often ordinary English: "light", "rage")
+// BENIGN: names that are also ordinary English words in other entries' descriptions ("Whirlwind of grit")
+const BENIGN=new Set(['Whirlwind']);
+const NAMED=[...new Set([...SPELLS.map(s=>s.n),...get('FEATURE_LIB').map(e=>e.n),...get('RACE_LIB').map(e=>e.n)])].filter(n=>(n.length>=8||/ /.test(n))&&!BENIGN.has(n));
+const NAMED_SET=new Set([...SPELLS.map(s=>s.n),...get('FEATURE_LIB').map(e=>e.n),...get('RACE_LIB').map(e=>e.n)]);
 const kinds=[...new Set([...items.values()].flatMap(i=>i.uses.map(u=>u.kind)))];
 const groupsOf=k=>[...new Set([...items.values()].flatMap(i=>i.uses.filter(u=>u.kind===k).map(u=>u.group)))];
 
@@ -61,6 +71,15 @@ if(flag('--groups')){
 if(flag('--glossary')){
   console.log('| Hebrew term | English trigger | must contain |\n|---|---|---|');
   TERMS.forEach(t=>console.log(`| ${t.say} | \`${t.en.source.replace(/\|/g,'\\|')}\` | \`${t.has.source.replace(/\|/g,'\\|')}\` |`));
+  process.exit(0);
+}
+
+// ---------- --lookup <text> ----------
+// Before translating something that mentions another spell/feature, look up how it was already named.
+if(opt('--lookup')){
+  const q=opt('--lookup').toLowerCase(); let n=0;
+  for(const [k,v] of DICT){ if(k.toLowerCase().includes(q)||v.includes(opt('--lookup'))){ console.log(k.slice(0,110)+'  =>  '+v.slice(0,110)); if(++n>=40){ console.log('…'); break; } } }
+  if(!n) console.log('(nothing)');
   process.exit(0);
 }
 
@@ -120,6 +139,14 @@ if(opt('--todo')){
   else if(k==='features') get('FEATURE_LIB').filter(e=>e.g.split(' — ')[0]===g||e.g===g).forEach(e=>push(e.n,e.d));
   else if(k==='races') get('RACE_LIB').filter(e=>e.g===g).forEach(e=>push(e.n,e.d));
   else if(k==='backgrounds') get('BACKGROUND_LIB').filter(e=>e.g===g).forEach(e=>push(e.n,e.d));
+  else if(k==='subclass-names'){ [...new Set(get('FEATURE_LIB').filter(e=>e.g.split(' — ')[0]===g&&e.g.includes(' — ')).map(e=>e.g.split(' — ')[1]))].forEach(n=>push(n,null)); }
+  else if(k==='names'){
+    const src={classes:()=>Object.values(get('CLASSES')).map(c=>c.name),races:()=>Object.values(get('RACES')).map(r=>r.name),
+      subraces:()=>Object.values(get('RACES')).flatMap(r=>Object.values(r.subs||{}).map(s=>s.name)),
+      backgrounds:()=>Object.values(get('BACKGROUNDS')).flatMap(b=>[b.name,b.featureName].filter(Boolean))}[g];
+    if(!src){ console.error('names: classes | races | subraces | backgrounds'); process.exit(2); }
+    src().forEach(n=>push(n,null));
+  }
   else { console.error('unknown kind',k); process.exit(2); }
   console.log(`# ${rows.length} entries still to do in ${k}:${g}${rows.length>limit?` (showing ${limit})`:''}`);
   rows.slice(0,limit).forEach((r,i)=>{
@@ -136,7 +163,7 @@ const DAMAGE=['Acid','Cold','Fire','Force','Lightning','Necrotic','Poison','Psyc
 const AMBIGUOUS=new Set(['Cold','Fire','Force','Poison']); // need "damage/resistance/immunity" next to them to count
 const CONDITIONS=['Blinded','Charmed','Deafened','Frightened','Grappled','Incapacitated','Invisible','Paralyzed','Petrified','Poisoned','Prone','Restrained','Stunned','Unconscious','Exhaustion'];
 const ABIL={Str:'Strength',Dex:'Dexterity',Con:'Constitution',Int:'Intelligence',Wis:'Wisdom',Cha:'Charisma'};
-const stem=w=>w.length>4?w.slice(0,w.length-1):w; // lets plurals / inflections pass
+const stem=w=>w.length>=4?w.slice(0,w.length-1):w; // lets plurals / inflections pass ("המום" → "המומים")
 const hasHe=(he,word)=>{ const w=ui(word); return !w||he.includes(stem(w))||he.includes(w); };
 
 const NUMWORDS=[
@@ -188,6 +215,16 @@ function validate(en,he){
   // leftovers: Latin words that aren't dice or an allowed abbreviation
   const latin=(he.replace(/\d*d\d+/gi,' ').match(/[A-Za-z][A-Za-z'’-]{2,}/g)||[]).filter(w=>!ALLOW_LATIN.has(w));
   if(latin.length) warn(`English left over: ${[...new Set(latin)].join(', ')}`);
+  // a description that names another spell / feature / race trait must use the Hebrew name already chosen for it
+  for(const nm of NAMED){
+    if(nm===en||!en.includes(nm)||NAMED_SET.has(en)) continue; // a name that merely contains another name ("Green-Flame Blade") is its own name
+    const re=new RegExp('(^|[^A-Za-z])'+nm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?![A-Za-z])');
+    if(!re.test(en)) continue;
+    const h=DICT.get(nm);
+    // a Hebrew name may take the definite article: "נתיב קדמון" → "הנתיב הקדמון", "הילת סערה" → "הילת הסערה"
+    const ws=h?h.split(' '):[], variants=h?[h,stem(h),ws.map(w=>'ה'+w).join(' '),ws.slice(0,-1).concat('ה'+ws[ws.length-1]).join(' ')]:[];
+    if(h&&!variants.some(v=>he.includes(v))) warn(`mentions "${nm}" but the Hebrew does not use its name "${h}"`);
+  }
   const wc=s=>s.split(/\s+/).filter(Boolean).length, r=wc(he)/Math.max(1,wc(en));
   if(wc(en)>=6&&(r<0.45||r>2.2)) warn(`length ratio ${r.toFixed(2)} (words EN ${wc(en)} / HE ${wc(he)}) — something dropped or padded?`);
   if(/[.!?]$/.test(en)&&!/[.!?]$/.test(he)) warn('English ends with punctuation, Hebrew does not');

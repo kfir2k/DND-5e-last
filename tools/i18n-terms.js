@@ -27,12 +27,12 @@ module.exports=[
   {say:'טקס',         en:/\britual\b/i, has:/טקס/},
   {say:'קנטריפ',      en:/\bcantrips?\b/i, has:/קנטריפ/},
   {say:'משבצת כישוף', en:/\bspell slots?\b|\bslot level\b|\bslots?\b/i, has:/משבצ/},
-  {say:'כישוף',       en:/\bspells?\b/i, has:/כישוף|כישופ/},
+  {say:'כישוף',       en:/\bspells?\b(?! out)/i, has:/כישוף|כישופ/},
   // --- life & resources
-  {say:'נקודות חיים', en:/\b(hit points|HP)\b/i, has:/נקודות חיים|HP/},
-  {say:'קוביית חיים', en:/\bhit dic?e\b/i, has:/קוביו?ת חיים/},
+  {say:'נקודות חיים', en:/\b(hit points|HP)\b/i, has:/נקודות ה?חיים|נקודת חיים|HP/},
+  {say:'קוביית חיים', en:/\bhit dic?e\b/i, has:/קובי(ית|ות) חיים/},
   {say:'מנוחה קצרה',  en:/\bshort rest\b/i, has:/מנוחה קצרה/},
-  {say:'מנוחה ארוכה', en:/\blong rest\b/i, has:/מנוחה ארוכה/},
+  {say:'מנוחה ארוכה', en:/\blong rest\b/i, has:/מנוחה ה?ארוכה|קצרה\/ה?ארוכה|קצרות\/ארוכות/},
   {say:'בונוס מיומנות', en:/\bproficiency bonus\b/i, has:/בונוס מיומנות|מיומנות/},
   {say:'מיומנות',     en:/\bproficien(t|cy|cies)\b/i, has:/מיומנ/},
   {say:'מומחיות',     en:/\bexpertise\b/i, has:/מומחי/},
@@ -53,5 +53,5 @@ module.exports=[
   {say:'רגל',         en:/\b\d+[- ]?(ft|feet|foot)\b\.?/i, has:/רגל|רגליים/},
   {say:'רדיוס',       en:/\bradius\b/i, has:/רדיוס/},
   {say:'חרוט',        en:/\bcone\b/i, has:/חרוט/},
-  {say:'דקה',         en:/\b(1 |one |\d+ )?min(ute)?s?\b\.?/i, has:/דק/},
+  {say:'דקה',         en:/\b(\d+|one|a|per) min(ute)?s?\b/i, has:/דק/},
 ];
