@@ -60,6 +60,7 @@ T(get('SP_SCHOOL')); T(get('SP_TIME')); T(get('SP_DUR'));
 // BENIGN: names that are also ordinary English words in other entries' descriptions ("Whirlwind of grit")
 const BENIGN=new Set(['Whirlwind']);
 const NAMED=[...new Set([...SPELLS.map(s=>s.n),...get('FEATURE_LIB').map(e=>e.n),...get('RACE_LIB').map(e=>e.n)])].filter(n=>(n.length>=8||/ /.test(n))&&!BENIGN.has(n));
+const NAMED_BY_LEN=[...NAMED].sort((a,b)=>b.length-a.length);
 const NAMED_SET=new Set([...SPELLS.map(s=>s.n),...get('FEATURE_LIB').map(e=>e.n),...get('RACE_LIB').map(e=>e.n)]);
 const kinds=[...new Set([...items.values()].flatMap(i=>i.uses.map(u=>u.kind)))];
 const groupsOf=k=>[...new Set([...items.values()].flatMap(i=>i.uses.filter(u=>u.kind===k).map(u=>u.group)))];
@@ -216,10 +217,15 @@ function validate(en,he){
   const latin=(he.replace(/\d*d\d+/gi,' ').match(/[A-Za-z][A-Za-z'’-]{2,}/g)||[]).filter(w=>!ALLOW_LATIN.has(w));
   if(latin.length) warn(`English left over: ${[...new Set(latin)].join(', ')}`);
   // a description that names another spell / feature / race trait must use the Hebrew name already chosen for it
-  for(const nm of NAMED){
-    if(nm===en||!en.includes(nm)||NAMED_SET.has(en)) continue; // a name that merely contains another name ("Green-Flame Blade") is its own name
-    const re=new RegExp('(^|[^A-Za-z])'+nm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?![A-Za-z])');
-    if(!re.test(en)) continue;
+  // Longest names first, and each match is blanked out once checked, so a short name that is only part of a
+  // longer one ("Protection" inside "Aura of Protection" or "Protection from Evil and Good") isn't counted twice.
+  let masked=en;
+  if(!NAMED_SET.has(en)) for(const nm of NAMED_BY_LEN){
+    if(nm===en||!masked.includes(nm)) continue;
+    const re=new RegExp('(^|[^A-Za-z])('+nm.replace(/[.*+?^${}()|[]\]/g,'\$&')+')(?![A-Za-z])');
+    const m=re.exec(masked);
+    if(!m) continue;
+    masked=masked.slice(0,m.index+m[1].length)+' '.repeat(nm.length)+masked.slice(m.index+m[1].length+nm.length);
     const h=DICT.get(nm);
     // a Hebrew name may take the definite article: "נתיב קדמון" → "הנתיב הקדמון", "הילת סערה" → "הילת הסערה"
     const ws=h?h.split(' '):[], variants=h?[h,stem(h),ws.map(w=>'ה'+w).join(' '),ws.slice(0,-1).concat('ה'+ws[ws.length-1]).join(' ')]:[];

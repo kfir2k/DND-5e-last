@@ -13,8 +13,8 @@ module.exports=[
   {say:'תגובה',       en:/\breactions?\b/i, has:/תגוב/},
   {say:'פעולה',       en:/\b(an?|your|the|one|that|this) actions?\b/i, has:/פעול/},
   {say:'תור',         en:/\b(your|its|their|the target's|each) turns?\b/i, has:/תור/},
-  {say:'סבב',         en:/\brounds?\b/i, has:/סבב/},
-  {say:'יוזמה',       en:/\binitiative\b/i, has:/יוזמה/},
+  {say:'סבב',         en:/\brounds?\b(?! (up|down)\b)/i, has:/סבב/},
+  {say:'יוזמה',       en:/\binitiative\b/i, has:/יוזמ/},
   // --- rolls
   {say:'הטלת הצלה',   en:/\bsaving throws?\b/i, has:/הצל/},
   {say:'בדיקת תכונה', en:/\bability checks?\b/i, has:/בדיק/},
@@ -38,7 +38,7 @@ module.exports=[
   {say:'מומחיות',     en:/\bexpertise\b/i, has:/מומחי/},
   // --- defences
   {say:'עמידות',      en:/\bresistan(ce|t)\b/i, has:/עמיד/},
-  {say:'חסינות',      en:/\bimmun(e|ity)\b/i, has:/חסינ/},
+  {say:'חסינות',      en:/\bimmun(e|ity)\b/i, has:/חסינ|חסין/},
   {say:'פגיעות',      en:/\bvulnerab(le|ility)\b/i, has:/פגיע/},
   {say:'שריון',       en:/\barmor\b/i, has:/שריון/},
   // --- senses & environment
