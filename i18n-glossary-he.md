@@ -71,3 +71,10 @@ together, then search/replace it across `i18n-he-*.js`.
 | concentration check | בדיקת ריכוז (CON save) |
 | "once per turn / per long rest" | פעם בתור / פעם בכל מנוחה ארוכה |
 | "at higher levels" (slot scaling) | `+1d6 לכל רמת משבצת מעל 3` |
+| ki · ki points | קי · נקודות קי |
+| Martial Arts · Martial Arts die | אומנויות לחימה · קוביית אומנויות לחימה |
+| Flurry of Blows · Patient Defense · Step of the Wind | מטר מכות · הגנה סבלנית · צעד הרוח |
+| unarmed strike · monk weapon | מכה ללא נשק · נשק נזיר |
+| elemental discipline | דיסציפלינת יסוד |
+| Wild Shape · Wild Shape form | צורה פראית (התמרה לחיה = ״התמרה״) |
+| Divine Domain / Druid Circle / Monastic Tradition | תחום ·מעגל · דרך (`Way of …` = ״דרך …״) |

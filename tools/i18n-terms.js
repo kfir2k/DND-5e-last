@@ -36,6 +36,13 @@ module.exports=[
   {say:'בונוס מיומנות', en:/\bproficiency bonus\b/i, has:/בונוס מיומנות|מיומנות/},
   {say:'מיומנות',     en:/\bproficien(t|cy|cies)\b/i, has:/מיומנ/},
   {say:'מומחיות',     en:/\bexpertise\b/i, has:/מומחי/},
+  // --- monk
+  {say:'קי',            en:/\bki\b/i, has:/(^|[^א-ת])[הולכבמש]?קי(?![א-ת])/},
+  {say:'אומנויות לחימה', en:/\bmartial arts\b/i, has:/אומנויות לחימה/},
+  {say:'מטר מכות',      en:/\bflurry of blows\b/i, has:/מטר מכות/},
+  {say:'הגנה סבלנית',   en:/\bpatient defense\b/i, has:/הגנה סבלנית/},
+  {say:'צעד הרוח',      en:/\bstep of the wind\b/i, has:/צעד הרוח/},
+  {say:'ראיית עיוור',   en:/\bblindsight\b/i, has:/ראיית עיוור/},
   // --- defences
   {say:'עמידות',      en:/\bresistan(ce|t)\b/i, has:/עמיד/},
   {say:'חסינות',      en:/\bimmun(e|ity)\b/i, has:/חסינ|חסין/},
