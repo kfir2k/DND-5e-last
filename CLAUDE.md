@@ -32,7 +32,9 @@ before it:
 7. `data-backgrounds.js` — `BACKGROUNDS` (skills/tools/languages/gold/equipment per background) and
    `BACKGROUND_LIB` (the searchable trait library — skill-grant + signature-feature entries)
 8. `i18n-he.js` — `I18N_HE` (English UI text → Hebrew), `I18N_HE_RX` (patterns for sentences with
-   numbers/names inside), `I18N_HE_KEEP`; plain data, no logic. See "UI language (Hebrew)" below.
+   numbers/names inside), `I18N_HE_KEEP`, and the `heAdd()` helper; plain data, no logic. Then the
+   game-data translation files `i18n-he-spells.js` (and, as they are written, `i18n-he-features.js`, …),
+   which add to the same dictionary via `heAdd()`. See "UI language (Hebrew)" below.
 9. `i18n.js` — the `I18N` engine and the language preference (`LANG_KEY`); in English mode it
    installs nothing. Must load before `app.js`, which calls `I18N.t()` while it boots.
 10. `app.js` — all application state, rendering, and event wiring (the bulk of the logic, ~7900 lines)
@@ -222,12 +224,34 @@ entry simply stays English, so nothing can break and translation can grow a piec
 switched **only** from Settings → Language (a bilingual `translate="no"` row in `index.html`); the switch
 saves, writes `dnd5e-binder-lang-v1` and reloads. English mode installs no observer and does no work.
 
-**Scope is UI chrome only.** Game data (spell/feature/item/class/race names and descriptions, the
-`RULES_DB` rule texts) is deliberately *not* translated — never edit `data-*.js` for this, and never
-translate by changing the strings the app copies into `S` (`grantKey`, `featureIsPristine`, library
-joins and `S.classLevel` etc. all compare English text). Translation is display-time only; the engine
-skips `contenteditable` (the backstory editor's `innerText` is saved straight into `S`), `textarea`,
-`translate="no"`, and the containers that show game-data names (see `SKIP` in `i18n.js`).
+**Display-time only, always.** Never edit `data-*.js` to translate, and never translate by changing the
+strings the app copies into `S` (`grantKey`, `featureIsPristine`, library joins, `S.classLevel`… all compare
+English text). The engine skips `contenteditable` (the backstory editor's `innerText` is saved straight into
+`S`), `textarea`, `translate="no"`, and the containers that show *untranslated* game data (items, weapons,
+languages, proficiencies — see `SKIP` in `i18n.js`). Game data that HAS Hebrew entries (spells, features,
+race traits, backgrounds) is translated everywhere it appears, by exact match; one without an entry stays
+English. Long game-data sentences are never run through the regex patterns (`PROSE` in `i18n.js`), and the
+open-ended patterns only accept known vocabulary — a half-translated sentence is a bug.
+
+**Translating game data (spells, features, race traits, backgrounds)** — in progress, on the
+`experimental/hebrew-ui` branch. Read `i18n-glossary-he.md` first (terms, style rules, open ★ decisions).
+- Entries are `[English, Hebrew]` pairs passed to `heAdd([...])` in `i18n-he-<kind>.js`, name and description
+  as separate pairs, English copied exactly from the data file. A second, different Hebrew for the same
+  English is recorded as a conflict instead of silently overwriting.
+- `node tools/i18n-check.js` is the accuracy gate — run it after every batch. It compares each Hebrew entry
+  with its English for every digit and `NdM` die, damage types, conditions, ability names, number words
+  (two/half/twice…), the terms in `tools/i18n-terms.js`, leftover English, and conflicting duplicates. It
+  exits non-zero on errors. It cannot judge style — a human proofreads.
+  `--todo spells:0` / `features:Bard` prints the next entries to translate; `--groups` lists the groups;
+  `--review spells:0` writes a side-by-side EN|HE page to `tools/review/` (git-ignored locally) for proofreading.
+- **A saved character keeps its own copy** of each spell/feature text from the day it was added, and the
+  library has been edited since — so a sheet often holds an *older or hand-pasted version* that no library
+  translation matches. `node tools/i18n-check.js --character Characters/<file>.json` lists exactly what is on
+  that sheet and still English, flagging the older versions with the library's current text; give each its own
+  `heAdd` entry (keep the numbers/terms in step with the library translation). This is how to cover one
+  player's sheet without translating the whole library.
+- Spell names also appear in the library pickers: typing Hebrew in a picker's search box does not find a spell
+  yet (the filters match English names only) — a known follow-up.
 
 **Adding or changing UI text:**
 - A new static label/placeholder/tooltip: add `'English exactly as rendered': 'עברית'` to `I18N_HE`

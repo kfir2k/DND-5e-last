@@ -23,6 +23,16 @@ const I18N_HE_KEEP=[
   'game-icons.net',
   '(CC BY 3.0) — Lorc, Delapouite, Skoll, sbed, carl-olsen.',
 ];
+// The GAME-DATA translations (spells, features, race traits… in i18n-he-*.js) go through heAdd, one
+// [english, hebrew] pair per line, so a second, different translation of the same English text is
+// recorded here (tools/i18n-check.js reports it) instead of silently overwriting the first.
+const I18N_HE_CONFLICTS=[];
+function heAdd(pairs){
+  for(const [k,v] of pairs){
+    if(Object.prototype.hasOwnProperty.call(I18N_HE,k)&&I18N_HE[k]!==v) I18N_HE_CONFLICTS.push({key:k,old:I18N_HE[k],new:v});
+    I18N_HE[k]=v;
+  }
+}
 
 // ---- Header, Settings, roster, map ----
 Object.assign(I18N_HE,{

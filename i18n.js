@@ -105,6 +105,15 @@ const I18N=(function(){
         if(m){ const o=RX[i][1](m,tr); if(o!=null) return o; }
       }
     }finally{ depth--; }
+    // A spell's meta line is stored as "<time> · <range> · <duration>" and shown whole or in parts.
+    // Translate it only when EVERY part translates, so a hand-edited line is never half-rewritten.
+    if(core.indexOf(' · ')>0){
+      const parts=core.split(' · '), out=[];
+      depth++;
+      try{ for(const p of parts){ const t=lookup(p); if(t==null) return null; out.push(t); } }
+      finally{ depth--; }
+      return out.join(' · ');
+    }
     return null;
   }
   // Handed to patterns so they can translate the pieces they capture (a skill name, a stat…). A piece
@@ -192,13 +201,12 @@ const I18N=(function(){
 
   // Never translate inside: a contenteditable (the backstory editor reads its innerText straight
   // into the saved sheet), a textarea, or anything marked translate="no" (the Language row itself).
-  // Also skipped: the containers that show game-data names (spell, item, library picks, roster
-  // names), so a UI word that happens to equal one — the weapon tag "Light" vs the cantrip Light —
-  // never rewrites it.
+  // Also skipped: containers that show game data we have NOT translated (items, weapons, languages,
+  // proficiencies), so a UI word that happens to equal one never rewrites it. Spells, features, race
+  // traits and backgrounds are translated now (i18n-he-*.js), so their names and descriptions are
+  // NOT skipped: an entry with a translation shows it, one without stays English.
   const SKIP='[contenteditable]:not([contenteditable="false"]),[translate="no"],textarea,script,style,noscript,'
-    +'.sc-name,.spell-modal-name,.eq-card-name,.feature-title,'
-    +'.lvlup-feat-body b,.lvlup-feat-body small,.lvlup-pool-chip,'
-    +'[data-spellpick],[data-libidx],[data-raceidx],[data-backgroundidx],[data-langpick],[data-profpick],'
+    +'.eq-card-name,[data-langpick],[data-profpick],'
     +'#weaponModalList,#itemIndexList,#packModalList';
   const skipped=el=>!!(el&&el.closest&&el.closest(SKIP));
   function tree(root){
