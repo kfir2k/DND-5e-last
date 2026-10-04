@@ -66,6 +66,11 @@ const esc = v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(
 const mod = score=>Math.floor((Number(score)||0)/2)-5;
 const fmt = n=>(n>=0?'+':'')+n;
 const num = v=>{const n=parseInt(v,10);return isNaN(n)?0:n;};
+// The seal letter on a feature card: the title's first letter, taken from its Hebrew display text in Hebrew mode.
+const capLetter = title=>{ const t=(title||'?').trim(); const h=I18N.lang==='he'?I18N.t(t).replace(/[\u2066-\u2069]/g,''):t; return h.charAt(0).toUpperCase()||'?'; };
+// Lower-cased haystack for the pickers' text search: the English game text plus, in Hebrew mode, its
+// Hebrew display text, so a name typed in either language finds it. (I18N.t is the identity in English.)
+const srch = v=>{ const t=String(v??''); const h=I18N.lang==='he'?I18N.t(t):''; return (h&&h!==t?t+' '+h:t).toLowerCase(); };
 
 // ----- Racial bonus helpers -----
 // Ability total = base score you typed + racial bonus. Bonuses are never
@@ -2467,7 +2472,7 @@ function featureCardLockedHTML(f,i){
   const lvlBadge=(S.featuresView!=='level' && f.levelAt!=null && f.levelAt!=='') ? `<span class="feat-lvl-badge">Lv ${esc(f.levelAt)}</span>` : '';
   return `
   <div class="feature-card locked" data-featidx="${i}" style="--src:${src.color}">
-    <div class="feature-cap">${esc((f.title||'?').trim().charAt(0).toUpperCase()||'?')}</div>
+    <div class="feature-cap">${esc(capLetter(f.title))}</div>
     <div class="feature-body">
       <div class="cf-row" style="align-items:flex-start">
         <div>
@@ -2551,7 +2556,7 @@ function featureCardEditHTML(f,i){
   const lvlIn=`<input type="number" class="feat-lvl-in" min="1" max="20" value="${f.levelAt??''}" data-lvlat="${i}" placeholder="Lv" title="Level gained — leave blank if it isn't tied to a level (homebrew, DM boon, race/background at creation, etc.)">`;
   return `
   <div class="feature-card" data-featidx="${i}" style="--src:${src.color}">
-    <div class="feature-cap">${esc((f.title||'?').trim().charAt(0).toUpperCase()||'?')}</div>
+    <div class="feature-cap">${esc(capLetter(f.title))}</div>
     <div class="feature-body">
       <div class="feature-head">
         <input type="text" class="feature-title" value="${esc(f.title)}" data-li="features.${i}.title" placeholder="Feature name (e.g. Natural Explorer)">
@@ -3124,7 +3129,7 @@ function renderCockpitCards(){
   // Free-text search narrows the whole pool first — the type dropdown, the zone chips, and
   // their counts all work off whatever it leaves, same as the type filter always has.
   const q=CK_SEARCH.trim().toLowerCase();
-  if(q) cards=cards.filter(x=>x.name.toLowerCase().includes(q));
+  if(q) cards=cards.filter(x=>srch(x.name).includes(q));
   const counts={all:cards.length};
   // A card tagged with more than one economy slot counts (and shows up) under every filter it's
   // tagged for, rather than being forced into one exclusive bucket.
@@ -4037,7 +4042,7 @@ function wireLibScope(){
 function wireLibrary(){
   const input=$('#libSearch'), panel=$('#libResults');
   const groupsOrder=[...new Set(FEATURE_LIB.map(e=>e.g))];
-  const matches=(e,q)=>!q || e.n.toLowerCase().includes(q) || e.g.toLowerCase().includes(q) || (e.d||'').toLowerCase().includes(q);
+  const matches=(e,q)=>!q || srch(e.n).includes(q) || srch(e.g).includes(q) || srch(e.d||'').includes(q);
   function renderResults(){
     const q=input.value.trim().toLowerCase();
     const items=FEATURE_LIB.map((e,idx)=>({...e,idx}))
@@ -4084,7 +4089,7 @@ function wireLibrary(){
 function wireRaceLibrary(){
   const input=$('#raceSearch'), panel=$('#raceResults'); if(!input) return;
   const groupsOrder=[...new Set(RACE_LIB.map(e=>e.g))];
-  const matches=(e,q)=>!q || e.n.toLowerCase().includes(q) || e.g.toLowerCase().includes(q) || (e.d||'').toLowerCase().includes(q);
+  const matches=(e,q)=>!q || srch(e.n).includes(q) || srch(e.g).includes(q) || srch(e.d||'').includes(q);
   function renderResults(){
     const q=input.value.trim().toLowerCase();
     const items=RACE_LIB.map((e,idx)=>({...e,idx}))
@@ -4119,7 +4124,7 @@ function wireRaceLibrary(){
 function wireBackgroundLibrary(){
   const input=$('#backgroundSearch'), panel=$('#backgroundResults'); if(!input) return;
   const groupsOrder=[...new Set(BACKGROUND_LIB.map(e=>e.g))];
-  const matches=(e,q)=>!q || e.n.toLowerCase().includes(q) || e.g.toLowerCase().includes(q) || (e.d||'').toLowerCase().includes(q);
+  const matches=(e,q)=>!q || srch(e.n).includes(q) || srch(e.g).includes(q) || srch(e.d||'').includes(q);
   function renderResults(){
     const q=input.value.trim().toLowerCase();
     const items=BACKGROUND_LIB.map((e,idx)=>({...e,idx}))
@@ -4877,7 +4882,7 @@ function wireSpellLibrary(){
   const input=$('#spellSearch'), panel=$('#spellResults'); if(!input) return;
   const levelLabel=lv=>lv===0?'Cantrips':lv+(lv===1?'st':lv===2?'nd':lv===3?'rd':'th')+' Level';
   const list=Object.values(SPELL_DB);
-  const matches=(e,q)=>!q||e.n.toLowerCase().includes(q)||SP_SCHOOL[e.sc].toLowerCase().includes(q);
+  const matches=(e,q)=>!q||srch(e.n).includes(q)||srch(SP_SCHOOL[e.sc]).includes(q);
   function renderResults(){
     const q=input.value.trim().toLowerCase();
     const items=list.filter(e=>matches(e,q)).sort((a,b)=>a.lv-b.lv||a.n.localeCompare(b.n));
@@ -5503,7 +5508,7 @@ function filterRacePicker(q){
   const close=()=>{ if(label) label.hidden=!any; };
   [...$('#raceRail').children].forEach(el=>{
     if(el.classList.contains('bRailGroupLabel')){ close(); label=el; any=false; return; }
-    const hit=!q||el.textContent.toLowerCase().includes(q);
+    const hit=!q||srch(RACES[el.dataset.id]?RACES[el.dataset.id].name:el.textContent).includes(q);
     el.hidden=!hit; if(hit) any=true;
   });
   close();
@@ -7337,8 +7342,8 @@ function openSuggestModal(inp){
   search.value=inp.value;
   const paint=()=>{
     const q=search.value.trim(), ql=q.toLowerCase();
-    const items=all.filter(x=>!ql||x.n.toLowerCase().includes(ql));
-    const exact=all.some(x=>x.n.toLowerCase()===ql);
+    const items=all.filter(x=>!ql||srch(x.n).includes(ql));
+    const exact=all.some(x=>x.n.toLowerCase()===ql||(I18N.lang==='he'&&I18N.t(x.n).toLowerCase()===ql));
     const customRow=q&&!exact
       ?`<button type="button" class="sel-opt sel-opt-custom" data-sugpick="${esc(q)}"><span>Use "${esc(q)}"</span><small>Not in the list — free text works too</small></button>`:'';
     // Clearing the field was previously only reachable by pressing Enter on an empty search box —

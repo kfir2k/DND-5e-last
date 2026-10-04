@@ -33,7 +33,8 @@ before it:
    `BACKGROUND_LIB` (the searchable trait library — skill-grant + signature-feature entries)
 8. `i18n-he.js` — `I18N_HE` (English UI text → Hebrew), `I18N_HE_RX` (patterns for sentences with
    numbers/names inside), `I18N_HE_KEEP`, and the `heAdd()` helper; plain data, no logic. Then the
-   game-data translation files `i18n-he-spells.js` (and, as they are written, `i18n-he-features.js`, …),
+   game-data translation files `i18n-he-spells.js` (spells + spell facts) and `i18n-he-features.js` (class
+   and subclass features, feats, race traits, backgrounds, and the class/race/background names),
    which add to the same dictionary via `heAdd()`. See "UI language (Hebrew)" below.
 9. `i18n.js` — the `I18N` engine and the language preference (`LANG_KEY`); in English mode it
    installs nothing. Must load before `app.js`, which calls `I18N.t()` while it boots.
@@ -233,8 +234,11 @@ race traits, backgrounds) is translated everywhere it appears, by exact match; o
 English. Long game-data sentences are never run through the regex patterns (`PROSE` in `i18n.js`), and the
 open-ended patterns only accept known vocabulary — a half-translated sentence is a bug.
 
-**Translating game data (spells, features, race traits, backgrounds)** — in progress, on the
-`experimental/hebrew-ui` branch. Read `i18n-glossary-he.md` first (terms, style rules, open ★ decisions).
+**Translating game data (spells, features, race traits, backgrounds)** — done on the `experimental/hebrew-ui`
+branch for everything the data files hold (`node tools/i18n-check.js` reports 100% in every group); not yet
+merged to `main`. Items, weapons, armor, languages and proficiencies are NOT translated. Read
+`i18n-glossary-he.md` first (terms, style rules, open ★ decisions). When game data is added or edited in
+`data-*.js`, the new English string shows up as untranslated in the checker's coverage — translate it too.
 - Entries are `[English, Hebrew]` pairs passed to `heAdd([...])` in `i18n-he-<kind>.js`, name and description
   as separate pairs, English copied exactly from the data file. A second, different Hebrew for the same
   English is recorded as a conflict instead of silently overwriting.
@@ -243,15 +247,17 @@ open-ended patterns only accept known vocabulary — a half-translated sentence 
   (two/half/twice…), the terms in `tools/i18n-terms.js`, leftover English, and conflicting duplicates. It
   exits non-zero on errors. It cannot judge style — a human proofreads.
   `--todo spells:0` / `features:Bard` prints the next entries to translate; `--groups` lists the groups;
-  `--review spells:0` writes a side-by-side EN|HE page to `tools/review/` (git-ignored locally) for proofreading.
+  `--review spells:0` writes a side-by-side EN|HE page to `tools/review/` (git-ignored locally) for proofreading;
+  `--review-all` writes every group's page plus `tools/review/index.html`.
 - **A saved character keeps its own copy** of each spell/feature text from the day it was added, and the
   library has been edited since — so a sheet often holds an *older or hand-pasted version* that no library
   translation matches. `node tools/i18n-check.js --character Characters/<file>.json` lists exactly what is on
   that sheet and still English, flagging the older versions with the library's current text; give each its own
   `heAdd` entry (keep the numbers/terms in step with the library translation). This is how to cover one
   player's sheet without translating the whole library.
-- Spell names also appear in the library pickers: typing Hebrew in a picker's search box does not find a spell
-  yet (the filters match English names only) — a known follow-up.
+- The pickers' search boxes (spell/feature/race/background libraries, Combat cards, subclass/feat sheet) match
+  a name typed in either language: filters go through `srch()` in `app.js`, which searches the English text
+  plus its Hebrew display text. Use `srch()` for any new filter over translated game data.
 
 **Adding or changing UI text:**
 - A new static label/placeholder/tooltip: add `'English exactly as rendered': 'עברית'` to `I18N_HE`

@@ -78,3 +78,18 @@ together, then search/replace it across `i18n-he-*.js`.
 | elemental discipline | דיסציפלינת יסוד |
 | Wild Shape · Wild Shape form | צורה פראית (התמרה לחיה = ״התמרה״) |
 | Divine Domain / Druid Circle / Monastic Tradition | תחום ·מעגל · דרך (`Way of …` = ״דרך …״) |
+
+## Choices made while translating features, races and backgrounds (please proofread)
+
+| English | Hebrew used | Note |
+|---|---|---|
+| Sorcery Points · Metamagic | נקודות כשפים · מטא-קסם | Sorcerer |
+| Sneak Attack · Cunning Action · Thieves' Cant | התקפה מתגנבת · פעולה ערמומית · שפת הגנבים | Rogue |
+| Pact Magic · Eldritch Invocations · Pact Boon | קסם הברית · השבעות מיסטיות · מתנת הברית | Warlock |
+| Warlock patrons | השד · הארכי-פיה · השמימי · עמקי הים · הג'יני · הקדמון הגדול · להב המארה · הבלתי-מת · הבלתי-גוסס | |
+| Cleric domain · Druid circle · Monk way · Wizard school | תחום … · מעגל … · דרך … · אסכולת … | e.g. תחום החיים, מעגל הירח, דרך היד הפתוחה, אסכולת ההגנה |
+| Wild Magic Surge | גל הקסם הפראי | same wording as the Barbarian text |
+| Shifter (race) | שיפטר | not "משנה צורה", which is the Hebrew for the Shapechanger trait |
+| Sleight of Hand | פרץ יד | already in the UI skill list — `קלות יד` is the more common wording; one search-and-replace if preferred |
+| Weapon and tool names inside descriptions | גרזן קרב, חרב ארוכה, כלי גנבים, ערכת הסוואה… | the item/weapon *pickers* are still English |
+| `at will` | כרצון | |

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dnd-5e-binder-v5';
+const CACHE_NAME = 'dnd-5e-binder-v6';
 const ASSETS = [
   './',
   './index.html',

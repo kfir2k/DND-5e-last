@@ -8,6 +8,10 @@
 //   node tools/i18n-check.js --todo features:Bard --limit 40
 //   node tools/i18n-check.js --groups             list the groups available to --todo
 //   node tools/i18n-check.js --glossary           the rules glossary as a markdown table (for review)
+//   node tools/i18n-check.js --lookup "Fireball"  the Hebrew for one English string (substring match)
+//   node tools/i18n-check.js --character <file>   English strings on a saved character that still lack Hebrew
+//   node tools/i18n-check.js --review spells:3    one proofreading page (English | Hebrew) in tools/review/
+//   node tools/i18n-check.js --review-all         every group's page plus tools/review/index.html
 //
 // What "accurate" means here, mechanically: every translated entry is compared with its English
 // source for the things that are easy to get wrong and expensive to get wrong at the table —
@@ -237,11 +241,11 @@ function validate(en,he){
   return out;
 }
 
-// ---------- --review kind:group [--out file.html] ----------
+// ---------- --review kind:group [--out file.html]   |   --review-all ----------
 // A page for proofreading: English on the left, Hebrew on the right (right-to-left), one row per
 // entry, problems from the checker shown under the row. Open it in a browser; nothing to install.
-if(opt('--review')){
-  const [k,g]=opt('--review').split(':');
+// --review-all writes every group's page plus tools/review/index.html linking them all.
+function writeReview(k,g,outOpt){
   const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   let ents=[];
   if(k==='spells') ents=SPELLS.filter(s=>String(s.lv)===g).map(s=>({n:s.n,d:s.d}));
@@ -258,9 +262,33 @@ if(opt('--review')){
   const done=ents.filter(e=>DICT.has(norm(e.n))&&(!e.d||DICT.has(norm(e.d)))).length;
   const css='body{font:15px/1.5 system-ui,Segoe UI,Arial;margin:0;background:#15110c;color:#e9ddc7}h1{font-size:1.1rem;padding:14px 18px;margin:0;position:sticky;top:0;background:#1f1913;border-bottom:1px solid #3e3427}table{border-collapse:collapse;width:100%}td{padding:6px 18px;vertical-align:top;width:50%}tr.head td{padding-top:16px;border-top:1px solid #3e3427;color:#e3c15c}td.en{color:#a3906f;direction:ltr}td.he{font-size:1.05rem}.todo{color:#c25;font-style:normal}.p{font-size:.85rem;padding-bottom:6px}.p .error{color:#ff7b6b}.p .warn{color:#e3c15c}';
   const html='<!doctype html><meta charset="utf-8"><title>Review '+k+':'+g+'</title><style>'+css+'</style><h1>'+esc(k+' · '+g)+' — '+done+' / '+ents.length+' translated</h1><table>'+rows+'</table>';
-  const out=opt('--out')||path.join(ROOT,'tools','review',k+'-'+String(g).replace(/\W+/g,'_')+'.html');
+  const out=outOpt||path.join(ROOT,'tools','review',k+'-'+String(g).replace(/\W+/g,'_')+'.html');
   fs.mkdirSync(path.dirname(out),{recursive:true}); fs.writeFileSync(out,html);
-  console.log('wrote',out,'('+done+'/'+ents.length+' entries translated)');
+  return {out,done,total:ents.length};
+}
+if(opt('--review')){
+  const [k,g]=opt('--review').split(':');
+  const r=writeReview(k,g,opt('--out'));
+  console.log('wrote',r.out,'('+r.done+'/'+r.total+' entries translated)');
+  process.exit(0);
+}
+if(flag('--review-all')){
+  const groups=[['spells',[0,1,2,3,4,5,6,7,8,9].map(String)],
+    ['features',[...new Set(get('FEATURE_LIB').map(e=>e.g.split(' — ')[0]))]],
+    ['races',[...new Set(get('RACE_LIB').map(e=>e.g))]],
+    ['backgrounds',[...new Set(get('BACKGROUND_LIB').map(e=>e.g))]]];
+  const links=[]; let pages=0;
+  for(const [k,gs] of groups){
+    links.push('<h2>'+k+'</h2><ul>');
+    for(const g of gs){
+      const r=writeReview(k,g); pages++;
+      links.push('<li><a href="'+path.basename(r.out)+'">'+g+'</a> — '+r.done+' / '+r.total+'</li>');
+    }
+    links.push('</ul>');
+  }
+  const idx='<!doctype html><meta charset="utf-8"><title>Hebrew review</title><style>body{font:16px/1.6 system-ui,Segoe UI,Arial;margin:24px;background:#15110c;color:#e9ddc7}a{color:#e3c15c}h2{margin-top:1.4em}</style><h1>Hebrew translation review</h1>'+links.join('\n');
+  fs.writeFileSync(path.join(ROOT,'tools','review','index.html'),idx);
+  console.log('wrote tools/review/index.html and '+pages+' pages');
   process.exit(0);
 }
 
