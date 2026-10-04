@@ -43,6 +43,8 @@ module.exports=[
   {say:'הגנה סבלנית',   en:/\bpatient defense\b/i, has:/הגנה סבלנית/},
   {say:'צעד הרוח',      en:/\bstep of the wind\b/i, has:/צעד הרוח/},
   {say:'ראיית עיוור',   en:/\bblindsight\b/i, has:/ראיית עיוור/},
+  // --- warlock
+  {say:'כרצון',         en:/\bat will\b/i, has:/כרצון/},
   // --- sorcerer
   {say:'נקודות כשפים',  en:/\bsorcery points?\b/i, has:/נקודות כשפים|נקודת כשפים/},
   {say:'מטא-קסם',       en:/\bmetamagic\b/i, has:/מטא-קסם/},
