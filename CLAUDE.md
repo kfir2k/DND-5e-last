@@ -203,8 +203,9 @@ Everything is `localStorage`, no backend:
 - `dnd5e-binder-wide-v1` — UI-only wide-layout preference, independent of character/roster
 - `dnd5e-binder-tab-v1` — UI-only last-open tab (restored at boot by `lastTab()`), independent of character/roster
 - `dnd5e-binder-lang-v1` — UI-only language, `'en'` (default) or `'he'`; read by `i18n.js` before `app.js`
-  runs, written only by the Settings → Language control. Never in `S` or any export.
-  (`dnd5e-binder-lang-reload` in `sessionStorage` is a one-shot flag set across that switch's reload.)
+  runs, written only by the language controls (Settings → Language, and the corner of the character-select
+  screen). Never in `S` or any export. (`dnd5e-binder-lang-reload` in `sessionStorage` is a one-shot flag
+  set across that switch's reload, holding which screen to reopen: `'settings'` or `'chars'`.)
 - `dnd5e-binder-backup-v1` — backup bookkeeping only (last-export time per character id, nudge
   snooze, iOS tip dismissed); drives the backup nudge bar. Never written into `S` or any export.
 - `dnd5e-binder-rescue-<id>-<ts>` — raw text of a save that failed to parse, parked by `load()`
@@ -224,8 +225,10 @@ The app is written in English; Hebrew is an overlay. `i18n.js` runs a `MutationO
 `document.body` and swaps UI text that **exactly matches** a key in `I18N_HE` (text nodes, plus the
 `placeholder`/`title`/`aria-label`/`alt`/`data-placeholder`/option-label attributes). Anything without an
 entry simply stays English, so nothing can break and translation can grow a piece at a time. It is
-switched **only** from Settings → Language (a bilingual `translate="no"` row in `index.html`); the switch
-saves, writes `dnd5e-binder-lang-v1` and reloads. English mode installs no observer and does no work.
+switched **only** from the two bilingual `translate="no"` controls in `index.html` — Settings → Language, and
+the top corner of the character-select screen (all `[data-lang]` buttons, wired by `wireLanguage()`); the
+switch saves, writes `dnd5e-binder-lang-v1` and reloads back onto the screen it was made on. English mode
+installs no observer and does no work.
 
 **Display-time only, always.** Never edit `data-*.js` to translate, and never translate by changing the
 strings the app copies into `S` (`grantKey`, `featureIsPristine`, library joins, `S.classLevel`… all compare
@@ -264,11 +267,14 @@ are NOT translated. Read
   a name typed in either language: filters go through `srch()` in `app.js`, which searches the English text
   plus its Hebrew display text. Use `srch()` for any new filter over translated game data.
 - **Editable fields show library text in Hebrew too** (the unlocked Features tab's name/description, the
-  class a feature is filed under): `field()` in `i18n.js` swaps the *displayed value* of `[data-li]` /
-  `[data-srcname]` inputs and textareas whose value is exactly a game-data string with an entry. S keeps
-  the English until the player types in that field (those fields write to S on `input`/`change` only) — and
-  then the Hebrew text is theirs. Don't extend this to `data-bind` fields: `syncBound()` rewrites their
-  value, and some (the header's class/race line) are parsed as English.
+  class a feature is filed under): `field()` in `i18n.js` swaps the *displayed value* of the feature
+  `[data-li]` / `[data-srcname]` inputs and textareas whose value is exactly a game-data string with an entry.
+  S keeps the English until the player types in that field (those fields write to S on `input`/`change`
+  only) — and then the Hebrew text is theirs, which is safe for features because grants are tracked by
+  `source.grantKey`, not the title. **Only extend this to a field whose text the app never looks up or
+  parses.** Spell rows are excluded on purpose: `SPELL_DB` is keyed by the English name and
+  `spellRulesCallout()` reads the English description. `data-bind` fields are out too: `syncBound()`
+  rewrites their value, and some (the header's class/race line) are parsed as English.
 
 **Adding or changing UI text:**
 - A new static label/placeholder/tooltip: add `'English exactly as rendered': 'עברית'` to `I18N_HE`

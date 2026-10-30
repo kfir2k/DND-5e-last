@@ -1,3 +1,8 @@
+// The language engine (i18n.js) normally loads before this file. Right after an update the offline
+// cache can briefly hand an older cached index.html (one that doesn't load i18n.js yet) together with
+// this newer app.js — so fall back to plain English rather than failing to start.
+if(typeof I18N==='undefined') window.I18N={lang:'en',t:s=>s,missing:()=>[],missingSkeleton:()=>'',setLang(){},consumeReload:()=>''};
+
 // ---------- Default state (mirrors the PDF fields) ----------
 function defaultState(){
   return {
@@ -7883,7 +7888,8 @@ function wireWideMode(){
 }
 // ---------- Language ----------
 // UI-only preference (key, engine and Hebrew dictionary live in i18n.js / i18n-he.js), switched
-// only from the Settings dialog. Changing it saves the sheet first, then reloads — see I18N.setLang.
+// from the Settings dialog or the character-select screen. Changing it saves the sheet first, then
+// reloads back onto the same screen — see I18N.setLang.
 function wireLanguage(){
   $$('[data-lang]').forEach(b=>{
     const on=b.dataset.lang===I18N.lang;
@@ -7892,7 +7898,7 @@ function wireLanguage(){
     b.addEventListener('click',()=>{
       if(b.dataset.lang===I18N.lang) return;
       flushSave();
-      I18N.setLang(b.dataset.lang);
+      I18N.setLang(b.dataset.lang,b.closest('#charSelect')?'chars':'settings');
     });
   });
 }
@@ -7903,7 +7909,9 @@ renderAll();
 wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireQuickRefPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode(); wireLanguage(); wireBackups();
 showTab(lastTab());
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
-// The one exception is the reload that follows a language switch: that puts you back in Settings.
-if(I18N.consumeReload()){ renderBackupInfo(); $('#settingsModal').classList.add('open'); }
-else if(ROSTER.list.length>1) openCharSelect();
+// The one exception is the reload that follows a language switch: that puts you back on the screen
+// you switched from (Settings or character select).
+const langBack=I18N.consumeReload();
+if(langBack==='settings'){ renderBackupInfo(); $('#settingsModal').classList.add('open'); }
+else if(langBack==='chars'||ROSTER.list.length>1) openCharSelect();
 

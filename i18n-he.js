@@ -1045,7 +1045,9 @@ I18N_HE_RX.push(
 
   // Levels, spells, numbers
   [/^Level (\d+) slot$/,m=>`משבצת ברמה ${m[1]}`],
-  [/^Level (\d+) (.+)$/,m=>`רמה ${m[1]} ${m[2]}`],
+  // "Level 3 Fighter · Aasimar" (character-select cards): class/race names with an entry are translated,
+  // a homebrew one stays as typed.
+  [/^Level (\d+) (.+)$/,(m,tr,has)=>`רמה ${m[1]} ${m[2].split(' · ').map(p=>has(p)?tr(p):p).join(' · ')}`],
   [/^Level Up to (\d+) →$/,m=>`עלייה לרמה ${m[1]} ←`],
   [/^No level (\d+) spells yet\.$/,m=>`אין עדיין כישופים ברמה ${m[1]}.`],
   [/^Next at level ([\d ·]+)$/,m=>`הבא ברמה ${m[1]}`],

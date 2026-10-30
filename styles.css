@@ -4562,3 +4562,7 @@ html[lang="he"] .title-block{min-width:360px}
 [dir="rtl"] .chud-nums{direction:ltr}
 /* Text set in CSS can't be reached by the Hebrew overlay, so its Hebrew lives here. */
 html[lang="he"] .ck-death.ck-collapsed h2::after{content:' — מוסתר כל עוד הדמות בהכרה (הקש להצצה)'}
+/* Character select: the same language control, parked in the top corner (the far end of the reading
+   direction, so top-right in English and top-left in Hebrew). */
+.lang-seg.cs-lang{position:absolute;top:14px;inset-inline-end:16px;margin:0;z-index:1;background:var(--panel)}
+@media(max-width:700px){.char-select .cs-inner{padding-top:70px}}

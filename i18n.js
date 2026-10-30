@@ -13,8 +13,9 @@
 // I18N object and the preference key below.
 //
 // The language is a UI-only preference like wide mode: its own localStorage key, never part of a
-// character sheet or an export. It is switched from the Settings dialog only (wireLanguage in app.js),
-// which saves, stores the key and reloads — so there is never a half-translated page to undo.
+// character sheet or an export. It is switched from Settings or the character-select screen
+// (wireLanguage in app.js), which saves, stores the key and reloads — so there is never a
+// half-translated page to undo.
 const LANG_KEY='dnd5e-binder-lang-v1';
 const LANG_RELOAD_KEY='dnd5e-binder-lang-reload';
 const I18N=(function(){
@@ -26,18 +27,23 @@ const I18N=(function(){
     t:s=>s,
     missing:()=>[],
     missingSkeleton:()=>'',
-    setLang(next){
+    // `from` names the screen the switch was made on ('settings' or 'chars'), so the reload can
+    // put the user back there.
+    setLang(next,from){
       try{
         localStorage.setItem(LANG_KEY,next==='he'?'he':'en');
-        sessionStorage.setItem(LANG_RELOAD_KEY,'1');
+        sessionStorage.setItem(LANG_RELOAD_KEY,from||'settings');
       }catch(e){}
       location.reload();
     },
-    // True once after a language switch's reload, so boot can put the user back in Settings instead
-    // of on the roster screen it would normally open for a multi-hero device.
+    // Once after a language switch's reload: the screen it was made on ('settings' / 'chars'), so boot
+    // reopens that instead of what it would normally show. '' otherwise.
     consumeReload(){
-      try{ if(sessionStorage.getItem(LANG_RELOAD_KEY)){ sessionStorage.removeItem(LANG_RELOAD_KEY); return true; } }catch(e){}
-      return false;
+      try{
+        const v=sessionStorage.getItem(LANG_RELOAD_KEY);
+        if(v){ sessionStorage.removeItem(LANG_RELOAD_KEY); return v==='1'?'settings':v; }
+      }catch(e){}
+      return '';
     },
   };
   if(lang!=='he'||typeof I18N_HE==='undefined') return api;
@@ -251,7 +257,11 @@ const I18N=(function(){
   // field's displayed value changes: S keeps the English until the player actually types there
   // (these fields write to S on 'input'/'change' only), and from then on the text is theirs.
   // Only exact game-data strings qualify, never something the player wrote.
-  const FIELD='input[data-li],textarea[data-li],input[data-srcname]';
+  // Feature fields only: features are tracked by source.grantKey, so an edited Hebrew title just makes
+  // the feature the player's own. Spell rows are NOT included — the app finds a spell's data by its
+  // English name (SPELL_DB) and reads its English description for the save/attack chips, so a spell
+  // edited in Hebrew would lose both.
+  const FIELD='input[data-li^="features."],textarea[data-li^="features."],input[data-srcname]';
   const GAME=new Set();
   (function(){
     const add=s=>{ if(typeof s==='string'&&s) GAME.add(norm(s)); };

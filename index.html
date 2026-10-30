@@ -51,6 +51,11 @@
 <main id="pages"></main>
 
 <div class="char-select" id="charSelect">
+  <!-- Same bilingual control as Settings → Language, so a Hebrew reader can switch before opening a sheet. -->
+  <span class="lang-seg cs-lang" role="group" aria-label="Language / שפה" translate="no">
+    <button type="button" class="lang-opt" data-lang="en" lang="en" aria-pressed="false">English</button>
+    <button type="button" class="lang-opt" data-lang="he" lang="he" aria-pressed="false">עברית</button>
+  </span>
   <div class="cs-inner">
     <h1 class="cs-title">Choose Your Adventurer</h1>
     <p class="cs-sub">Tap a character to open their sheet. Everything saves automatically as you play.</p>
