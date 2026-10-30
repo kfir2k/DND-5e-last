@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dnd-5e-binder-v8';
+const CACHE_NAME = 'dnd-5e-binder-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -17,7 +17,9 @@ const ASSETS = [
   './i18n-he-rules.js',
   './i18n-he-weapons.js',
   './i18n.js',
-  './fonts/frank-ruhl-libre-hebrew.woff2',
+  './fonts/david-libre-hebrew-400.woff2',
+  './fonts/david-libre-hebrew-500.woff2',
+  './fonts/david-libre-hebrew-700.woff2',
   './wizard.js',
   './map.js',
   './manifest.json',

@@ -313,7 +313,7 @@ lines). Arrows are not mirrored by bidi: in Hebrew text "forward/next" is `←` 
 mirrored automatically). Keep invisible bidi characters out of source: write them as
 `\u2066` escapes.
 
-**Fonts:** Cinzel and Crimson Pro have no Hebrew. `fonts/frank-ruhl-libre-hebrew.woff2` is aliased to both
+**Fonts:** Cinzel and Crimson Pro have no Hebrew. `fonts/david-libre-hebrew-{400,500,700}.woff2` (David Libre) are aliased to both
 family names in `styles.css` with `unicode-range` limited to the Hebrew block. **Those `@font-face` weight/
 style descriptors must mirror the Google Fonts `<link>` in `index.html`** (Cinzel 500/700; Crimson Pro 400,
 600, 400 italic): the browser picks a weight/style set first and only then looks glyphs up inside it, so a

@@ -4504,14 +4504,15 @@ body.hp-zero .fx-vignette:not(.hit):not(.heal){
    (Cinzel 500/700, Crimson Pro 400/600 and 400 italic): the browser first chooses a weight/style set
    and only then looks glyphs up inside it, so a Hebrew face with different descriptors would be picked
    for Latin text too and leave it without glyphs. Matching them keeps English text rendering exactly
-   as before. Bundled (not Google-hosted) so it also works offline; the file is the upright Frank Ruhl
-   Libre Hebrew subset, so italic text is upright rather than a synthesized slant. SIL Open Font
-   License 1.1 — see fonts/README.md. */
-@font-face{font-family:'Cinzel';font-weight:500;font-style:normal;src:url('fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
-@font-face{font-family:'Cinzel';font-weight:700;font-style:normal;src:url('fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
-@font-face{font-family:'Crimson Pro';font-weight:400;font-style:normal;src:url('fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
-@font-face{font-family:'Crimson Pro';font-weight:600;font-style:normal;src:url('fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
-@font-face{font-family:'Crimson Pro';font-weight:400;font-style:italic;src:url('fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
+   as before. Bundled (not Google-hosted) so it also works offline: the Hebrew subsets of David Libre
+   (the free release of the classic David typeface) in 400/500/700. Crimson Pro's 600 maps to David's
+   700 for a clear bold; italic text maps to the upright 400, since David Libre has no italic. SIL Open
+   Font License 1.1 — see fonts/README.md. */
+@font-face{font-family:'Cinzel';font-weight:500;font-style:normal;src:url('fonts/david-libre-hebrew-500.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
+@font-face{font-family:'Cinzel';font-weight:700;font-style:normal;src:url('fonts/david-libre-hebrew-700.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
+@font-face{font-family:'Crimson Pro';font-weight:400;font-style:normal;src:url('fonts/david-libre-hebrew-400.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
+@font-face{font-family:'Crimson Pro';font-weight:600;font-style:normal;src:url('fonts/david-libre-hebrew-700.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
+@font-face{font-family:'Crimson Pro';font-weight:400;font-style:italic;src:url('fonts/david-libre-hebrew-400.woff2') format('woff2');font-display:swap;unicode-range:U+0590-05FF,U+FB1D-FB4F}
 
 /* Settings → Language: a label plus a two-button segmented control. */
 .settings-row.lang-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--panel2);border:1px solid var(--border-lt);border-radius:8px}

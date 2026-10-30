@@ -6787,8 +6787,11 @@ function wireRest(){
     S.hdUsed=Math.max(0,num(S.hdUsed)-regained);
     S.deathS=[false,false,false]; S.deathF=[false,false,false];
     S.features.forEach(f=>{ if(f.combat && num(f.usesMax)>0) f.usesUsed=0; }); // long rest recharges everything
-    renderSpellLevels(); renderDeathSaves(); renderCombatFeatures(); syncBound(); recalc(); save();
-    restCeremony('long');
+    // Homebrew stress eases by one step per long rest (never below 0).
+    const stressBefore=Math.max(0,Math.min(STRESS_MAX,num(S.stress)));
+    S.stress=Math.max(0,stressBefore-1);
+    renderSpellLevels(); renderDeathSaves(); renderCombatFeatures(); renderOverviewStress(); syncBound(); recalc(); save();
+    restCeremony('long',{stressEased:stressBefore>0});
   });
 }
 
@@ -6830,7 +6833,7 @@ function screenFlash(kind){
 }
 // Short/Long Rest used to happen with no feedback at all — numbers quietly reset. A moon-blue or
 // dawn-gold veil now sweeps the screen for a beat with a one-line caption of what came back.
-function restCeremony(kind){
+function restCeremony(kind,opts={}){
   const old=$('.rest-veil'); if(old) old.remove();
   const v=document.createElement('div');
   v.className='rest-veil '+kind; v.setAttribute('role','status'); v.setAttribute('aria-live','polite');
@@ -6838,7 +6841,8 @@ function restCeremony(kind){
   const back=Math.max(1,Math.floor(n/2));
   const pact=CLASSES[S.classId]&&CLASSES[S.classId].cast==='pact';
   const msg=kind==='long'
-    ? `<b>☀ Long Rest</b><span>Dawn breaks. Hit points, spell slots and ${back} hit ${back===1?'die':'dice'} restored.</span>`
+    ? `<b>☀ Long Rest</b><span>Dawn breaks. Hit points, spell slots and ${back} hit ${back===1?'die':'dice'} restored.</span>`+
+      (opts.stressEased?`<span>Stress eased by 1.</span>`:'')
     : `<b>🌙 Short Rest</b><span>An hour passes. Short-rest features${pact?' and pact slots':''} return.</span>`;
   v.innerHTML=`<div class="rest-veil-card">${msg}</div>`;
   document.body.appendChild(v);

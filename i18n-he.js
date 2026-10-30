@@ -153,6 +153,7 @@ Object.assign(I18N_HE,{
   'Saving Throws':'הטלות הצלה',
   'Stress':'לחץ',
   'No stress — rolls are unaffected.':'אין לחץ — ההטלות לא מושפעות.',
+  'Stress eased by 1.':'הלחץ ירד ב-1.',
   'Trained Skills':'כישורים מאומנים',
   '🔮 Spellcasting':'🔮 הטלת כישופים',
   '🔮 Spell Save DC':'🔮 DC הצלה מכישוף',
