@@ -1204,8 +1204,10 @@ function showTab(id){
   // reload reopens where you left off instead of always bouncing back to Overview.
   const nav=$('#tabs'), tb=$('#tab-'+id);
   if(nav&&tb&&nav.scrollWidth>nav.clientWidth+4){
+    // Measured from the rects, so it holds in Hebrew too, where an RTL strip's scrollLeft runs negative
+    // (the browser clamps an out-of-range target to the strip's ends either way).
     const left=tb.getBoundingClientRect().left-nav.getBoundingClientRect().left+nav.scrollLeft-(nav.clientWidth-tb.offsetWidth)/2;
-    nav.scrollTo({left:Math.max(0,left),behavior:'smooth'});
+    nav.scrollTo({left,behavior:'smooth'});
   }
   try{ localStorage.setItem(TAB_KEY,id); }catch(e){}
   $$('.tab-page').forEach(p=>p.classList.toggle('active',p.id==='page-'+id));
@@ -5115,7 +5117,7 @@ function recalc(){
   const curPct=scale?cur/scale*100:0;
   const tmpPct=scale?Math.min(100-curPct,temp/scale*100):0;
   $$('.hp-fill').forEach(f=>f.style.width=curPct+'%');
-  $$('.hp-temp-fill').forEach(f=>{ f.style.left=curPct+'%'; f.style.width=tmpPct+'%'; });
+  $$('.hp-temp-fill').forEach(f=>{ f.style.insetInlineStart=curPct+'%'; f.style.width=tmpPct+'%'; });
   $$('.hp-bar').forEach(bar=>bar.classList.toggle('has-temp',num(S.hpTemp)>0));
   // bloodied / critical feedback directly on the real HP bar(s) — no separate decorative copy
   const hpPct=max?cur/max:1;
@@ -5277,7 +5279,9 @@ function renderOverviewWhisper(){
   box.style.display = fields.length ? '' : 'none';
   box.innerHTML = fields.map(([k,label])=>{
     const v=S[k].trim().split('\n')[0];
-    return `<p class="ov-whisper-line" data-ovwhisper><b>${label}.</b> ${esc(v.slice(0,140))}${v.length>140?'…':''}</p>`;
+    // <bdi>: the player's line keeps its own direction next to the label (English text under a
+    // Hebrew label would otherwise get its full stop on the wrong end).
+    return `<p class="ov-whisper-line" data-ovwhisper><b>${label}.</b> <bdi>${esc(v.slice(0,140))}${v.length>140?'…':''}</bdi></p>`;
   }).join('');
   $$('[data-ovwhisper]').forEach(p=>p.addEventListener('click',()=>showTab('character')));
 }
@@ -6361,22 +6365,27 @@ function renderBuildNote(){
   // The sentence is assembled here from fixed English words, so each goes through I18N.t (the
   // identity in English; the Hebrew overlay can't match a line built from this many parts).
   const T=I18N.t;
+  // Every piece sits in its own <bdi> (no visible change in English): in Hebrew the line mixes
+  // Hebrew words with English names and "30 ft."-style values, and one long text node of that
+  // comes out scrambled; isolated pieces each keep their own order inside a right-to-left line.
+  const B=s=>`<bdi>${esc(s)}</bdi>`;
   if(c){
     const bits=[`${T('proficiency')} ${val('profBonus')}${mark('profBonus')}`,`${T('hit dice')} ${val('hdTotal')}${mark('hdTotal')}`,`${val('saves')}${mark('saves')}`];
     // Mentioned for a non-casting class too once you've set slots or an ability yourself.
     if(c.cast||bovHas('slots')||bovHas('spellAbility'))
       bits.push(`${T(c.name==='Warlock'?'pact magic slots set':'spell slots set')} (${T(val('spellAbility'))}${mark('spellAbility')})${mark('slots')}`);
-    notes.push(`${val('classLevel')||c.name+' '+S.level}${mark('classLevel')}: ${bits.join(', ')}`);
+    notes.push(`${B((val('classLevel')||c.name+' '+S.level)+mark('classLevel'))}: ${bits.map(B).join(', ')}`);
   }
   const ri=raceInfo();
   if(ri){
     const bs=ABILITIES.filter(([k])=>racialBonus(k)>0).map(([k])=>`+${racialBonus(k)} ${abbr3(k)}`);
     const dv=val('vision');
-    notes.push(`${val('race')||raceDisplayName()}${mark('race')}: ${val('speed')}${mark('speed')}${ri.r.move?' ('+ri.r.move+')':''}`+
-      `${dv&&dv!=='None'?', '+T('darkvision')+' '+dv+mark('vision'):''}${bs.length?', '+bs.join(' '):''}`+
-      (flexCount()>0&&S.flexBonus.filter(Boolean).length<flexCount()?' — '+T('pick your bonus abilities above!'):''));
+    const parts=[`${T(val('speed'))}${mark('speed')}${ri.r.move?' ('+ri.r.move+')':''}`];
+    if(dv&&dv!=='None') parts.push(`${T('darkvision')} ${T(dv)}${mark('vision')}`);
+    notes.push(`${B((val('race')||raceDisplayName())+mark('race'))}: ${parts.map(B).join(', ')}${bs.length?', '+bs.map(B).join(' '):''}`+
+      (flexCount()>0&&S.flexBonus.filter(Boolean).length<flexCount()?' — '+B(T('pick your bonus abilities above!')):''));
   }
-  el.textContent=notes.join('  ·  ')||'Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses.';
+  el.innerHTML=notes.join('  ·  ')||esc('Choose a class and level to auto-set proficiency, hit dice, saving throws and spell slots. Choose a race for speed and ability bonuses.');
 }
 
 // ---------- Build ▸ Customize panel ----------
@@ -7826,9 +7835,13 @@ function lastTab(){
 // sliding behind it, and arrow-key movement between tabs for keyboard users.
 function wireTabStrip(){
   const nav=$('#tabs'); if(!nav) return;
+  // In Hebrew the strip runs right-to-left: it starts scrolled to its right end and scrollLeft goes
+  // negative from there, so "scrolled away from the start" is the right edge's fade, not the left's.
+  const rtl=()=>getComputedStyle(nav).direction==='rtl';
   const edges=()=>{
-    nav.classList.toggle('can-l',nav.scrollLeft>4);
-    nav.classList.toggle('can-r',nav.scrollLeft+nav.clientWidth<nav.scrollWidth-4);
+    const s=Math.abs(nav.scrollLeft), r=rtl();
+    nav.classList.toggle(r?'can-r':'can-l',s>4);
+    nav.classList.toggle(r?'can-l':'can-r',s<nav.scrollWidth-nav.clientWidth-4);
   };
   nav.addEventListener('scroll',edges,{passive:true});
   window.addEventListener('resize',edges);
@@ -7841,7 +7854,8 @@ function wireTabStrip(){
   nav.addEventListener('keydown',e=>{
     if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
     const ids=TABS.map(([id])=>id); const cur=$('.tab-btn.active'); let i=Math.max(0,ids.indexOf(cur?cur.dataset.tab:''));
-    if(e.key==='ArrowLeft') i=(i-1+ids.length)%ids.length; else if(e.key==='ArrowRight') i=(i+1)%ids.length; else if(e.key==='Home') i=0; else i=ids.length-1;
+    const back=rtl()?'ArrowRight':'ArrowLeft', fwd=rtl()?'ArrowLeft':'ArrowRight';
+    if(e.key===back) i=(i-1+ids.length)%ids.length; else if(e.key===fwd) i=(i+1)%ids.length; else if(e.key==='Home') i=0; else i=ids.length-1;
     e.preventDefault(); showTab(ids[i]); const b=$('#tab-'+ids[i]); if(b) b.focus();
   });
 }

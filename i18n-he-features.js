@@ -2484,4 +2484,52 @@ heAdd([
   [`Those who look into your eyes can see you've faced unimaginable horror. Commoners treat you with deference and offer aid, and unless you've proven dangerous, they'll fight alongside you against your enemies.`,`מי שמסתכל בעיני הדמות רואה שהיא התמודדה עם אימה בלתי נתפסת. פשוטי העם מתייחסים אליה בכבוד ומציעים עזרה, ואלא אם הוכיחה את עצמה מסוכנת, הם ילחמו לצדה נגד אויביה.`],
 ]);
 
+// ---- Class one-liners (CLASS_FLAVOR — the Build tab's class card) ----
+heAdd([
+  ['Fury given form — she abandons defense for raw, unstoppable rage, striking hardest the closer death creeps.',
+   'זעם בדמות אדם — היא זונחת את ההגנה לטובת זעם גולמי שאין לעצור, ומכה חזק יותר ככל שהמוות מתקרב.'],
+  ['A grim vigilante who trades their own blood for forbidden hemocraft magic, becoming something of a monster to hunt the monstrous.',
+   'נוקם קודר שמשלם בדמו שלו על קסם דם אסור, והופך למעין מפלצת כדי לצוד מפלצות.'],
+  ['A storyteller and spellsinger who turns wit, music and charm into magic that lifts allies and unravels foes.',
+   'מספר סיפורים וזמר כשפים שהופך שנינות, מוזיקה וקסם אישי לכישוף שמרומם בני ברית ומפרק אויבים.'],
+  ['A conduit for divine power, channeling their god’s will into healing light or righteous judgment.',
+   'צינור לכוח אלוהי, שמתעל את רצון האל שלו לאור מרפא או לשיפוט צודק.'],
+  ['Keeper of the wild, shifting shape and bending nature itself to protect the balance of the world.',
+   'שומר הפרא, שמשנה צורה ומכופף את הטבע עצמו כדי להגן על איזון העולם.'],
+  ['A master of arms and tactics, trained to outlast and outfight anything the battlefield throws at them.',
+   'אמן נשק וטקטיקה, שאומן לשרוד ולגבור על כל מה ששדה הקרב מטיל עליו.'],
+  ['A disciplined martial artist who channels inner energy into strikes faster than the eye can follow.',
+   'לוחם אומנויות לחימה ממושמע, שמתעל אנרגיה פנימית למכות מהירות מכדי שהעין תעקוב אחריהן.'],
+  ['A sworn champion bound by sacred oath, wielding martial might and divine magic in equal measure.',
+   'אלוף מושבע הכבול בשבועה קדושה, שמחזיק בעוצמת לחימה ובקסם אלוהי במידה שווה.'],
+  ['A hunter of the frontier, as deadly with a blade as with a bow, and never lost in hostile terrain.',
+   'צייד הספר, קטלני בלהב כמו בקשת, ולעולם לא תועה בשטח עוין.'],
+  ['A shadow between heartbeats — precise, cunning, and lethal the moment an opening appears.',
+   'צל בין פעימות לב — מדויק, ערמומי וקטלני ברגע שנפתחת פרצה.'],
+  ['Magic runs in their blood, wild and instinctive, reshaped on the fly to suit the moment’s need.',
+   'קסם זורם בדמו, פראי ואינסטינקטיבי, ומעוצב מחדש תוך כדי תנועה לפי צורך הרגע.'],
+  ['Bound by pact to a power beyond mortal ken, trading service for magic that bends reality’s rules.',
+   'כבול בברית לכוח שמעבר להבנת בני תמותה, ומשלם בשירות על קסם שמכופף את חוקי המציאות.'],
+  ['A scholar of the arcane, wielding spells drawn from years of study and a mind as sharp as any blade.',
+   'חוקר תורת הנסתר, שמחזיק בכישופים משנים של לימוד ובשכל חד כמו כל להב.'],
+]);
+
+// ---- Effect conditions (the "(…)" on ★ advantage chips, from the fx of features and race traits) ----
+heAdd([
+  ['while raging','בזמן זעם'],
+  ['against effects you can see (traps, spells)','נגד אפקטים בקו הראייה (מלכודות, כישופים)'],
+  ['tracking fey, fiends, or undead','במעקב אחר פיות, שדים או בלתי-מתים'],
+  ['about sinister history tied to something you touch','על היסטוריה אפלה הקשורה לדבר שנוגעים בו'],
+  ['tracking your favored enemies','במעקב אחר האויבים המועדפים שלך'],
+  ['in favored terrain','בשטח מועדף'],
+  ['camouflaged & motionless','בהסוואה וללא תנועה'],
+  ['impersonating someone','בהתחזות למישהו'],
+  ['relying on hearing or smell','בהסתמכות על שמיעה או ריח'],
+  ['while Visage of the Astral Self is active','כל עוד פני העצמי האסטרלי פעילות'],
+  ['moving no more than half speed that turn','בתנועה של לא יותר מחצי מהמהירות באותו תור'],
+  ['while your spellbook is on your person','כשספר הכישופים שלך עליך'],
+  ['about the origin of stonework','על מקורה של עבודת אבן'],
+  ['about magic, alchemical, or technological items','על פריטים קסומים, אלכימיים או טכנולוגיים'],
+]);
+
 // @@NEXT-FEATURES@@ (batches are inserted above this line)

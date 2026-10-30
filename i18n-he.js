@@ -228,7 +228,7 @@ Object.assign(I18N_HE,{
   'Saves':'הצלות',
   '👁 Passive Perception':'👁 תפיסה פסיבית',
   '📖 Proficiency':'📖 מיומנות',
-  'Tap a save tile or skill circle: proficiency → expertise → none ·':'הקש על אריח הצלה או עיגול כישור: מיומנות → מומחיות → כלום ·',
+  'Tap a save tile or skill circle: proficiency → expertise → none ·':'הקש על אריח הצלה או עיגול כישור: מיומנות ← מומחיות ← כלום ·',
   'green':'ירוק',
   '= granted by a feature (already counted) ·':'= ניתן על ידי יכולת (כבר נספר) ·',
   '= situational reminder, apply it yourself.':'= תזכורת מצבית, החל אותה בעצמך.',
@@ -275,6 +275,7 @@ Object.assign(I18N_HE,{
   'Delete selected':'מחק את הנבחרים',
   'Cancel':'ביטול',
   'New Item':'פריט חדש',
+  'Edit Item':'עריכת פריט',
   'Single item':'פריט בודד',
   'Paste a list':'הדבק רשימה',
   'Name':'שם',
@@ -343,7 +344,7 @@ Object.assign(I18N_HE,{
   'Finesse':'עדינות',
   'wpn-tag|Light':'קל',
   'Versatile':'רב-שימושי',
-  'Reach':'טווח',
+  'Reach':'טווח הישג',
   'Heavy':'כבד',
   'Two-Handed':'שתי ידיים',
   'Thrown':'נזרק',
@@ -452,7 +453,7 @@ Object.assign(I18N_HE,{
   'Hit Points':'נקודות חיים',
   'I rolled it':'הטלתי',
   "ASI/Feat picks above save as you make them, same as the Build tab. Level and HP only apply when you press the button below.":'בחירות שיפור התכונות/הכישרון למעלה נשמרות תוך כדי הבחירה, בדיוק כמו בלשונית בנייה. הרמה ונקודות החיים מוחלות רק כשתלחץ על הכפתור למטה.',
-  'Level Up →':'עלייה ברמה →',
+  'Level Up →':'עלייה ברמה ←',
   'Pick a class or heritage above and its defaults show up here, ready to be overridden.':'בחר מקצוע או מורשת למעלה וברירות המחדל שלהם יופיעו כאן, מוכנות לשינוי.',
   'Auto-add features':'הוספת יכולות אוטומטית',
   "— grant the class, subclass, heritage and background features you qualify for, on the Features tab. They stay fully editable; the ones you've edited are kept even if you change your mind later.":'— מעניק את יכולות המקצוע, תת-המקצוע, המורשת והרקע שמגיעות לך, בלשונית יכולות. הן נשארות ניתנות לעריכה מלאה; אלה שערכת נשמרות גם אם תשנה את דעתך אחר כך.',
@@ -462,7 +463,7 @@ Object.assign(I18N_HE,{
   'Damage:':'נזק:',
   'The opponent blocked this attack — no roll needed.':'היריב חסם את ההתקפה הזו — אין צורך בהטלה.',
   "↺ Undo — it wasn't blocked":'↺ בטל — היא לא נחסמה',
-  '← Back':'← חזרה',
+  '← Back':'→ חזרה',
   'This attack was removed from your character sheet.':'ההתקפה הזו הוסרה מדף הדמות שלך.',
   'Skip':'דלג',
   'Strikes true on':'פוגע ב-',
@@ -472,7 +473,7 @@ Object.assign(I18N_HE,{
   'Opponent blocked this attack':'היריב חסם את ההתקפה הזו',
   'The turn is spent':'התור נוצל',
   'The Reckoning':'החשבון',
-  '← Revisit':'← חזור לעיין',
+  '← Revisit':'→ חזור לעיין',
   'Close':'סגור',
   'Fate turns aside — a critical miss.':'הגורל פונה הצידה — החטאה קריטית.',
   'A masterstroke — critical hit!':'מכת מופת — פגיעה קריטית!',
@@ -663,7 +664,7 @@ Object.assign(I18N_HE,{
   'Which category this feature is filed under':'תחת איזו קטגוריה היכולת הזו מסווגת',
   'Lv':'רמ׳',
   "Level gained — leave blank if it isn't tied to a level (homebrew, DM boon, race/background at creation, etc.)":'הרמה שבה הושגה — השאר ריק אם היא לא קשורה לרמה (הומברו, מתנת DM, גזע/רקע ביצירה וכו׳)',
-  'Feature name (e.g. Natural Explorer)':'שם היכולת (למשל Natural Explorer)',
+  'Feature name (e.g. Natural Explorer)':'שם היכולת (למשל חוקר טבע)',
   'What it does...':'מה היא עושה...',
   'Shows under:':'מוצג תחת:',
   'Condition — e.g. first turn of combat, once per turn':'תנאי — למשל תור ראשון בקרב, פעם בתור',
@@ -768,6 +769,8 @@ Object.assign(I18N_HE,{
 // ---- Patterns: sentences with numbers/names inside ----
 // n === 1 picks the singular form, anything else the plural.
 const heN=(n,one,many)=>+n===1?one:many;
+// The condition in a ★ chip's parentheses: library wording has an entry; one the player typed stays as typed.
+const heCond=(c,tr,has)=>has&&has(c)?tr(c):c;
 // Names the open-ended patterns below are allowed to capture. A callback returns null (= "not mine") for
 // anything else, so a pattern can never rewrite a game description or a player's own text that merely
 // starts with the same word ("Raise a wall of stone…", "Choose one: Archery, Dueling…", "miner's pick").
@@ -804,6 +807,7 @@ I18N_HE_RX.push(
   // Skills / Overview / levels
   [/^Level (\d+)$/,m=>`רמה ${m[1]}`],
   [/^Lv (\d+)$/,m=>`רמ׳ ${m[1]}`],
+  [/^Lv (\d+) ([★☆]+)$/,m=>`רמ׳ ${m[1]} ${m[2]}`],
   [/^([\d,.]+) to level (\d+)$/,m=>`${m[1]} עד רמה ${m[2]}`],
   [/^(.+) \(trained, hidden\)$/,(m,tr)=>`${tr(m[1])} (מאומן, מוסתר)`],
   [/^[+−-]?\d+ HP$/,m=>m[0]],
@@ -885,7 +889,7 @@ Object.assign(I18N_HE,{
   'No features yet — search above or add one below.':'אין יכולות עדיין — חפש למעלה או הוסף אחת למטה.',
   'Cast with slot:':'הטל עם משבצת:',
   'Full editing (buffs, magic, dice) in the Attacks panel below.':'עריכה מלאה (חיזוקים, קסם, קוביות) בלוח ההתקפות למטה.',
-  'Tap: proficiency → expertise → none':'הקש: מיומנות → מומחיות → כלום',
+  'Tap: proficiency → expertise → none':'הקש: מיומנות ← מומחיות ← כלום',
   'Tap to toggle save proficiency':'הקש כדי להחליף מיומנות בהצלה',
   'Custom weapon':'נשק מותאם',
   'Damage die':'קוביית נזק',
@@ -904,6 +908,20 @@ Object.assign(I18N_HE,{
   '+ Effect':'+ אפקט',
   'Nothing attuned — flag a Magic item with ✦ on the Inventory tab.':'אין פריט מחובר — סמן פריט קסום עם ✦ בלשונית ציוד.',
   'Traits.':'תכונות.',
+  'Ideals.':'אידיאלים.',
+  'Bonds.':'קשרים.',
+  'Flaws.':'חולשות.',
+  'Goals.':'מטרות.',
+  // The name a new character's first turn plan is created with (saved in S, shown as-is).
+  'Default':'ברירת מחדל',
+  '⚠ stealth disadvantage':'⚠ חיסרון בהתגנבות',
+  // Quick View skill tiles' tooltips, and the Conditions picker's Rage entry
+  'Expertise':'מומחיות',
+  'Proficient':'מיומן',
+  'Not proficient':'לא מיומן',
+  'Expertise (granted by a feature)':'מומחיות (מוענקת על ידי יכולת)',
+  'Proficient (granted by a feature)':'מיומן (מוענק על ידי יכולת)',
+  'Raging':'בזעם',
   'Tap to also show this feature’s text in the Custom Stats panel':'הקש כדי להציג את הטקסט של היכולת הזו גם בלוח הנתונים המותאמים',
   '★ Inspired':'★ בהשראה',
   'Tap to show in Combat tab':'הקש כדי להציג בלשונית קרב',
@@ -939,6 +957,9 @@ Object.assign(I18N_HE,{
   '▸ Conditions':'▸ מצבים',
   '▸ Key concepts':'▸ מושגי מפתח',
   'Flexible Bonus — +2 to one ability, +1 to another':'בונוס גמיש — +2 לתכונה אחת, +1 לאחרת',
+  'Flexible Bonus — +1 to two different abilities':'בונוס גמיש — +1 לשתי תכונות שונות',
+  // Skills tab: the bold word after a "★ <feature>" advantage badge
+  'adv':'יתרון',
   'Same ability twice = +2 to it':'אותה תכונה פעמיים = +2 אליה',
   'First +1':'ראשון +1',
   'Second +1':'שני +1',
@@ -1024,15 +1045,28 @@ I18N_HE_RX.push(
   // Levels, spells, numbers
   [/^Level (\d+) slot$/,m=>`משבצת ברמה ${m[1]}`],
   [/^Level (\d+) (.+)$/,m=>`רמה ${m[1]} ${m[2]}`],
-  [/^Level Up to (\d+) →$/,m=>`עלייה לרמה ${m[1]} →`],
+  [/^Level Up to (\d+) →$/,m=>`עלייה לרמה ${m[1]} ←`],
   [/^No level (\d+) spells yet\.$/,m=>`אין עדיין כישופים ברמה ${m[1]}.`],
-  [/^Next at level (.+)$/,m=>`הבא ברמה ${m[1]}`],
+  [/^Next at level ([\d ·]+)$/,m=>`הבא ברמה ${m[1]}`],
   [/^Next ASI\/Feat at level (\d+) · Proficiency \+(\d+) at level (\d+)$/,m=>`שיפור התכונות/הכישרון הבא ברמה ${m[1]} · מיומנות +${m[2]} ברמה ${m[3]}`],
   [/^No Ability Score Improvement or Feat at level (\d+) — HP only this time\. Next one's at level (\d+)\.$/,m=>`אין שיפור תכונות או כישרון ברמה ${m[1]} — רק נקודות חיים הפעם. הבא ברמה ${m[2]}.`],
-  [/^Tap to choose — (.+) picks at level (\d+)$/,m=>`הקש לבחירה — ${m[1]} בוחר ברמה ${m[2]}`],
-  [/^ASI → (\d+)$/,m=>`שיפור תכונות → ${m[1]}`],
+  [/^Tap to choose — (.+) picks at level (\d+)$/,(m,tr)=>`הקש לבחירה — ${tr(m[1])} בוחר ברמה ${m[2]}`],
+  [/^ASI → (\d+)$/,m=>`שיפור תכונות ← ${m[1]}`],
   [/^\(max HP (\d+) → (\d+)\)$/,m=>`(מקס׳ HP ${m[1]} → ${m[2]})`],
-  [/^temp → (\d+)$/,m=>`זמני → ${m[1]}`],
+  [/^temp → (\d+)$/,m=>`זמני ← ${m[1]}`],
+  // Ability card breakdown "+1 race, +2 ASI → 18": each bonus sits in its own <b>, so the words come
+  // through as separate text nodes.
+  [/^race → (\d+)$/,m=>`גזע ← ${m[1]}`],
+  // Build ▸ race card: the flexible-bonus pills and chips
+  [/^\+1 \(choice (\d)\)$/,m=>`+1 (בחירה ${m[1]})`],
+  [/^\+(\d) \(your choice\)$/,m=>`+${m[1]} (לבחירתך)`],
+  // Build ▸ ASI line for a class with no ASI at its current level yet
+  [/^Next at level (.+) — none earned yet\.$/,m=>`הבא ברמה ${m[1]} — עדיין לא הושג אף אחד.`],
+  [/^No more ASI levels ahead — none earned yet\.$/,()=>'אין עוד רמות שיפור תכונות בהמשך — עדיין לא הושג אף אחד.'],
+  // Level-up modal: "Fighter ↗" / "Aasimar ↗" links to the class/race page
+  [/^(.+) ↗$/,(m,tr)=>heClassNames().has(m[1])||heRaceNames().has(m[1])?`${tr(m[1])} ↗`:null],
+  [/^(race|ASI|temp),$/,m=>({race:'גזע,',ASI:'שיפור תכונות,',temp:'זמני,'})[m[1]]],
+  [/^([\d,]+) words?$/,m=>`${m[1]} ${heN(m[1],'מילה','מילים')}`],
   [/^Speed (\d+) ft\.$/,m=>`מהירות ${m[1]} רגל`],
   [/^(\d+) ft\.?$/,m=>`${m[1]} רגל`],
   [/^Attack \+(\d+)$/,m=>`התקפה +${m[1]}`],
@@ -1061,9 +1095,23 @@ I18N_HE_RX.push(
   [/^(AC|Speed|Initiative|Passive Perception|Max HP|Darkvision Range) ([+\u2212-]?\d+|[+\u2212-]?[A-Z][A-Z0-9+*\/()\u2212\- ]{0,24})$/,(m,tr)=>`${tr(m[1])} ${m[2]}`],
   [/^(.+): (Proficiency|Expertise)$/,(m,tr)=>`${m[1].split(', ').map(s=>tr(s)).join(', ')}: ${tr(m[2])}`],
   [/^(.+) save proficiency$/,(m,tr)=>`מיומנות בהצלת ${tr(m[1])}`],
-  [/^★ (.+) save: advantage(?: \((.+)\))?$/,(m,tr)=>`★ הצלת ${tr(m[1])}: יתרון${m[2]?` (${m[2]})`:''}`],
-  [/^★ (AC|Speed|Initiative|Passive Perception|Max HP|Darkvision Range)(?: ([^(]+?))?(?: \((.+)\))?$/,(m,tr)=>`★ ${tr(m[1])}${m[2]?' '+m[2]:''}${m[3]?` (${m[3]})`:''}`],
-  [/^★ (.+): (advantage|proficiency boost|note|[+−-]?\d\S*)(?: \((.+)\))?$/,(m,tr)=>`★ ${m[1].split(', ').map(s=>tr(s)).join(', ')}: ${m[2]==='advantage'?'יתרון':m[2]==='proficiency boost'?'חיזוק מיומנות':m[2]==='note'?'הערה':m[2]}${m[3]?` (${m[3]})`:''}`],
+  [/^★ (.+) save: advantage(?: \((.+)\))?$/,(m,tr,has)=>`★ הצלת ${tr(m[1])}: יתרון${m[2]?` (${heCond(m[2],tr,has)})`:''}`],
+  [/^★ (AC|Speed|Initiative|Passive Perception|Max HP|Darkvision Range)(?: ([^(]+?))?(?: \((.+)\))?$/,(m,tr,has)=>`★ ${tr(m[1])}${m[2]?' '+m[2]:''}${m[3]?` (${heCond(m[3],tr,has)})`:''}`],
+  [/^★ (.+): (advantage|proficiency boost|note|[+−-]?\d\S*)(?: \((.+)\))?$/,(m,tr,has)=>`★ ${m[1].split(', ').map(s=>tr(s)).join(', ')}: ${m[2]==='advantage'?'יתרון':m[2]==='proficiency boost'?'חיזוק מיומנות':m[2]==='note'?'הערה':m[2]}${m[3]?` (${heCond(m[3],tr,has)})`:''}`],
+  // A feature/feat name behind a marker: "★ Favored Enemy" (Skills tab badge), "⚔ Sentinel" (feat list).
+  [/^([★⚔✦]) (.+)$/,(m,tr,has)=>has(m[2])?`${m[1]} ${tr(m[2])}`:null],
+  // HUD breakdown lines: "Dex +0, Alert +5", "Chain Mail 16, Dex +0, shield +2". Each "<label> <number>"
+  // term with a known label is translated (ability abbreviations are written out by the engine);
+  // an unknown one — an armor name, the player's own label — is kept as it is.
+  [/^[^,]+ [+−-]?\d+(?:, [^,]+ [+−-]?\d+)*$/,(m,tr,has)=>{
+    let changed=false;
+    const out=m[0].split(', ').map(p=>{
+      const t=/^(.+) ([+−-]?\d+)$/.exec(p);
+      if(!t||!has(t[1])) return p;
+      changed=true; return `${tr(t[1])} ${t[2]}`;
+    });
+    return changed?out.join(', '):null;
+  }],
 );
 
 // ---- Computed readouts: skill/passive breakdowns, save DCs, damage ----

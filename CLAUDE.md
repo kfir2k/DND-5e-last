@@ -34,8 +34,10 @@ before it:
 8. `i18n-he.js` — `I18N_HE` (English UI text → Hebrew), `I18N_HE_RX` (patterns for sentences with
    numbers/names inside), `I18N_HE_KEEP`, and the `heAdd()` helper; plain data, no logic. Then the
    game-data translation files `i18n-he-spells.js` (spells + spell facts) and `i18n-he-features.js` (class
-   and subclass features, feats, race traits, backgrounds, and the class/race/background names),
-   which add to the same dictionary via `heAdd()`. See "UI language (Hebrew)" below.
+   and subclass features, feats, race traits, backgrounds, and the class/race/background names) and
+   `i18n-he-rules.js` (the combat rules cheatsheet / condition reminders, `RULES_DB`) and
+   `i18n-he-weapons.js` (weapon names and the weapon picker's stat lines), which add to the same dictionary
+   via `heAdd()`. See "UI language (Hebrew)" below.
 9. `i18n.js` — the `I18N` engine and the language preference (`LANG_KEY`); in English mode it
    installs nothing. Must load before `app.js`, which calls `I18N.t()` while it boots.
 10. `app.js` — all application state, rendering, and event wiring (the bulk of the logic, ~7900 lines)
@@ -234,9 +236,12 @@ race traits, backgrounds) is translated everywhere it appears, by exact match; o
 English. Long game-data sentences are never run through the regex patterns (`PROSE` in `i18n.js`), and the
 open-ended patterns only accept known vocabulary — a half-translated sentence is a bug.
 
-**Translating game data (spells, features, race traits, backgrounds)** — done on the `experimental/hebrew-ui`
+**Translating game data (spells, features, race traits, backgrounds, rules)** — done on the `experimental/hebrew-ui`
 branch for everything the data files hold (`node tools/i18n-check.js` reports 100% in every group); not yet
-merged to `main`. Items, weapons, armor, languages and proficiencies are NOT translated. Read
+merged to `main`. Weapons (`i18n-he-weapons.js`: names, special texts, the picker's stat line), the class
+one-liners (`CLASS_FLAVOR`) and the conditions inside feature effects (`fx` cond, shown in ★ chips) are covered
+too (checker groups `weapons`, `names:class-flavor`, `effects`). Items, armor, languages and proficiencies
+are NOT translated. Read
 `i18n-glossary-he.md` first (terms, style rules, open ★ decisions). When game data is added or edited in
 `data-*.js`, the new English string shows up as untranslated in the checker's coverage — translate it too.
 - Entries are `[English, Hebrew]` pairs passed to `heAdd([...])` in `i18n-he-<kind>.js`, name and description
@@ -258,28 +263,54 @@ merged to `main`. Items, weapons, armor, languages and proficiencies are NOT tra
 - The pickers' search boxes (spell/feature/race/background libraries, Combat cards, subclass/feat sheet) match
   a name typed in either language: filters go through `srch()` in `app.js`, which searches the English text
   plus its Hebrew display text. Use `srch()` for any new filter over translated game data.
+- **Editable fields show library text in Hebrew too** (the unlocked Features tab's name/description, the
+  class a feature is filed under): `field()` in `i18n.js` swaps the *displayed value* of `[data-li]` /
+  `[data-srcname]` inputs and textareas whose value is exactly a game-data string with an entry. S keeps
+  the English until the player types in that field (those fields write to S on `input`/`change` only) — and
+  then the Hebrew text is theirs. Don't extend this to `data-bind` fields: `syncBound()` rewrites their
+  value, and some (the header's class/race line) are parsed as English.
 
 **Adding or changing UI text:**
 - A new static label/placeholder/tooltip: add `'English exactly as rendered': 'עברית'` to `I18N_HE`
   (keys are whitespace-collapsed; HTML entities are decoded, so write `&`, not `&amp;`). Split text sits
   in separate DOM nodes where the app splits it — a paragraph with `<b>`/`<i>` needs one entry per piece.
-- A sentence with a number or name in it: add a `[regex, (m, tr) => hebrew]` to `I18N_HE_RX`
-  (`tr()` translates a captured piece through the dictionary; `heN(n, one, many)` picks singular/plural).
+- A sentence with a number or name in it: add a `[regex, (m, tr, has) => hebrew]` to `I18N_HE_RX`
+  (`tr()` translates a captured piece through the dictionary; `has()` says whether a piece has an entry, for
+  patterns that must only accept known vocabulary — return `null` to decline; `heN(n, one, many)` picks
+  singular/plural).
 - A sentence the JS assembles from several fixed words (the Build summary line): wrap those words in
   `I18N.t('…')` — the identity in English — and give each an entry. Don't rely on regexing the result.
 - A word that means something else elsewhere (weapon tag "Light" vs the cantrip): key it
   `'<first class of its parent>|Light'` (see `wpn-tag|Light`) so it only applies in that element.
-- Keep HP/AC/DC, the ability abbreviations, dice notation and the formula tokens PROF/LVL/STR… in Latin —
-  the formula fields parse those tokens.
+- Keep HP/AC/DC, dice notation and the formula tokens PROF/LVL/STR… in Latin wherever the player is told what
+  to *type* — the formula fields parse those tokens. Elsewhere the engine writes ability abbreviations out in
+  full on screen ("+2 CHA" → "+2 כריזמה", "Dex +0" → "זריזות +0"; `abFull()` in `i18n.js`). It leaves alone
+  any text mentioning PROF/LVL (formula help and formulas) and English prose, and the context-keyed lookups.
 - Find what's still untranslated by running the app in Hebrew and calling `I18N.missing()` in the console
   (`copy(I18N.missingSkeleton())` gives paste-ready dictionary lines). Game-data text will show up in it too.
 
-**Layout stays left-to-right** (no `dir="rtl"` on the page — that would mean mirroring ~200 left/right CSS
-rules, the tab strip's scroll math, drawers, the wizard's 3D scenes and the map). After translating a node
-the engine puts `dir="auto"` (or `rtl` when a line opens with an English name but is mostly Hebrew) on its
-*text box* — never on a flex/grid container, which `dir` would mirror — so Hebrew sentences read and
-align right-to-left. Each run of Latin/number text inside Hebrew becomes an LTR island (U+2066/U+2069),
-so `1d4+4` / `+2` / `Bard 6` stay in one piece. Keep invisible bidi characters out of source: write them as
+**The layout mirrors in Hebrew.** `i18n.js` puts `dir="rtl"` on `<html>`, and `styles.css` is written with
+CSS logical properties (`margin-inline-start`, `padding-inline-end`, `border-inline-start`, `inset-inline-end`,
+`text-align:start`, `float:inline-end`, `border-start-end-radius`…), which render exactly like the old
+left/right values in English and flip on their own in Hebrew. **Write new CSS the same way — never a bare
+`left`/`right`/`margin-left`/`padding-right`/`border-left`** unless it must stay physical. The deliberate
+exceptions, and what can't be expressed logically, are in the "Right-to-left layout" block at the end of
+`styles.css`: `left:50%` + `translateX(-50%)` centering; the campaign map (pan/zoom anchors top-left); the two
+Combat side handles (`writing-mode:vertical-rl` turns "inline" into up/down, so they keep physical sides and are
+swapped there by hand); slide-in transforms, which multiply by `var(--flip)` (1, or −1 in RTL). In JS, read
+`scrollLeft` direction-agnostically (it runs negative in an RTL scroller — see `wireTabStrip()`), swap
+ArrowLeft/ArrowRight in RTL, and set `style.insetInlineStart` rather than `style.left`. Number pairs that read
+left-to-right even in Hebrew (`current / max` HP) get `direction:ltr` in that block.
+
+Inside the mirrored page the engine still fixes up text direction. After translating a node it puts
+`dir="auto"` (or `rtl` when a line opens with an English name but is mostly Hebrew) on its *text box* — never
+on a flex/grid container, which `dir` would mirror. Untranslated English that is a sentence, or starts/ends on
+punctuation, gets `dir="auto"` too, so its full stop stays on the right end. Each run of Latin/number text
+inside Hebrew becomes an LTR island (U+2066/U+2069), so `1d4+4` / `+2` / `Bard 6` stay in one piece, and a bare
+signed number node (`+4`, `-10`, `±0`) is wrapped the same way so its sign doesn't jump to the other side.
+Where the app renders the player's own text next to a label, wrap it in `<bdi>` (see the Overview whisper
+lines). Arrows are not mirrored by bidi: in Hebrew text "forward/next" is `←` and "back" is `→` (`‹ ›` *are*
+mirrored automatically). Keep invisible bidi characters out of source: write them as
 `\u2066` escapes.
 
 **Fonts:** Cinzel and Crimson Pro have no Hebrew. `fonts/frank-ruhl-libre-hebrew.woff2` is aliased to both
@@ -290,9 +321,12 @@ Hebrew face with different descriptors gets chosen for Latin text too and strips
 the `<link>`, change those rules to match.
 
 **Verifying:** there's no test runner, so check in a browser: English must look exactly as before (the only
-intended difference is that Hebrew text already in the app now uses the bundled font); in Hebrew, click
-every tab/modal and check `I18N.missing()`, watch for clipped labels and Hebrew-only overflow at tablet
-widths, and confirm no translated text appears in a saved character (the export is still exactly `S`).
+intended difference is that Hebrew text already in the app now uses the bundled font) — after any CSS change,
+screenshot the tabs and overlays in English before and after and diff them pixel for pixel; a logical-property
+slip shows up there at once. In Hebrew, click every tab/modal and check `I18N.missing()`, check both drawers
+slide in from the correct edge, the tab strip scrolls from the right at phone width, watch for clipped labels
+and Hebrew-only overflow at tablet widths, and confirm no translated text appears in a saved character (the
+export is still exactly `S`).
 
 ## End-of-task changelog line
 

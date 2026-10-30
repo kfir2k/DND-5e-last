@@ -59,6 +59,14 @@ Object.values(get('RACES')).forEach(r=>{ add('names','races','name',r.name); Obj
 Object.values(get('BACKGROUNDS')).forEach(b=>{ add('names','backgrounds','name',b.name); if(b.featureName) add('names','backgrounds','name',b.featureName); });
 const T=(o)=>Object.values(o).forEach(v=>add('spell-facts','tables','name',v));
 T(get('SP_SCHOOL')); T(get('SP_TIME')); T(get('SP_DUR'));
+// the combat rules cheatsheet (Combat tab → Rules drawer, and the Conditions picker)
+get('RULES_DB').forEach(sec=>{ add('rules',sec.s,'name',sec.s); sec.items.forEach(([n,d])=>{ add('rules',sec.s,'name',n); add('rules',sec.s,'desc',d); }); });
+// weapons (names + special-property text); the class one-liners on the Build tab; the conditions in
+// the fx of features/race traits/backgrounds (shown in ★ chips as "(while raging)")
+Object.values(get('WEAPONS')).forEach(w=>{ add('weapons','weapons','name',w.n); add('weapons','weapons','desc',w.special); });
+Object.values(get('CLASS_FLAVOR')).forEach(v=>add('names','class-flavor','desc',v));
+const FX_TEXTS=()=>[...get('FEATURE_LIB'),...get('RACE_LIB'),...get('BACKGROUND_LIB')].flatMap(e=>(e.fx||[]).flatMap(x=>[x.cond,x.text]).filter(s=>typeof s==='string'&&/[A-Za-z]/.test(s)));
+FX_TEXTS().forEach(s=>add('effects','conditions','name',s));
 
 // names a description can refer to; short one-word names are skipped (too often ordinary English: "light", "rage")
 // BENIGN: names that are also ordinary English words in other entries' descriptions ("Whirlwind of grit")
@@ -144,12 +152,15 @@ if(opt('--todo')){
   else if(k==='features') get('FEATURE_LIB').filter(e=>e.g.split(' — ')[0]===g||e.g===g).forEach(e=>push(e.n,e.d));
   else if(k==='races') get('RACE_LIB').filter(e=>e.g===g).forEach(e=>push(e.n,e.d));
   else if(k==='backgrounds') get('BACKGROUND_LIB').filter(e=>e.g===g).forEach(e=>push(e.n,e.d));
+  else if(k==='rules') get('RULES_DB').filter(sec=>sec.s===g).forEach(sec=>{ push(sec.s,null); sec.items.forEach(([n,d])=>push(n,d)); });
+  else if(k==='weapons') Object.values(get('WEAPONS')).forEach(w=>push(w.n,w.special));
+  else if(k==='effects') FX_TEXTS().forEach(s=>push(s,null));
   else if(k==='subclass-names'){ [...new Set(get('FEATURE_LIB').filter(e=>e.g.split(' — ')[0]===g&&e.g.includes(' — ')).map(e=>e.g.split(' — ')[1]))].forEach(n=>push(n,null)); }
   else if(k==='names'){
-    const src={classes:()=>Object.values(get('CLASSES')).map(c=>c.name),races:()=>Object.values(get('RACES')).map(r=>r.name),
+    const src={classes:()=>Object.values(get('CLASSES')).map(c=>c.name),'class-flavor':()=>Object.values(get('CLASS_FLAVOR')),races:()=>Object.values(get('RACES')).map(r=>r.name),
       subraces:()=>Object.values(get('RACES')).flatMap(r=>Object.values(r.subs||{}).map(s=>s.name)),
       backgrounds:()=>Object.values(get('BACKGROUNDS')).flatMap(b=>[b.name,b.featureName].filter(Boolean))}[g];
-    if(!src){ console.error('names: classes | races | subraces | backgrounds'); process.exit(2); }
+    if(!src){ console.error('names: classes | races | subraces | backgrounds | class-flavor'); process.exit(2); }
     src().forEach(n=>push(n,null));
   }
   else { console.error('unknown kind',k); process.exit(2); }
@@ -276,7 +287,8 @@ if(flag('--review-all')){
   const groups=[['spells',[0,1,2,3,4,5,6,7,8,9].map(String)],
     ['features',[...new Set(get('FEATURE_LIB').map(e=>e.g.split(' — ')[0]))]],
     ['races',[...new Set(get('RACE_LIB').map(e=>e.g))]],
-    ['backgrounds',[...new Set(get('BACKGROUND_LIB').map(e=>e.g))]]];
+    ['backgrounds',[...new Set(get('BACKGROUND_LIB').map(e=>e.g))]],
+    ['rules',get('RULES_DB').map(sec=>sec.s)]];
   const links=[]; let pages=0;
   for(const [k,gs] of groups){
     links.push('<h2>'+k+'</h2><ul>');

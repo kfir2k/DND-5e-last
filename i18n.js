@@ -4,9 +4,10 @@
 // MutationObserver swaps English UI text for the Hebrew in I18N_HE as it appears in the DOM
 // (buttons, labels, placeholders, tooltips, dialogs, toasts — the app rebuilds its HTML in a lot of
 // places, so a one-shot pass would go stale at once). Anything with no entry just stays English, so
-// the dictionary can grow a piece at a time. Game data (spells, features, items, class/race names…)
-// is deliberately not translated — and since only exact UI strings match, text the player typed or
-// edited is never touched.
+// the dictionary can grow a piece at a time. Spells, features, race traits and backgrounds have
+// entries (i18n-he-spells.js / i18n-he-features.js); items, weapons and languages do not — and since
+// only exact strings match, text the player typed or edited is never touched. The page itself is
+// mirrored to right-to-left (see dirBox below).
 //
 // English mode installs nothing at all: no observer, no work. The only global effects are the
 // I18N object and the preference key below.
@@ -102,20 +103,29 @@ const I18N=(function(){
     try{
       for(let i=0;i<RX.length;i++){
         const m=RX[i][0].exec(core);
-        if(m){ const o=RX[i][1](m,tr); if(o!=null) return o; }
+        if(m){ const o=RX[i][1](m,tr,has); if(o!=null) return o; }
       }
     }finally{ depth--; }
     // A spell's meta line is stored as "<time> · <range> · <duration>" and shown whole or in parts.
     // Translate it only when EVERY part translates, so a hand-edited line is never half-rewritten.
+    // A part with no letters ("1", "⚔ 3" — the level in a library row "1 · Favored Enemy") passes through.
     if(core.indexOf(' · ')>0){
       const parts=core.split(' · '), out=[];
+      let words=0;
       depth++;
-      try{ for(const p of parts){ const t=lookup(p); if(t==null) return null; out.push(t); } }
+      try{
+        for(const p of parts){
+          if(!/[A-Za-z]/.test(p)){ out.push(p); continue; }
+          const t=lookup(p); if(t==null) return null; out.push(t); words++;
+        }
+      }
       finally{ depth--; }
-      return out.join(' · ');
+      return words?out.join(' · '):null;
     }
     return null;
   }
+  // For patterns that only accept known vocabulary: does this piece have a translation?
+  function has(s){ return lookup(norm(String(s)))!=null; }
   // Handed to patterns so they can translate the pieces they capture (a skill name, a stat…). A piece
   // with no entry is reported as missing, so English left inside an otherwise translated sentence
   // ("בחר Path") shows up in I18N.missing() too (a game name captured this way is noise there).
@@ -127,11 +137,32 @@ const I18N=(function(){
   // Finished translation of one whole string, or null when there isn't one. `exact` skips the
   // patterns (used for context-keyed entries, whose key isn't real text).
   function translate(core,exact){
-    const r=lookup(core,exact);
-    if(r==null) return null;
+    let r=lookup(core,exact);
+    if(r==null){
+      if(exact) return null;   // a context key ("bPill|STR") is not text
+      // No entry, but a short UI line built around ability abbreviations ("+2 CHA", "Dex +0",
+      // "STR/DEX") still reads in Hebrew once they're written out.
+      const a=abFull(core);
+      if(a===core) return null;
+      r=a;
+    }
+    else r=abFull(r);
     const out=isolate(r);
     OUT.add(norm(out));
     return out;
+  }
+  // Ability abbreviations are written out in full in Hebrew ("CHA" → "כריזמה"). Not where they are
+  // formula tokens — anything mentioning PROF or LVL is formula help or a formula ("8+PROF+STR"), and
+  // the formula fields only understand the Latin tokens — and not inside English prose, which would
+  // come out half-translated. Title-case forms ("Dex") only next to a number ("Dex +0", "+2 Wis"),
+  // so an ordinary word like "Con" in a name is left alone.
+  const AB_HE={STR:'כוח',DEX:'זריזות',CON:'חוסן',INT:'אינטליגנציה',WIS:'חוכמה',CHA:'כריזמה'};
+  const AB_UP=/\b(STR|DEX|CON|INT|WIS|CHA)\b/g;
+  const AB_TC=/\b(Str|Dex|Con|Int|Wis|Cha)\b(?=\s*[+\-−±]?\d)|(?<=[+\-−±]?\d\s*)\b(Str|Dex|Con|Int|Wis|Cha)\b/g;
+  const ENGLISH_PROSE=/\b[a-z]{2,}\s+[a-z]{2,}\s+[a-z]{2,}\b/;
+  function abFull(s){
+    if(!/[A-Z][A-Za-z]{2}/.test(s)||/\b(PROF|LVL)\b/.test(s)||ENGLISH_PROSE.test(s.replace(/[֐-׿]+/g,' '))) return s;
+    return s.replace(AB_UP,m=>AB_HE[m]).replace(AB_TC,m=>AB_HE[m.toUpperCase()]);
   }
   // Only a string with a real word is reported as missing: "STR +0" or "d8 5 +3 CON =" need no Hebrew.
   const ABBR=new Set(['Str','Dex','Con','Int','Wis','Cha','Prof','Lvl']);
@@ -141,13 +172,15 @@ const I18N=(function(){
     if(hasWord(core)&&!HEB.test(core)&&!OUT.has(core)&&!KEEP.has(core)) MISS.set(core,(MISS.get(core)||0)+1);
   }
 
-  // The page stays laid out left-to-right, but Hebrew reads right-to-left. Left in an LTR box, a
-  // Hebrew sentence gets its punctuation, numbers and any bold/italic pieces in the wrong order.
-  // dir="auto" lets a text box take its direction from its own text. It goes only on text boxes —
-  // elements whose children are all inline — never on a layout container, because dir also
-  // mirrors flex/grid rows and would flip the icon/label order of every button.
+  // In Hebrew the whole page is laid out right-to-left (<html dir="rtl">, and styles.css uses logical
+  // properties, so every margin/border/inset follows). Text the page shows in English — game data
+  // with no translation yet, what the player typed — still reads left-to-right, and left in an RTL
+  // box an English sentence gets its punctuation on the wrong end. dir="auto" lets a text box take
+  // its direction from its own text. It goes only on text boxes — elements whose children are all
+  // inline — never on a layout container, because dir also mirrors flex/grid rows and would flip the
+  // icon/label order of every button.
   const BOXED=new WeakSet();
-  function rtlBox(node){
+  function dirBox(node){
     let el=node.parentElement;
     while(el&&el!==document.body&&getComputedStyle(el).display==='inline') el=el.parentElement;
     if(!el||el===document.body||BOXED.has(el)||el.hasAttribute('dir')) return;
@@ -169,8 +202,16 @@ const I18N=(function(){
     el.setAttribute('dir',heb>lat&&/^[^\u0590-\u05FFA-Za-z]*[A-Za-z]/.test(t)?'rtl':'auto');
   }
 
+  // A bare number with a sign or symbol ("+4", "-10", "±0", "+2 / 3") in the RTL page would show its
+  // sign on the wrong side ("4+"); an LTR island keeps it as typed. Text only — no alignment changes.
+  const NUMERIC=/^[\s\d+\-−±.,\/×%():]*\d[\s\d+\-−±.,\/×%():]*$/;
   function txt(node){
     const v=node.nodeValue;
+    if(v&&NUMERIC.test(v)&&/[^\d\s]/.test(v)&&v.indexOf('⁦')<0){
+      const m=/^(\s*)([\s\S]*?)(\s*)$/.exec(v);
+      node.nodeValue=m[1]+'⁦'+m[2]+'⁩'+m[3];
+      return;
+    }
     if(!v||!LATIN.test(v)) return;
     const m=/^(\s*)([\s\S]*?)(\s*)$/.exec(v);
     const core=norm(m[2]);
@@ -180,9 +221,15 @@ const I18N=(function(){
     const p=node.parentElement;
     let r=p&&p.classList.length?translate(p.classList[0]+'|'+core,true):null;
     if(r==null) r=translate(core);
-    if(r==null){ miss(core); return; }
+    if(r==null){
+      miss(core);
+      // A lone English word or name reads fine right-aligned in an RTL box; a sentence, or anything
+      // that opens or closes on punctuation ("Bonds.", "Radiant Soul (3rd level)"), needs its own LTR.
+      if(core.split(' ').length>=4||/^[^A-Za-z0-9]|[^A-Za-z0-9]$/.test(core)) dirBox(node);
+      return;
+    }
     node.nodeValue=m[1]+r+m[3];
-    if(HEB.test(r)) rtlBox(node);
+    if(HEB.test(r)) dirBox(node);
   }
   const ATTRS=['placeholder','title','aria-label','alt','data-placeholder','label'];
   function attr(el,name){
@@ -199,25 +246,67 @@ const I18N=(function(){
     for(let i=0;i<ATTRS.length;i++) if(el.hasAttribute(ATTRS[i])) attr(el,ATTRS[i]);
   }
 
+  // Editable fields holding untouched library text — a feature's name and description on the
+  // unlocked Features tab, the class name it's filed under — show the Hebrew instead. Only the
+  // field's displayed value changes: S keeps the English until the player actually types there
+  // (these fields write to S on 'input'/'change' only), and from then on the text is theirs.
+  // Only exact game-data strings qualify, never something the player wrote.
+  const FIELD='input[data-li],textarea[data-li],input[data-srcname]';
+  const GAME=new Set();
+  (function(){
+    const add=s=>{ if(typeof s==='string'&&s) GAME.add(norm(s)); };
+    const each=(o,f)=>{ if(o) (Array.isArray(o)?o:Object.values(o)).forEach(f); };
+    each(typeof FEATURE_LIB!=='undefined'?FEATURE_LIB:null,e=>{ add(e.n); add(e.d); add(e.g); (e.g||'').split(' — ').forEach(add); });
+    each(typeof RACE_LIB!=='undefined'?RACE_LIB:null,e=>{ add(e.n); add(e.d); add(e.g); });
+    each(typeof BACKGROUND_LIB!=='undefined'?BACKGROUND_LIB:null,e=>{ add(e.n); add(e.d); add(e.g); });
+    each(typeof SPELL_DB!=='undefined'?SPELL_DB:null,s=>{ add(s.n); add(s.d); });
+    each(typeof CLASSES!=='undefined'?CLASSES:null,c=>add(c.name));
+    each(typeof RACES!=='undefined'?RACES:null,r=>{ add(r.name); each(r.subs,s=>add(s.name)); });
+    each(typeof BACKGROUNDS!=='undefined'?BACKGROUNDS:null,b=>add(b.name));
+    each(typeof WEAPONS!=='undefined'?WEAPONS:null,w=>add(w.n));
+  })();
+  function field(el){
+    const v=el.value;
+    if(!v||!LATIN.test(v)) return;
+    const core=norm(v);
+    if(!GAME.has(core)) return;
+    const r=DICT.get(core);
+    if(r==null) return;
+    el.value=r;
+    // A description textarea was already grown to fit the English.
+    if(el.tagName==='TEXTAREA'&&el.style.height){ el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+  }
+  // Elements as the walk meets them. A textarea's own text is never touched (see SKIP), but its
+  // placeholder/tooltip are UI text, and a [data-li] one may hold library text (field above).
+  function elem(el){
+    attrs(el);
+    if(el.matches(FIELD)) field(el);
+  }
+
   // Never translate inside: a contenteditable (the backstory editor reads its innerText straight
   // into the saved sheet), a textarea, or anything marked translate="no" (the Language row itself).
-  // Also skipped: containers that show game data we have NOT translated (items, weapons, languages,
-  // proficiencies), so a UI word that happens to equal one never rewrites it. Spells, features, race
+  // Also skipped: containers that show game data we have NOT translated (items, languages,
+  // proficiencies), so a UI word that happens to equal one never rewrites it. Spells, features, weapons, race
   // traits and backgrounds are translated now (i18n-he-*.js), so their names and descriptions are
   // NOT skipped: an entry with a translation shows it, one without stays English.
   const SKIP='[contenteditable]:not([contenteditable="false"]),[translate="no"],textarea,script,style,noscript,'
     +'.eq-card-name,[data-langpick],[data-profpick],'
-    +'#weaponModalList,#itemIndexList,#packModalList';
+    +'#itemIndexList,#packModalList';
   const skipped=el=>!!(el&&el.closest&&el.closest(SKIP));
+  const isTextarea=el=>el.tagName==='TEXTAREA'&&!el.closest('[translate="no"]');
   function tree(root){
     if(root.nodeType===3){ if(!skipped(root.parentElement)) txt(root); return; }
-    if(root.nodeType!==1||skipped(root)) return;
-    attrs(root);
+    if(root.nodeType!==1) return;
+    if(skipped(root)){ if(isTextarea(root)) elem(root); return; }
+    elem(root);
     const w=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT,{
-      acceptNode:n=>n.nodeType===1&&n.matches(SKIP)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT,
+      acceptNode:n=>{
+        if(n.nodeType===1&&n.matches(SKIP)){ if(isTextarea(n)) elem(n); return NodeFilter.FILTER_REJECT; }
+        return NodeFilter.FILTER_ACCEPT;
+      },
     });
     let n;
-    while((n=w.nextNode())){ if(n.nodeType===3) txt(n); else attrs(n); }
+    while((n=w.nextNode())){ if(n.nodeType===3) txt(n); else elem(n); }
   }
 
   api.t=function(s){
@@ -230,12 +319,13 @@ const I18N=(function(){
   api.missingSkeleton=()=>api.missing().map(k=>'  '+JSON.stringify(k)+': \'\',').join('\n');
 
   document.documentElement.lang='he';
+  document.documentElement.dir='rtl';
   document.body.classList.add('lang-he');
   new MutationObserver(recs=>{
     for(const r of recs){
       if(r.type==='childList') r.addedNodes.forEach(tree);
       else if(r.type==='characterData'){ if(!skipped(r.target.parentElement)) txt(r.target); }
-      else if(!skipped(r.target)) attr(r.target,r.attributeName);
+      else if(!skipped(r.target)||isTextarea(r.target)) attr(r.target,r.attributeName);
     }
   }).observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:ATTRS});
   tree(document.body);
