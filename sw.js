@@ -1,8 +1,9 @@
-const CACHE_NAME = 'dnd-5e-binder-v9';
+const CACHE_NAME = 'dnd-5e-binder-v14';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './immersive.css',
   './app.js',
   './data-classes-races.js',
   './data-spells.js',
@@ -21,7 +22,9 @@ const ASSETS = [
   './fonts/david-libre-hebrew-500.woff2',
   './fonts/david-libre-hebrew-700.woff2',
   './wizard.js',
+  './media.js',
   './map.js',
+  './bestiary.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

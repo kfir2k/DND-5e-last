@@ -17,7 +17,7 @@ const SKILLS = [
 const TABS = [
   ['overview','Overview'],['build','Build'],['combat','Combat'],['skills','Skills'],
   ['spells','Spells'],['inventory','Inventory'],['features','Features'],
-  ['character','Character'],['notes','Notes']
+  ['character','Character'],['notes','Notes'],['bestiary','Bestiary']
 ];
 const STORE_KEY = 'dnd5e-binder-v1';
 

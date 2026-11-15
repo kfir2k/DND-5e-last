@@ -130,7 +130,7 @@ function asiBonus(k){
   return b;
 }
 function tempAbilityDelta(k){ return num((S.tempAbility||{})[k]); }
-function score(k){ return (Number(S.abilities[k])||0)+racialBonus(k)+asiBonus(k)+tempAbilityDelta(k); }
+function score(k){ return (Number(S.abilities[k])||0)+racialBonus(k)+asiBonus(k)+tempAbilityDelta(k)+fxAbility(k); }
 function amod(k){ return mod(score(k)); }
 // Uses-scale: ties a feature's max uses to a live stat instead of a fixed number that goes
 // stale the moment you level up or bump an ability score. 'prof' = proficiency bonus; any
@@ -169,11 +169,33 @@ function usesScaleLabel(scale){
 // {t:'statnote',stat,n?,cond} = ★ conditional reminder shown next to that stat on the Overview.
 // (skills:[...] is the current format; skill:'x' — a single string — is still read for old saved data.)
 function xSkills(x){ return x.skills || (x.skill?[x.skill]:[]); }
+// Switchable features (f.toggle): a mutagen, Hybrid Transformation, a rite — anything that is only
+// "on" some of the time. While switched off, none of its effects count anywhere. An effect marked
+// side:true is the feature's drawback (a mutagen's side effect); f.sideOff suppresses just those
+// (Strange Metabolism). Effects of a switched-on feature carry on:true so their ★ reminders light
+// up as "applies right now" without needing a matching Condition.
+function featIsOn(f){ return !f.toggle || !!f.on; }
+function featHasSide(f){ return (f.fx||[]).some(x=>x.side); }
 function allFx(){
   const out=[];
-  (S.features||[]).forEach(f=>(f.fx||[]).forEach(x=>out.push({...x,src:f.title||'Feature'})));
+  (S.features||[]).forEach(f=>{
+    if(!featIsOn(f)) return;
+    (f.fx||[]).forEach(x=>{
+      if(x.side&&f.sideOff) return;
+      out.push({...x,src:f.title||'Feature',on:!!f.toggle});
+    });
+  });
   return out;
 }
+// A reminder is "live" when its feature is switched on, or its condition matches an active state.
+function fxLive(x){ return !!x.on || condActive(x.cond); }
+// An effect's amount: n (number or formula), or lv — a level table [[fromLevel,amount],…] for
+// bonuses that step up at set levels (a mutagen's +3, +4 at 11th, +5 at 18th).
+function fxVal(x){
+  if(Array.isArray(x.lv)){ let v=0; const L=num(S.level)||1; x.lv.forEach(([from,amt])=>{ if(L>=from) v=amt; }); return v; }
+  return fxAmount(x.n);
+}
+function fxValLabel(x){ return Array.isArray(x.lv) ? fmt(fxVal(x)) : fmtAmount(x.n); }
 // An effect amount can be a plain number or a mini-formula using PROF, LVL, and ability
 // modifiers (STR DEX CON INT WIS CHA) — e.g. "PROF", "DEX+1", "2*PROF". Resolved live against
 // the sheet, so these bonuses keep up with level-ups the same way "= PROF" uses do.
@@ -196,7 +218,15 @@ function fmtAmount(n){
   const s=String(n??'').trim();
   return (typeof n==='number'||/^[+-]?\d*$/.test(s)) ? fmt(fxAmount(n)) : `${s.toUpperCase()} (${fmt(fxAmount(n))})`;
 }
-function fxStat(stat){ return allFx().filter(x=>x.t==='stat'&&x.stat===stat).reduce((n,x)=>n+fxAmount(x.n),0); }
+function fxStat(stat){ return allFx().filter(x=>x.t==='stat'&&x.stat===stat).reduce((n,x)=>n+fxVal(x),0); }
+// Ability-score effects ({t:'stat',stat:'ab-str',…}) feed score() itself. The guard stops a formula
+// that mentions an ability (which resolves through score()) from looping back in here.
+let fxAbBusy=false;
+function fxAbility(k){
+  if(fxAbBusy) return 0;
+  fxAbBusy=true;
+  try{ return fxStat('ab-'+k); } finally{ fxAbBusy=false; }
+}
 function fxStatRems(stat){ return allFx().filter(x=>x.t==='statnote'&&x.stat===stat); }
 function fxSkillGrant(k){
   let g=0;
@@ -216,6 +246,7 @@ function noteMath(k,ab,x){
   const base=amod(ab)+eff*P;
   const kind=x.kind==='prof'?'dprof':x.kind;
   if(kind==='adv')   return 'roll with advantage';
+  if(kind==='dis')   return 'roll with disadvantage';
   if(kind==='dprof') return eff>=2 ? `already ${fmt(base)} (expertise — no change)`
                           : eff>=1 ? `roll ${fmt(amod(ab)+2*P)} instead of ${fmt(base)} (proficiency doubled)`
                           : `roll ${fmt(amod(ab)+1*P)} instead of ${fmt(base)} (situational proficiency, +${fmt(P)})`;
@@ -229,6 +260,7 @@ function noteBadge(k,ab,x){
   const P=num(S.profBonus), eff=effSkill(k);
   const kind=x.kind==='prof'?'dprof':x.kind;
   if(kind==='adv')   return 'adv';
+  if(kind==='dis')   return 'dis';
   if(kind==='dprof') return eff>=2 ? null : fmt(amod(ab)+(eff>=1?2:1)*P);
   if(kind==='flat')  return fmt(amod(ab)+eff*P+fxAmount(x.n));
   return x.text||null;
@@ -464,6 +496,7 @@ combat:`
     <div class="ck-states-list" id="ckStates"></div>
     <button class="ck-tbtn" id="ckAddConditionBtn" title="Add a condition">+ Condition</button>
   </div>
+  <div class="mut-station"></div>
   <div class="ck-duo" id="ckDuo">
     <div class="panel ck-actions-panel"><h2>⚡ Do Something</h2>
       <div id="ckUndo"></div>
@@ -841,6 +874,7 @@ inventory:`
   <div class="eq-toast" id="eqToast"><span id="eqToastMsg"></span><button id="eqToastUndo" type="button" style="display:none">Undo</button></div>`,
 
 features:`
+  <div class="mut-station"></div>
   <div class="panel"><h2>Features &amp; Traits<button class="lock-toggle" id="featuresLockBtn"></button></h2>
     <div class="fx-addrow" id="featuresEditBar" style="margin:0 0 12px">
       <div style="position:relative;flex:0 0 300px">
@@ -944,12 +978,46 @@ character:`
   </div>`,
 
 notes:`
-  <div class="tl-toolbar">
-    <input type="text" id="noteSearch" class="tl-search" placeholder="Search notes… (title, body, tags, session)" autocomplete="off">
-    <div id="noteTagFilters" class="tl-filters"></div>
+  <div class="nb" id="noteBook">
+    <aside class="nb-rail">
+      <div class="nb-rail-top">
+        <input type="text" id="noteSearch" class="tl-search nb-search" placeholder="Search notes… (title, body, tags, session)" autocomplete="off">
+        <button class="add-btn nb-new" data-add="notes">+ New note</button>
+      </div>
+      <div id="noteTagFilters" class="tl-filters"></div>
+      <div class="nb-count" id="noteCount"></div>
+      <div id="noteList" class="nb-list"></div>
+    </aside>
+    <section class="nb-page" id="notePage"></section>
+  </div>`,
+
+// The Bestiary tab — filled and wired by bestiary.js (loaded after this file).
+bestiary:`
+  <div class="bs" id="bestiary">
+    <div class="bs-top">
+      <input type="text" id="bsSearch" class="bs-search" placeholder="Search creatures and people…" autocomplete="off">
+      <div class="bs-kinds" id="bsKinds">
+        <button type="button" data-bskind="">All</button>
+        <button type="button" data-bskind="monster">Monsters</button>
+        <button type="button" data-bskind="person">People</button>
+      </div>
+      <button type="button" class="add-btn bs-add" id="bsAdd">+ New entry</button>
+    </div>
+    <div class="bs-sub">
+      <span class="bs-count" id="bsCount"></span>
+      <span class="bs-sub-note">Shared by every character on this device.</span>
+      <span class="bs-sub-btns">
+        <button type="button" class="icon-btn sm" id="bsExport" title="Save the whole bestiary, pictures included, to a file">⬇ Export</button>
+        <button type="button" class="icon-btn sm" id="bsImport" title="Add the entries from a bestiary file">⬆ Import</button>
+      </span>
+      <input type="file" id="bsImportFile" accept=".json,application/json" style="display:none">
+      <input type="file" id="bsImageFile" accept="image/*" style="display:none">
+    </div>
+    <div class="bs-grid" id="bsGrid"></div>
   </div>
-  <div id="noteList" class="timeline"></div>
-  <button class="add-btn" data-add="notes">+ New note</button>`
+  <div class="modal-bg bs-modal-bg" id="bsModal">
+    <div class="modal bs-modal" id="bsPanel"></div>
+  </div>`
 };
 
 // ---------- Persistence (multi-character roster) ----------
@@ -984,6 +1052,9 @@ let saveTimer=null;
 // part of S: it's a view over the notes, not data worth persisting per character.
 let activeNoteFilters=new Set();
 let noteSearchQuery='';
+// Which note is open on the page (an index into S.notes), and — at phone width, where the list and
+// the page can't sit side by side — whether the page is the one showing. UI-only, never saved.
+let NOTE_SEL=null, NOTE_READING=false;
 function saveNow(){
   try{
     localStorage.setItem(charKey(ROSTER.active),JSON.stringify(S));
@@ -1193,9 +1264,27 @@ function migrateAttacks(){
 }
 
 // ---------- Build tabs & pages ----------
+// One small line-drawn glyph per tab (24×24, stroke only, drawn for this app) — the strip reads as a
+// row of chapter marks rather than plain words. Purely decorative: the label is still the name.
+const TAB_ICON={
+  overview:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+  build:'M12 2.5l2.4 7.1 7.1 2.4-7.1 2.4-2.4 7.1-2.4-7.1L2.5 12l7.1-2.4z',
+  combat:'M4 4l11 11M20 4L9 15M6.5 13.5l4 4M17.5 13.5l-4 4M4 20l3.5-3.5M20 20l-3.5-3.5',
+  skills:'M12 4a8 8 0 100 16 8 8 0 000-16zM12 9a3 3 0 100 6 3 3 0 000-6zM12 1.5V4M12 20v2.5M1.5 12H4M20 12h2.5',
+  spells:'M12 3c1 4 5.5 5.5 5.5 10.5a5.5 5.5 0 01-11 0c0-2.2 1-3.6 2.2-4.7 0 2.2.9 3.4 2 3.4C11 9 9.8 6.8 12 3z',
+  inventory:'M8 8V6.5a4 4 0 018 0V8M5 8h14l1.2 12.5H3.8zM9.5 12.5h5',
+  features:'M6 3.5h12v17l-6-4.2-6 4.2zM9.5 8h5M9.5 11.5h5',
+  character:'M12 12a4.2 4.2 0 100-8.4 4.2 4.2 0 000 8.4zM4 21c0-4.2 3.8-6.3 8-6.3s8 2.1 8 6.3',
+  notes:'M5 3.5h10.5L19 7v13.5H5zM15.5 3.5V7H19M8.5 11h7M8.5 14.5h7M8.5 18h4',
+  bestiary:'M4 5c2.5-1.2 5.5-1.2 8 .4 2.5-1.6 5.5-1.6 8-.4v13.5c-2.5-1.2-5.5-1.2-8 .4-2.5-1.6-5.5-1.6-8-.4zM12 5.4v13.5M15 9.5l1.2 1.6L18 10M6.5 9.5h3M6.5 12.5h3',
+};
+function tabIconHTML(id){
+  const d=TAB_ICON[id]; if(!d) return '';
+  return `<svg class="tab-ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+}
 function buildShell(){
   $('#tabs').innerHTML = TABS.map(([id,label])=>
-    `<button class="tab-btn" role="tab" id="tab-${id}" data-tab="${id}" aria-controls="page-${id}" aria-selected="false" tabindex="-1">${label}</button>`).join('');
+    `<button class="tab-btn" role="tab" id="tab-${id}" data-tab="${id}" aria-controls="page-${id}" aria-selected="false" tabindex="-1">${tabIconHTML(id)}<span class="tab-lbl">${label}</span></button>`).join('');
   $('#pages').innerHTML = TABS.map(([id])=>
     `<section class="tab-page" role="tabpanel" id="page-${id}" aria-labelledby="tab-${id}">${PAGES[id]}</section>`).join('');
   // A tap on a tab while scrolled deep into a long page (Spells, Combat) used to land you
@@ -1228,6 +1317,7 @@ function showTab(id){
   // yank focus mid-keystroke), so re-render it fresh whenever the Combat tab is opened — otherwise
   // a feature edited after its "Show in Combat" flag was set could show a stale row with no chevron.
   if(id==='combat') renderCombatFeatures();
+  if(id==='combat'||id==='features') renderMutagenStation();
   // The Custom Stats / Quick View handles+panels are fixed to the viewport edges (so they can use
   // the empty margin beside a wide `main` column), which means they're outside any one tab's own
   // DOM and would otherwise stay visible/open while browsing a different tab entirely.
@@ -1356,8 +1446,8 @@ function renderAbilityCards(){
 function saveBadgesHTML(k){
   return fxSaveNotes(k).map(n=>{
     const tip=n.cond?`<span class="sk-tip">${esc(n.cond)}</span>`:'';
-    const active=condActive(n.cond);
-    return `<span class="sk-fx${active?' active':''}" title="${active?'This condition is active right now':''}">★ ${esc(n.src)} <b>adv</b>${tip}</span>`;
+    const active=fxLive(n), dis=n.kind==='dis';
+    return `<span class="sk-fx${active?' active':''}${dis?' dis':''}" title="${active?'This condition is active right now':''}">★ ${esc(n.src)} <b>${dis?'dis':'adv'}</b>${tip}</span>`;
   }).join('');
 }
 function renderSaves(){
@@ -1408,8 +1498,8 @@ function skillBadgesHTML(k,ab){
     const b=noteBadge(k,ab,n);
     if(b==null) return; // effect makes no difference here (e.g. already at expertise) — nothing to show
     const tip=n.cond?`<span class="sk-tip">${esc(n.cond)}</span>`:'';
-    const active=condActive(n.cond);
-    badges.push(`<span class="sk-fx${active?' active':''}" data-notemath="${k}" title="${active?'This condition is active right now':''}">★ ${esc(n.src)} <b>${esc(b)}</b>${tip}</span>`);
+    const active=fxLive(n);
+    badges.push(`<span class="sk-fx${active?' active':''}${n.kind==='dis'?' dis':''}" data-notemath="${k}" title="${active?'This condition is active right now':''}">★ ${esc(n.src)} <b>${esc(b)}</b>${tip}</span>`);
   });
   return badges.join('');
 }
@@ -1741,17 +1831,24 @@ function attackRowHTML(a,i){
     // A collapsed card hides the buff row entirely, so a missing linked buff (see
     // atkMissingLinkedBuffs) would otherwise go unnoticed until the card happens to be opened —
     // show the actual number it would add right beside Damage instead.
+    const miniTags=c.propTags.map(t=>`<span class="wpn-tag wpn-tag-mini">${esc(t.label)}</span>`).join('');
+    const note=(a.note||'').trim();
     return `
     <div class="atk-card atk-collapsed">
       <div class="atk-mini-head" data-atkopen="${i}" title="Tap for full editing">
         <span class="atk-icon">${icon}</span>
-        <span class="atk-mini-name">${esc(a.name)}</span>
-        <span class="atk-mini-hit"><span class="atk-label">To hit</span><span class="big" data-atkview="${i}">${c.bonus}</span></span>
-        <span class="atk-mini-dmg" style="--dc:${dCol}"><span class="atk-label">Damage</span><span class="atk-mini-dmg-row">${dIcon}<span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span>${atkCondBonusHTML(a)}</span></span>
+        <span class="atk-mini-id">
+          <span class="atk-mini-name" dir="auto">${esc(a.name)}</span>
+          ${miniTags?`<span class="atk-mini-tags">${miniTags}</span>`:''}
+        </span>
+        <span class="atk-mini-hit"><span class="atk-label">To hit</span><span class="big" data-atkview="${i}">${c.bonus}</span><span class="atk-breakdown" data-atkbreak="${i}">${c.breakdown}</span></span>
+        <span class="atk-mini-dmg" style="--dc:${dCol}"><span class="atk-label">Damage</span><span class="atk-mini-dmg-row">${dIcon}<span class="atk-formula" data-atkdmg="${i}">${c.dmg}</span>${atkCondBonusHTML(a)}</span><span class="atk-breakdown" data-atkdmgbreak="${i}">${c.dmgBreakdown}</span></span>
         <span class="atk-chevron">▸</span>
       </div>
       ${roll}
+      <button type="button" class="atk-rollbtn" data-atkroll="${i}" title="Roll helper — type what the d20 and the damage dice show, and it does the maths" aria-label="Roll helper">🎲</button>
       <button class="del-btn" data-del="attacks.${i}" title="Remove this attack">✕</button>
+      ${note?`<div class="atk-mini-note" dir="auto">${esc(note)}</div>`:''}
     </div>`;
   }
   // Open = the setup form, laid out top-down as one story: which weapon (name, tags) → what it
@@ -1775,6 +1872,7 @@ function attackRowHTML(a,i){
       <input type="text" class="atk-combo" autocomplete="off" value="${esc(a.name)}" data-nameinput="${i}"
         placeholder="Weapon name — browse or type your own" title="Type any name for a custom weapon, or browse the PHB weapon table">
       <button type="button" class="wpn-browse-btn" data-wpnbrowse="${i}" title="Browse the full weapon table">Browse</button>
+      <button type="button" class="atk-rollbtn" data-atkroll="${i}" title="Roll helper — type what the d20 and the damage dice show, and it does the maths" aria-label="Roll helper">🎲</button>
       <button class="del-btn" data-del="attacks.${i}" title="Remove this attack" aria-label="Remove this attack">✕</button>
     </div>
     ${tags?`<div class="atk-props">${tags}</div>`:''}
@@ -1876,6 +1974,7 @@ function renderAttacks(){
       save();
     });
   });
+  $$('#attackList [data-atkroll]').forEach(btn=>btn.addEventListener('click',()=>openTurnWizard([+btn.dataset.atkroll])));
   $$('[data-wpnbrowse]').forEach(btn=>btn.addEventListener('click',()=>{
     WPN_MODAL_I=+btn.dataset.wpnbrowse;
     openWeaponModal();
@@ -2382,19 +2481,20 @@ function wireEqSelect(){
     renderEquipment(); renderCombatFeatures(); renderOverviewWealth(); save();
   });
 }
-const FX_STATS={ac:'AC',speed:'Speed',init:'Initiative',passive:'Passive Perception',hpmax:'Max HP',vision:'Darkvision Range'};
+const FX_STATS={ac:'AC',speed:'Speed',init:'Initiative',passive:'Passive Perception',hpmax:'Max HP',vision:'Darkvision Range',
+  'ab-str':'Strength score','ab-dex':'Dexterity score','ab-con':'Constitution score','ab-int':'Intelligence score','ab-wis':'Wisdom score','ab-cha':'Charisma score'};
 const SKILL_NAMES=Object.fromEntries(SKILLS.map(s=>[s[0],s[1]]));
 let FX_DRAFT={}; // in-progress "add effect" form per feature (not saved)
 
 function fxChipLabel(x){
-  if(x.t==='stat')  return `${FX_STATS[x.stat]} ${fmtAmount(x.n)}`;
+  if(x.t==='stat')  return `${FX_STATS[x.stat]} ${fxValLabel(x)}`;
   if(x.t==='skill') return `${xSkills(x).map(s=>SKILL_NAMES[s]).join(', ')}: ${x.grant==='exp'?'Expertise':'Proficiency'}`;
   if(x.t==='save')  return `${AB_NAMES[x.ab]} save proficiency`;
-  if(x.t==='savenote') return `★ ${AB_NAMES[x.ab]} save: advantage${x.cond?' ('+x.cond+')':''}`;
+  if(x.t==='savenote') return `★ ${AB_NAMES[x.ab]} save: ${x.kind==='dis'?'disadvantage':'advantage'}${x.cond?' ('+x.cond+')':''}`;
   if(x.t==='statformula') return `${x.label||'Custom Stat'}: ${fmtAmount(x.n)}`;
   if(x.t==='note'){
     const kind=x.kind==='prof'?'dprof':x.kind;
-    const what=kind==='adv'?'advantage':kind==='dprof'?'proficiency boost':kind==='flat'?fmtAmount(x.n):'note';
+    const what=kind==='adv'?'advantage':kind==='dis'?'disadvantage':kind==='dprof'?'proficiency boost':kind==='flat'?fmtAmount(x.n):'note';
     return `★ ${xSkills(x).map(s=>SKILL_NAMES[s]).join(', ')}: ${what}${x.cond?' ('+x.cond+')':''}`;
   }
   if(x.t==='statnote'){
@@ -2471,14 +2571,129 @@ function srcKindMeta(kind){ return SRC_KIND_META[kind]||SRC_KIND_META.custom; }
 // Which "By Source" sections are collapsed — session-only, like the cockpit's open/pinned sets,
 // so it doesn't need a migration and resets to "everything open" on a fresh load.
 const FEAT_SECTION_COLLAPSED=new Set();
+// The on/off switch a switchable feature wears wherever it is shown (Features tab, Combat card).
+// A second switch appears when the feature has a drawback: it turns just the side effect off
+// while the benefit stays (a Mutant's Strange Metabolism, or a DM ruling).
+function featSwitchHTML(f,i){
+  if(!f.toggle) return '';
+  const on=!!f.on, side=featHasSide(f), sideOn=!f.sideOff;
+  return `<div class="feat-switch-row">
+    <button type="button" class="feat-switch${on?' on':''}" role="switch" aria-checked="${on}" data-feattoggle="${i}" title="${on?'Switched on — its effects are counted. Tap to switch off.':'Switched off — its effects are not counted. Tap to switch on.'}"><span class="fs-track"><span class="fs-knob"></span></span><span class="fs-lbl">${on?'Active':'Inactive'}</span></button>
+    ${side?`<button type="button" class="feat-switch side${sideOn?' on':''}" role="switch" aria-checked="${sideOn}" data-featside="${i}" title="${sideOn?'The side effect applies while this is active. Tap to ignore it.':'The side effect is being ignored. Tap to apply it again.'}"><span class="fs-track"><span class="fs-knob"></span></span><span class="fs-lbl">${sideOn?'Side effect':'Side effect ignored'}</span></button>`:''}
+  </div>`;
+}
+// Effect chips of a switchable feature show what state they're in: dimmed while the feature is
+// off, struck through when it's a side effect being ignored.
+function fxChipCls(f,x){
+  if(!f.toggle) return '';
+  return (x.side?' side':'')+(!f.on?' off':(x.side&&f.sideOff?' ignored':''));
+}
+// Features that end with a rest (a mutagen wears off, a transformation ends) switch themselves off.
+function restEndsToggles(){
+  (S.features||[]).forEach(f=>{ if(f.toggle&&f.toggleEnds){ f.on=false; f.sideOff=false; f.brewed=false; } });
+}
+function toggleRefresh(){
+  renderFeatures(); renderSkills(); renderSaves(); renderCombatFeatures(); recalc();
+  if($('#page-overview')&&$('#page-overview').classList.contains('active')) renderOverview();
+  save();
+}
+function wireFeatureSwitches(){
+  // Capture phase: a switch sits inside tappable cards (a Combat card opens on tap), so the tap
+  // is handled here and goes no further.
+  document.addEventListener('click',e=>{
+    const mu=e.target.closest('[data-mut],[data-mutlearn],[data-mutbook]');
+    if(mu){ e.stopPropagation(); e.preventDefault(); mutagenAction(mu); return; }
+    const tg=e.target.closest('[data-feattoggle]'), sd=e.target.closest('[data-featside]'), fl=e.target.closest('[data-togflag]');
+    if(!tg&&!sd&&!fl) return;
+    e.stopPropagation(); e.preventDefault();
+    const f=S.features[+(tg||sd||fl).dataset[tg?'feattoggle':sd?'featside':'togflag']]; if(!f) return;
+    // Switching a mutagen on straight from its card means it was crafted and drunk: count the vial.
+    if(tg){ f.on=!f.on; if(f.on&&isMutagen(f)) f.brewed=true; }
+    else if(sd) f.sideOff=!f.sideOff;
+    else{ f.toggle=!f.toggle; if(f.toggle&&f.on==null) f.on=false; }
+    toggleRefresh();
+  },true);
+}
+// ---------- Mutagencraft station (Blood Hunter — Order of the Mutant) ----------
+// One panel, on Combat and on Features, that runs the whole mutagen loop: the formula book (which
+// formulas this hunter knows), crafting vials after a rest, drinking one (its effects switch on),
+// ending it, and the count of vials crafted since the last rest. A known formula IS a feature in
+// S.features (so its effects go through the ordinary fx system); the station only adds two flags
+// to it — brewed (a vial was crafted this rest) and on (it was drunk and is active). A rest clears both.
+const MUT_POOL='mutagens';
+const MUT_BREW={3:1,7:2,15:3}; // mutagens created per rest, by Blood Hunter level
+let MUT_BOOK_OPEN=false;
+function mutLib(){ return FEATURE_LIB.filter(e=>e.pool===MUT_POOL&&!e.pickCap); }
+function isMutagen(f){ return !!f && mutLib().some(e=>e.n===f.title); }
+function mutByLevel(tbl){ const L=num(S.level)||1; let v=0; Object.keys(tbl).map(Number).sort((a,b)=>a-b).forEach(k=>{ if(L>=k) v=tbl[k]; }); return v; }
+function mutBrewCap(){ return mutByLevel(MUT_BREW); }
+function mutFormulaCap(){ const head=FEATURE_LIB.find(e=>e.pool===MUT_POOL&&e.pickCap); return head?mutByLevel(head.pickCap):0; }
+function hasMutagencraft(){
+  return (S.features||[]).some(f=>f.title==='Mutagencraft'||isMutagen(f)) || (S.classId==='bloodhunter'&&/mutant/i.test(S.subclass||''));
+}
+function renderMutagenStation(){
+  const boxes=$$('.mut-station'); if(!boxes.length) return;
+  if(!hasMutagencraft()){ boxes.forEach(b=>b.innerHTML=''); return; }
+  const known=S.features.map((f,i)=>({f,i})).filter(x=>isMutagen(x.f));
+  const crafted=known.filter(x=>x.f.brewed||x.f.on).length, cap=mutBrewCap(), fcap=mutFormulaCap();
+  const vials=known.map(({f,i})=>{
+    const state=f.on?'active':f.brewed?'ready':'idle', side=featHasSide(f), sideOn=!f.sideOff;
+    const stateLbl=state==='active'?'<span class="mut-state">Active</span>':state==='ready'?'<span class="mut-state">Ready to drink</span>':'';
+    const btns= state==='idle' ? `<button type="button" class="mut-btn" data-mut="craft:${i}" title="Craft a vial of this mutagen (done when you finish a rest)">Craft</button>`
+      : state==='ready' ? `<button type="button" class="mut-btn go" data-mut="drink:${i}" title="Bonus action — its effects and side effect start now">Drink</button><button type="button" class="mut-btn ghost" data-mut="discard:${i}" title="Crafted by mistake — take the vial back">Undo</button>`
+      : `<button type="button" class="mut-btn ghost" data-mut="end:${i}" title="End this mutagen — its effects and side effect stop">End</button>`+
+        (side?`<button type="button" class="feat-switch side${sideOn?' on':''}" role="switch" aria-checked="${sideOn}" data-featside="${i}" title="${sideOn?'The side effect applies while this is active. Tap to ignore it.':'The side effect is being ignored. Tap to apply it again.'}"><span class="fs-track"><span class="fs-knob"></span></span><span class="fs-lbl">${sideOn?'Side effect':'Side effect ignored'}</span></button>`:'');
+    return `<div class="mut-vial ${state}">
+      <div class="mut-vial-head"><span class="mut-flask" aria-hidden="true">⚗</span><span class="mut-name">${esc(f.title)}</span>${stateLbl}</div>
+      <div class="mut-desc">${esc(f.desc)}</div>
+      <div class="mut-actions">${btns}</div>
+    </div>`;
+  }).join('');
+  const knownNames=new Set(known.map(x=>x.f.title)), L=num(S.level)||1;
+  const book=mutLib().map(e=>{
+    const on=knownNames.has(e.n), need=(e.req&&e.req.level)||0, locked=!on&&need>L;
+    return `<button type="button" class="mut-formula${on?' on':''}${locked?' locked':''}" data-mutlearn="${esc(e.n)}" ${locked?'disabled':''} title="${esc(e.d)}"><span class="mut-formula-name">${esc(e.n)}</span>${need?`<span class="mut-req">Lv ${need}</span>`:''}</button>`;
+  }).join('');
+  const html=`<div class="panel mut-panel">
+    <h2><span>⚗ Mutagencraft</span><span class="mut-count${cap&&crafted>cap?' over':''}">${cap?`Crafted ${crafted} / ${cap} this rest`:`Crafted ${crafted} this rest`}</span></h2>
+    <p class="prep-note mut-help">Craft your vials when you finish a rest, drink one as a bonus action. Active mutagens end, and unused vials go inert, at your next short or long rest.</p>
+    ${vials?`<div class="mut-vials">${vials}</div>`:'<p class="prep-note mut-empty">No formulas yet — open the formula book below and pick the ones you know.</p>'}
+    <button type="button" class="mut-book-btn" data-mutbook aria-expanded="${MUT_BOOK_OPEN}"><span>${fcap?`Formula book — ${known.length} / ${fcap} known`:`Formula book — ${known.length} known`}</span><span class="mut-chev">${MUT_BOOK_OPEN?'▾':'▸'}</span></button>
+    ${MUT_BOOK_OPEN?`<div class="mut-book"><p class="prep-note" style="margin:0 0 8px">Tap a formula to learn it; tap a known one to forget it.</p><div class="mut-formulas">${book}</div></div>`:''}
+  </div>`;
+  boxes.forEach(b=>b.innerHTML=html);
+}
+function mutagenAction(el){
+  if(el.dataset.mutbook!=null){ MUT_BOOK_OPEN=!MUT_BOOK_OPEN; renderMutagenStation(); return; }
+  if(el.dataset.mutlearn){
+    const name=el.dataset.mutlearn, idx=S.features.findIndex(f=>f.title===name&&isMutagen(f));
+    if(idx>=0){
+      if(!confirm(`Forget "${name}"? It is removed from your formulas.`)) return;
+      S.features.splice(idx,1);
+    }else{
+      const ent=mutLib().find(e=>e.n===name); if(!ent) return;
+      // A blank placeholder row (a fresh sheet has one) is reused rather than left behind.
+      const feat=libEntryToFeature(ent,{kind:'subclass',classId:'bloodhunter',className:ent.g,subclassName:'Order of the Mutant'});
+      const blank=S.features.findIndex(f=>!(f.title||'').trim()&&!(f.desc||'').trim()&&!(f.fx||[]).length);
+      if(blank>=0) S.features[blank]=feat; else S.features.push(feat);
+    }
+    toggleRefresh(); return;
+  }
+  const [act,i]=el.dataset.mut.split(':'), f=S.features[+i]; if(!f) return;
+  if(act==='craft'){ f.brewed=true; f.on=false; }
+  else if(act==='drink'){ f.brewed=true; f.on=true; }
+  else if(act==='end'){ f.on=false; f.sideOff=false; }      // drunk and spent: the vial still counts
+  else if(act==='discard'){ f.brewed=false; f.on=false; }
+  toggleRefresh();
+}
 function featureCardLockedHTML(f,i){
   const src=featureSourceMeta(f);
-  const chips=(f.fx||[]).map(x=>`<span class="fx-chip ro">${esc(fxChipLabel(x))}</span>`).join('');
+  const chips=(f.fx||[]).map(x=>`<span class="fx-chip ro${fxChipCls(f,x)}">${esc(fxChipLabel(x))}</span>`).join('');
   // The level badge is only shown grouped "By Source" — in "By Level" view the timeline node
   // above the card already says the level, so repeating it on every card would be noise.
   const lvlBadge=(S.featuresView!=='level' && f.levelAt!=null && f.levelAt!=='') ? `<span class="feat-lvl-badge">Lv ${esc(f.levelAt)}</span>` : '';
   return `
-  <div class="feature-card locked" data-featidx="${i}" style="--src:${src.color}">
+  <div class="feature-card locked${f.toggle?(f.on?' tg-on':' tg-off'):''}" data-featidx="${i}" style="--src:${src.color}">
     <div class="feature-cap">${esc(capLetter(f.title))}</div>
     <div class="feature-body">
       <div class="cf-row" style="align-items:flex-start">
@@ -2489,13 +2704,14 @@ function featureCardLockedHTML(f,i){
         <div class="feat-cf-tags">${lvlBadge}${f.combat?'<span class="cf-tag">⚔</span>':''}</div>
       </div>
       ${f.desc?`<div class="locked-desc">${esc(f.desc)}</div>`:''}
+      ${featSwitchHTML(f,i)}
       ${chips?`<div class="fx-chip-row">${chips}</div>`:''}
     </div>
   </div>`;
 }
 function featureCardEditHTML(f,i){
   const chips=(f.fx||[]).map((x,j)=>
-    `<span class="fx-chip" title="${esc(x.text||x.cond||'')}">${esc(fxChipLabel(x))}<button class="edit" data-fxedit="${i}.${j}" title="Edit this effect in place">✎</button><button class="copy" data-fxcopy="${i}.${j}" title="Duplicate as a separate new effect (e.g. to also cover another skill)">⧉</button><button data-fxdel="${i}.${j}" title="Remove effect">✕</button></span>`).join('');
+    `<span class="fx-chip${fxChipCls(f,x)}" title="${esc(x.text||x.cond||'')}">${esc(fxChipLabel(x))}<button class="edit" data-fxedit="${i}.${j}" title="Edit this effect in place">✎</button><button class="copy" data-fxcopy="${i}.${j}" title="Duplicate as a separate new effect (e.g. to also cover another skill)">⧉</button><button data-fxdel="${i}.${j}" title="Remove effect">✕</button></span>`).join('');
   const d=FX_DRAFT[i]||{};
   const draftSkills=xSkills(d);
   const editing=d._editIdx!=null;
@@ -2575,10 +2791,12 @@ function featureCardEditHTML(f,i){
         <div class="feature-flags">
           ${lvlIn}
           <button class="combat-flag ${f.combat?'on':''}" data-combat="${i}" title="${f.combat?'Shown in Combat tab — tap to remove':'Tap to show in Combat tab'}">⚔</button>
+          <button class="combat-flag tg-flag ${f.toggle?'on':''}" data-togflag="${i}" title="${f.toggle?'Has an on/off switch — its effects only count while switched on. Tap to remove the switch.':'Tap to give this feature an on/off switch, so its effects only count while it is active'}">On/Off</button>
           <button class="combat-flag cs-flag ${f.csShow?'on':''}" data-csflag="${i}" title="${f.csShow?'Shown in the Custom Stats panel — tap to remove':'Tap to also show this feature’s text in the Custom Stats panel'}">Stats</button>
         </div>
       </div>
       <textarea class="desc-ta" data-li="features.${i}.desc" placeholder="What it does...">${esc(f.desc)}</textarea>
+      ${featSwitchHTML(f,i)}
       ${f.combat?`
       <div class="fx-addrow" style="margin:4px 0 0">
         <span class="prep-note" style="margin:0">Uses</span>
@@ -2638,7 +2856,7 @@ function renderFeaturesBySource(){
         <span class="fv-group-rule"></span>
         <span class="fv-group-chev">▾</span>
       </div>
-      <div class="fv-group-clip"><div class="fv-group-cards">${cardsHTML}</div></div>
+      <div class="fv-group-clip"><div class="fv-group-cards" style="--cols:${Math.min(g.items.length,4)}">${cardsHTML}</div></div>
     </div>`;
   }).join('');
 }
@@ -2661,7 +2879,7 @@ function renderFeaturesByLevel(){
       <div class="fv-tl-spine"><div class="fv-tl-badge ${badgeCls||''}">${badgeInner}</div></div>
       <div class="fv-tl-body">
         <div class="fv-tl-heading"><h3>${esc(heading)}</h3></div>
-        <div class="fv-tl-cards">${sortWithin(items).map(({f,i})=>featureCardHTML(f,i)).join('')}</div>
+        <div class="fv-tl-cards" style="--cols:${Math.min(items.length,4)}">${sortWithin(items).map(({f,i})=>featureCardHTML(f,i)).join('')}</div>
       </div>
     </div>`;
   const levels=[...buckets.keys()].sort((a,b)=>a-b);
@@ -2682,6 +2900,7 @@ function renderFeatures(){
   wireFx();
   wireFeatureLevelInputs();
   wireFeatureGroupToggles();
+  renderMutagenStation();
 }
 function wireFeatureLevelInputs(){
   $$('[data-lvlat]').forEach(el=>el.addEventListener('change',()=>{
@@ -3118,7 +3337,8 @@ function ckCardHTML(card){
   // every tag — spell level, economy pills, Pinned, Concentration — sits on its own row under it,
   // so a card with two pills is no taller in the head than one with a single pill.
   const flags=(card.pin?`<span class="ck-flag">Pinned</span>`:'')+(card.conc?`<span class="ck-flag ck-flag-conc">Concentration</span>`:'');
-  return `<div class="ck-card ck-card-${card.type||'other'} ${card.kind==='sp'?'ck-card-spell':''} ${card.isFeat?'ck-card-feat':''} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${active?'ck-active':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
+  const tgf=card.kind==='ft'&&card.gi!=null?S.features[card.gi]:null;
+  return `<div class="ck-card ck-card-${card.type||'other'} ${tgf&&tgf.toggle?(tgf.on?'tg-on':'tg-off'):''} ${card.kind==='sp'?'ck-card-spell':''} ${card.isFeat?'ck-card-feat':''} ${card.cond?'ck-cond':''} ${card.out?'ck-out':''} ${active?'ck-active':''}" data-ckopen="${card.key}" data-ckdrag="${card.key}">
     <div class="ck-card-head">
       <span class="ck-drag-handle" data-ckdraghandle title="Drag to place in your turn plan">⠿</span>
       <span class="ck-card-name">${esc(card.name)}</span>
@@ -3126,6 +3346,7 @@ function ckCardHTML(card){
     </div>
     <div class="ck-card-tags">${lvlBadge}<span class="ck-pillgroup">${pills}</span>${flags}${card.kind==='it'&&!card.out?`<button class="ck-quickuse" data-ckituse="${card.i}" title="Use one — no need to open the card">Use</button>`:''}</div>
     ${sub?`<div class="ck-card-sub">${sub}</div>`:''}
+    ${card.kind==='ft'&&card.gi!=null?featSwitchHTML(S.features[card.gi],card.gi):''}
     ${card.cond?`<div class="ck-card-cond"><span class="ck-k">When</span> ${esc(card.cond)}</div>`:''}
   </div>`;
 }
@@ -3318,7 +3539,9 @@ function renderCockpitPlan(){
   const clr=$('#ckPlanClear');
   if(clr) clr.style.display=cur.steps.length?'':'none';
   const wiz=$('#ckPlanWizard');
-  if(wiz) wiz.style.display=cur.steps.some(p=>p.key.startsWith('atk:'))?'':'none';
+  // Always offered while there is anything to roll: with no attack in the plan it walks every
+  // weapon on the sheet instead (see openTurnWizard), so the helper can't quietly disappear.
+  if(wiz) wiz.style.display=(cur.steps.some(p=>p.key.startsWith('atk:'))||S.attacks.some(a=>(a.name||'').trim()))?'':'none';
   const cc=$('#ckPlanCollapsedCount');
   if(cc) cc.textContent=cur.steps.length?String(cur.steps.length):'';
   const duo=$('#ckDuo');
@@ -3426,12 +3649,14 @@ function wireCustomStatsPanel(){
 function ckQuickSavesHTML(){
   return `<div class="ck-qr-grid">${ABILITIES.map(([k,label])=>{
     const b=amod(k)+((S.saveProf[k]||fxSaveProf(k))?num(S.profBonus):0);
-    const notes=fxSaveNotes(k), hot=notes.filter(n=>condActive(n.cond));
-    const tip=hot.length?hot.map(n=>`${n.src}: advantage${n.cond?` (${n.cond})`:''}`).join('; '):(notes.length?notes.map(n=>`${n.src}: advantage${n.cond?` (${n.cond})`:''}`).join('; '):'');
+    const notes=fxSaveNotes(k), hot=notes.filter(fxLive);
+    const advWord=n=>n.kind==='dis'?'disadvantage':'advantage';
+    const tip=(hot.length?hot:notes).map(n=>`${n.src}: ${advWord(n)}${n.cond?` (${n.cond})`:''}`).join('; ');
+    const hotDis=hot.length&&hot.every(n=>n.kind==='dis'), hotMix=hot.some(n=>n.kind==='dis')&&!hotDis;
     return `<div class="ck-qr-cell${hot.length?' active':''}" style="--ab-color:${AB_COLOR[k]}" title="${esc(tip)}">
       <span class="ck-qr-ic">${giHTML(AB_ICON[k])}</span>
       <span class="ck-qr-l">${esc(label)}</span><span class="ck-qr-v">${fmt(b)}</span>
-      ${hot.length?'<span class="ck-qr-badge">ADV</span>':(notes.length?'<span class="ck-qr-badge dim">★</span>':'')}
+      ${hot.length?`<span class="ck-qr-badge${hotDis?' dis':''}">${hotDis?'DIS':hotMix?'ADV/DIS':'ADV'}</span>`:(notes.length?'<span class="ck-qr-badge dim">★</span>':'')}
     </div>`;
   }).join('')}</div>`;
 }
@@ -3444,7 +3669,7 @@ function ckQuickSkillsHTML(){
     const cells=SKILLS.filter(([,,ab])=>ab===abKey).map(([k,label])=>{
       const man=S.skills[k]||0, g=fxSkillGrant(k), eff=Math.max(man,g);
       const b=amod(abKey)+eff*num(S.profBonus);
-      const notes=fxNotes(k), hot=notes.filter(n=>condActive(n.cond));
+      const notes=fxNotes(k), hot=notes.filter(fxLive);
       const tip=hot.length?hot.map(n=>`${n.src}: ${noteBadge(k,abKey,n)}${n.cond?` (${n.cond})`:''}`).join('; '):'';
       const granted=g>man;
       let profCls=eff===2?'exp':eff===1?'on':'';
@@ -3563,7 +3788,9 @@ function renderCockpitExtras(){
   $$('.ck-conc').forEach(el=>el.innerHTML=el.classList.contains('ck-conc-chip')?concChip:concHtml);
   const abChips=ABILITIES.filter(([k])=>tempAbilityDelta(k)).map(([k])=>
     `<span class="ck-state ${tempAbilityDelta(k)<0?'down':'up'}" title="Temporary adjustment — clear it from the Ability Scores card on Overview">${giHTML(AB_ICON[k])} ${k.toUpperCase()} ${fmt(tempAbilityDelta(k))}</span>`);
-  const topHtml=[...abChips,...S.states.map(s=>{
+  const onChips=S.features.map((f,i)=>f.toggle&&f.on&&(f.title||'').trim()
+    ? `<button type="button" class="ck-state tg${featHasSide(f)&&f.sideOff?' noside':''}" data-feattoggle="${i}" title="Active — tap to switch off">◉ ${esc(f.title)}</button>`:'').filter(Boolean);
+  const topHtml=[...abChips,...onChips,...S.states.map(s=>{
     const p=s.key?statePresetFor(s.key):null;
     const durTag=s.dur!=null?` ${s.dur}`:'';
     return `<span class="ck-state ${p?(p.bad?'bad':'buff'):''}">${esc(s.name)}${durTag}</span>`;
@@ -3590,11 +3817,11 @@ function renderCockpitExtras(){
   // Active-condition reminders float to the top and glow (condActive) — the whole point of this
   // feed during a fight is "what applies to me right now", not just "what could ever apply".
   const rems=allFx().filter(x=>x.t==='statnote'||x.t==='savenote')
-    .sort((a,b)=>condActive(b.cond)-condActive(a.cond));
+    .sort((a,b)=>fxLive(b)-fxLive(a));
   $('#ckRems').innerHTML = rems.length
     ? rems.map(r=>{
-        const active=condActive(r.cond), cls=active?' active':'';
-        if(r.t==='savenote') return `<div class="ck-rem${cls}">★ ${esc(r.src)} — ${AB_NAMES[r.ab]||r.ab} save <b>advantage</b>${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
+        const active=fxLive(r), cls=(active?' active':'')+(r.kind==='dis'?' dis':'');
+        if(r.t==='savenote') return `<div class="ck-rem${cls}">★ ${esc(r.src)} — ${AB_NAMES[r.ab]||r.ab} save <b>${r.kind==='dis'?'disadvantage':'advantage'}</b>${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
         const amt=(r.n!=null&&String(r.n).trim()!=='')?` <b>${fmt(fxAmount(r.n))}</b>`:'';
         return `<div class="ck-rem${cls}">★ ${esc(r.src)} — ${FX_STATS[r.stat]||r.stat}${amt}${r.cond?`<span class="ck-rem-cond">${esc(r.cond)}</span>`:''}</div>`;
       }).join('')
@@ -3983,7 +4210,10 @@ function libEntryToFeature(ent,source){
   const levelAt = source.kind==='feat'
     ? (source.asiLevel!=null ? num(source.asiLevel) : null)
     : (ent.l!=null && ent.l!=='' ? num(ent.l) : null);
-  return {title:ent.n,desc:ent.d,fx,combat:!!ent.combat,actionType:ent.actionType||'',usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,levelAt,source};
+  const feat={title:ent.n,desc:ent.d,fx,combat:!!ent.combat,actionType:ent.actionType||'',usesMax,usesPer:ent.usesPer||'short',usesUsed:0,usesScale,usesScaleBonus:ent.usesScaleBonus||0,levelAt,source};
+  // Switchable entries start switched off; `ends` says which rest switches them back off.
+  if(ent.toggle){ feat.toggle=true; feat.on=false; if(ent.ends) feat.toggleEnds=ent.ends; }
+  return feat;
 }
 // Same job for RACE_LIB entries — shared by the race-trait search box below and the heritage
 // auto-grant (syncGrantedFeatures), so a trait added either way comes out identically wired.
@@ -4451,55 +4681,152 @@ function renderNoteFilters(){
     renderNotes();
   }));
 }
-function renderNotes(){
-  renderNoteFilters();
+// The Notes tab is a notebook, not a column of cards: an index of every note down one side (title,
+// session, a line of the text — or, while searching, the line that matched), and ONE note open on
+// a full page beside it. Long notes are found from the index instead of by scrolling past every
+// other note's full text. NOTE_SEL is the open note; nothing about the layout is saved.
+function noteRows(){
   const terms=noteSearchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  // Keep each row's real index (for data-li/data-del paths) while showing most-recently-added
-  // notes first — a session log reads top-down as "what just happened", not "what happened first".
+  // Newest first, each keeping its real index into S.notes.
   const rows=S.notes.map((n,i)=>({n,i})).filter(({n})=>
     noteMatches(n,terms) && (!activeNoteFilters.size || (n.tags||[]).some(t=>activeNoteFilters.has(t)))
   ).reverse();
-  $('#noteList').innerHTML = rows.length ? rows.map(({n,i})=>`
-    <div class="tl-entry">
-      <div class="tl-dot"></div>
-      <input type="text" class="tl-session" value="${esc(n.session)}" data-li="notes.${i}.session" placeholder="Session / date…">
-      <div class="tl-card">
-        <div class="tl-card-head">
-          <input type="text" class="tl-note-title" value="${esc(n.title)}" data-li="notes.${i}.title" placeholder="Note title">
-          <button class="del-btn" data-del="notes.${i}">✕</button>
-        </div>
-        <textarea data-li="notes.${i}.body" placeholder="Write anything...">${esc(n.body)}</textarea>
-        <div class="tl-tag-row">
-          ${(n.tags||[]).map((t,ti)=>`<span class="tl-tag" style="--accent:${noteTagColor(t)}">${esc(t)}<button type="button" data-deltag="${i}.${ti}">✕</button></span>`).join('')}
-          <input type="text" class="tl-tag-add" data-tagadd="${i}" placeholder="+ tag" autocomplete="off">
-        </div>
-      </div>
-    </div>`).join('')
-    : `<p class="prep-note" style="margin:0">${S.notes.length?'No notes match your search.':'No notes yet — jot down anything with the +New note button below.'}</p>`;
-  wireList('#noteList');
-  wireNoteExtras();
+  return {terms,rows};
 }
-function wireNoteExtras(){
-  $$('#noteList [data-tagadd]').forEach(inp=>inp.addEventListener('keydown',e=>{
-    if(e.key!=='Enter') return;
+function noteSnippetHTML(n,terms){
+  const body=(n.body||'').replace(/\s+/g,' ').trim();
+  if(!body) return '';
+  const low=body.toLowerCase();
+  let at=-1,len=0;
+  for(const t of terms){ const p=low.indexOf(t); if(p>=0){ at=p; len=t.length; break; } }
+  if(at<0) return esc(body.slice(0,130))+(body.length>130?'…':'');
+  const from=Math.max(0,at-36), to=Math.min(body.length,at+len+80);
+  return (from?'…':'')+esc(body.slice(from,at))+'<mark>'+esc(body.slice(at,at+len))+'</mark>'+esc(body.slice(at+len,to))+(to<body.length?'…':'');
+}
+// Every place the search words appear inside the open note — each one a button that jumps the
+// cursor there, so a word can be found in a very long note without reading down to it.
+function noteHitsHTML(n,terms){
+  const body=n.body||''; if(!terms.length||!body) return '';
+  const low=body.toLowerCase(), hits=[];
+  terms.forEach(t=>{ let p=0; while(hits.length<60&&(p=low.indexOf(t,p))>=0){ hits.push([p,t.length]); p+=t.length; } });
+  if(!hits.length) return '';
+  hits.sort((a,b)=>a[0]-b[0]);
+  const clean=x=>esc(x.replace(/\s+/g,' '));
+  return '<span class="nb-hits-h">Found in this note</span>'+hits.slice(0,12).map(([p,l])=>{
+    const from=Math.max(0,p-24), to=Math.min(body.length,p+l+44);
+    return `<button type="button" class="nb-hit" data-notehit="${p}:${l}" dir="auto">${from?'…':''}${clean(body.slice(from,p))}<mark>${clean(body.slice(p,p+l))}</mark>${clean(body.slice(p+l,to))}${to<body.length?'…':''}</button>`;
+  }).join('')+(hits.length>12?`<span class="nb-hits-more">+${hits.length-12}</span>`:'');
+}
+function renderNoteRail(){
+  const list=$('#noteList'); if(!list) return;
+  const {terms,rows}=noteRows();
+  list.innerHTML = rows.length ? rows.map(({n,i})=>{
+    const snip=noteSnippetHTML(n,terms);
+    return `<button type="button" class="nb-item${i===NOTE_SEL?' on':''}" data-notesel="${i}">
+      ${(n.session||'').trim()?`<span class="nb-item-session" dir="auto">${esc(n.session)}</span>`:''}
+      <span class="nb-item-title" dir="auto">${(n.title||'').trim()?esc(n.title):'<i>Untitled note</i>'}</span>
+      ${snip?`<span class="nb-item-snip" dir="auto">${snip}</span>`:''}
+      ${(n.tags||[]).length?`<span class="nb-item-tags">${n.tags.map(t=>`<span class="tl-tag" style="--accent:${noteTagColor(t)}">${esc(t)}</span>`).join('')}</span>`:''}
+    </button>`;
+  }).join('')
+    : `<p class="prep-note nb-empty">${S.notes.length?'No notes match your search.':'No notes yet — jot down anything with the +New note button below.'}</p>`;
+  const cnt=$('#noteCount');
+  if(cnt) cnt.textContent = !S.notes.length ? '' : rows.length===S.notes.length
+    ? `${S.notes.length} note${S.notes.length===1?'':'s'}` : `${rows.length} of ${S.notes.length} notes`;
+}
+function noteWordCount(){
+  const el=$('#noteWords'), n=NOTE_SEL!=null&&S.notes[NOTE_SEL]; if(!el||!n) return;
+  const w=(n.body||'').trim().split(/\s+/).filter(Boolean).length;
+  el.textContent=`${w} word${w===1?'':'s'}`;
+}
+function renderNotePage(){
+  const page=$('#notePage'); if(!page) return;
+  const {terms}=noteRows();
+  const i=NOTE_SEL, n=i!=null?S.notes[i]:null;
+  const book=$('#noteBook'); if(book) book.classList.toggle('reading',NOTE_READING&&!!n);
+  if(!n){
+    page.innerHTML=`<div class="nb-blank"><span class="nb-blank-mark">✒</span><p>${S.notes.length?'Pick a note from the list to read it here.':'No notes yet — start your first one.'}</p></div>`;
+    return;
+  }
+  page.innerHTML=`
+    <div class="nb-page-head">
+      <button type="button" class="nb-back" data-noteback>‹ All notes</button>
+      <input type="text" class="nb-session" value="${esc(n.session)}" data-note="session" placeholder="Session / date…" dir="auto">
+      <span class="nb-words" id="noteWords"></span>
+      <button type="button" class="del-btn" data-notedel title="Delete this note" aria-label="Delete this note">✕</button>
+    </div>
+    <input type="text" class="nb-title" value="${esc(n.title)}" data-note="title" placeholder="Note title" dir="auto">
+    <div class="tl-tag-row">
+      ${(n.tags||[]).map((t,ti)=>`<span class="tl-tag" style="--accent:${noteTagColor(t)}">${esc(t)}<button type="button" data-deltag="${ti}">✕</button></span>`).join('')}
+      <input type="text" class="tl-tag-add" data-tagadd placeholder="+ tag" autocomplete="off">
+    </div>
+    <div class="nb-hits" id="noteHits">${noteHitsHTML(n,terms)}</div>
+    <textarea class="nb-body" data-note="body" placeholder="Write anything..." dir="auto">${esc(n.body)}</textarea>`;
+  noteWordCount();
+}
+function renderNotes(){
+  renderNoteFilters();
+  const {rows}=noteRows();
+  // Keep the open note open while it still passes the search; otherwise open the first match.
+  if(NOTE_SEL==null||!rows.some(r=>r.i===NOTE_SEL)) NOTE_SEL=rows.length?rows[0].i:null;
+  renderNoteRail(); renderNotePage();
+}
+// The index and the page are rebuilt often, so everything is delegated from the two containers
+// that persist (wired once at boot).
+function wireNotes(){
+  const search=$('#noteSearch'), list=$('#noteList'), page=$('#notePage'); if(!search||!list||!page) return;
+  search.addEventListener('input',()=>{ noteSearchQuery=search.value; renderNotes(); });
+  list.addEventListener('click',e=>{
+    const b=e.target.closest('[data-notesel]'); if(!b) return;
+    NOTE_SEL=+b.dataset.notesel; NOTE_READING=true; renderNotes();
+  });
+  page.addEventListener('input',e=>{
+    const el=e.target.closest('[data-note]'), n=NOTE_SEL!=null&&S.notes[NOTE_SEL]; if(!el||!n) return;
+    n[el.dataset.note]=el.value; save();
+    // Typing must not rebuild the page (it would drop the cursor) — only the index entry, the
+    // word count and the found-here strip follow along.
+    renderNoteRail();
+    if(el.dataset.note==='body'){
+      noteWordCount();
+      const h=$('#noteHits'); if(h) h.innerHTML=noteHitsHTML(n,noteRows().terms);
+    }
+  });
+  page.addEventListener('keydown',e=>{
+    const inp=e.target.closest('[data-tagadd]'); if(!inp||e.key!=='Enter') return;
     e.preventDefault();
-    const i=+inp.dataset.tagadd, val=inp.value.trim();
+    const n=S.notes[NOTE_SEL], val=inp.value.trim(); if(!n) return;
     if(val){
-      const tags=S.notes[i].tags=(S.notes[i].tags||[]);
+      const tags=n.tags=(n.tags||[]);
       if(!tags.some(t=>t.toLowerCase()===val.toLowerCase())) tags.push(val);
       save();
     }
     renderNotes();
-  }));
-  $$('#noteList [data-deltag]').forEach(b=>b.addEventListener('click',()=>{
-    const [i,ti]=b.dataset.deltag.split('.').map(Number);
-    S.notes[i].tags.splice(ti,1);
-    renderNotes(); save();
-  }));
-}
-function wireNotes(){
-  const search=$('#noteSearch'); if(!search) return;
-  search.addEventListener('input',()=>{ noteSearchQuery=search.value; renderNotes(); });
+    $('#notePage [data-tagadd]')?.focus();
+  });
+  page.addEventListener('click',e=>{
+    const n=NOTE_SEL!=null&&S.notes[NOTE_SEL];
+    if(e.target.closest('[data-noteback]')){ NOTE_READING=false; renderNotes(); return; }
+    if(!n) return;
+    const dt=e.target.closest('[data-deltag]');
+    if(dt){ n.tags.splice(+dt.dataset.deltag,1); renderNotes(); save(); return; }
+    const hit=e.target.closest('[data-notehit]');
+    if(hit){
+      const [p,l]=hit.dataset.notehit.split(':').map(Number), ta=$('#notePage .nb-body'); if(!ta) return;
+      // Scroll the text box to roughly the right place first, then let the browser bring the
+      // caret into view by focusing on a collapsed selection before widening it to the word.
+      ta.scrollTop=Math.max(0,ta.scrollHeight*(p/Math.max(1,ta.value.length))-ta.clientHeight/2);
+      ta.blur(); ta.setSelectionRange(p,p); ta.focus(); ta.setSelectionRange(p,p+l);
+      return;
+    }
+    if(e.target.closest('[data-notedel]')){
+      const name=(n.title||'').trim()||'this note';
+      uiConfirm(`Delete "${name}"? This can't be undone.`,{title:'Delete?',ok:'Delete',danger:true}).then(ok=>{
+        if(!ok) return;
+        S.notes.splice(NOTE_SEL,1); NOTE_SEL=null; NOTE_READING=false;
+        renderNotes(); save();
+      });
+    }
+  });
 }
 // Power-tier accent (mirrors the elemental accents on Ability Scores/Skills): cantrips read as
 // cool silver sparks, low-level spells arcane blue, mid-level mystic violet, and 7th-9th the
@@ -4985,8 +5312,10 @@ function recalc(){
     if(rb) parts.push(`<b>+${rb}</b> race`);
     if(ab) parts.push(`<b>+${ab}</b> ASI`);
     if(tp) parts.push(`<b style="color:${tp<0?'var(--red)':'var(--green)'}">${fmt(tp)}</b> temp`);
+    const fb=fxAbility(k);
+    if(fb) parts.push(`<b style="color:${fb<0?'var(--red)':'var(--green)'}">${fmt(fb)}</b> active`);
     let txt=parts.length?parts.join(', ')+` → ${tot}`:'';
-    if(tot>20) txt+=` <span style="color:var(--red)">over 20!</span>`;
+    if(tot-Math.max(0,fb)>20) txt+=` <span style="color:var(--red)">over 20!</span>`;
     $$(`[data-abrace="${k}"]`).forEach(el=>el.innerHTML=txt);
     $$(`[data-abtempval="${k}"]`).forEach(el=>el.textContent=tp?fmt(tp):'±0');
     $$(`[data-abcard="${k}"]`).forEach(el=>el.classList.toggle('temp-down',tp<0));
@@ -5050,7 +5379,7 @@ function recalc(){
   // point of a reminder vs. a bonus), so it can't just join the same line as the base terms without
   // looking counted when it isn't. Instead its amount becomes a big "+N" beside the value itself
   // (data-fxmod — impossible to miss) and its source/condition drops to a plain line underneath.
-  const alwaysText=k=>allFx().filter(x=>x.t==='stat'&&x.stat===k).map(x=>`${x.src} ${fmt(fxAmount(x.n))}`);
+  const alwaysText=k=>allFx().filter(x=>x.t==='stat'&&x.stat===k).map(x=>`${x.src} ${fmt(fxVal(x))}`);
   const condList=k=>{
     const list=fxStatRems(k).map(r=>({
       amt: (r.n!=null&&String(r.n).trim()!=='') ? fxAmount(r.n) : null,
@@ -5324,6 +5653,7 @@ function wireStress(){
 // roster's per-character localStorage slot like any other field), but downscaled through a
 // canvas first — an unscaled phone photo would blow past localStorage's ~5MB quota fast.
 function renderCharacterPortrait(){
+  syncHeaderPortrait();
   const box=$('#cpPortraitImg'), rm=$('#cpPortraitRemove'); if(!box) return;
   if(S.portrait){
     box.style.backgroundImage=`url("${S.portrait}")`;
@@ -5437,11 +5767,12 @@ function wireAddButtons(){
   $$('[data-add]').forEach(b=>b.addEventListener('click',()=>{
     const key=b.dataset.add;
     S[key].push(ADD_TEMPLATES[key]());
+    if(key==='notes'){
+      NOTE_SEL=S.notes.length-1; NOTE_READING=true; noteSearchQuery=''; activeNoteFilters.clear();
+      const q=$('#noteSearch'); if(q) q.value='';
+    }
     RERENDER[key](); save();
-    // Notes render newest-first (the Session Timeline reads top-down as most-recent-first), so
-    // the just-added note is the FIRST title field in the list, not the last — everywhere else
-    // a fresh row lands at the bottom, so focusLast's "grab the last input" still applies there.
-    if(key==='notes') $('#noteList .tl-note-title')?.focus();
+    if(key==='notes') $('#notePage .nb-title')?.focus();
     else focusLast('#'+({attacks:'attackList',features:'featureList'})[key]);
   }));
   // Its own button rather than the generic data-add path above: a custom feat needs
@@ -6780,7 +7111,8 @@ function wireRest(){
   $('#shortRestBtn').addEventListener('click',()=>{
     if(CLASSES[S.classId]&&CLASSES[S.classId].cast==='pact') S.spellLevels.forEach(lv=>lv.used=0);
     S.features.forEach(f=>{ if(f.combat && num(f.usesMax)>0 && f.usesPer!=='long') f.usesUsed=0; });
-    renderSpellLevels(); renderCombatFeatures(); recalc(); save();
+    restEndsToggles();
+    renderSpellLevels(); renderFeatures(); renderCombatFeatures(); recalc(); save();
     restCeremony('short');
   });
   $('#longRestBtn').addEventListener('click',()=>{
@@ -6792,6 +7124,7 @@ function wireRest(){
     S.hdUsed=Math.max(0,num(S.hdUsed)-regained);
     S.deathS=[false,false,false]; S.deathF=[false,false,false];
     S.features.forEach(f=>{ if(f.combat && num(f.usesMax)>0) f.usesUsed=0; }); // long rest recharges everything
+    restEndsToggles(); renderFeatures();
     // Homebrew stress eases by one step per long rest (never below 0).
     const stressBefore=Math.max(0,Math.min(STRESS_MAX,num(S.stress)));
     S.stress=Math.max(0,stressBefore-1);
@@ -6812,7 +7145,7 @@ function applyClassAmbience(accent){
   root.setProperty('--class',accent);
   root.setProperty('--class-dim',accent+'30');
   const sig=$('#hdrSigil');
-  if(sig){ const f=CLASS_ICON[S.classId]; sig.innerHTML=giHTML(f); sig.classList.toggle('empty',!f); }
+  if(sig){ const f=CLASS_ICON[S.classId]; sig.innerHTML=giHTML(f); sig.classList.toggle('empty',!f&&!S.portrait); }
   // theme-color wants a flat colour: blend ~22% of the accent into the page background.
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta){
@@ -6821,6 +7154,13 @@ function applyClassAmbience(accent){
       meta.setAttribute('content','#'+mix(0,0x14)+mix(2,0x10)+mix(4,0x0b));
     }
   }
+}
+// The header medallion wears the player's own portrait when there is one (the class sigil otherwise).
+function syncHeaderPortrait(){
+  const sig=$('#hdrSigil'); if(!sig) return;
+  sig.classList.toggle('has-portrait',!!S.portrait);
+  sig.style.backgroundImage=S.portrait?`url("${S.portrait}")`:'';
+  if(S.portrait) sig.classList.remove('empty'); else sig.classList.toggle('empty',!CLASS_ICON[S.classId]);
 }
 // One fixed, pointer-transparent vignette layer: a red edge flash on damage, a soft green one on
 // healing. Created lazily so the markup stays clean; the dying state (body.hp-zero) reuses it.
@@ -6980,10 +7320,18 @@ function ensureDiceArray(res,key,count){
   return arr;
 }
 function sumDice(arr){ return Array.isArray(arr)?arr.reduce((n,v)=>n+num(v),0):0; }
-function openTurnWizard(){
+function openTurnWizard(only){
+  // Three ways in: one attack's own 🎲 button (only=[index]), the plan's attack steps, or — when the
+  // plan holds no attack — every named weapon on the sheet, each of which can be skipped.
   const cur=ckPlan();
-  const steps=cur.steps.map((p,i)=>({p,i})).filter(({p})=>p.key.startsWith('atk:'))
-    .map(({p,i})=>({stepIdx:i,atkIdx:+p.key.split(':')[1],name:p.name}));
+  let steps;
+  if(Array.isArray(only)) steps=only.filter(i=>S.attacks[i]).map(i=>({stepIdx:-1,atkIdx:i,name:S.attacks[i].name}));
+  else{
+    steps=cur.steps.map((p,i)=>({p,i})).filter(({p})=>p.key.startsWith('atk:'))
+      .map(({p,i})=>({stepIdx:i,atkIdx:+p.key.split(':')[1],name:p.name}));
+    if(!steps.length) steps=S.attacks.map((a,i)=>({a,i})).filter(({a})=>(a.name||'').trim())
+      .map(({a,i})=>({stepIdx:-1,atkIdx:i,name:a.name}));
+  }
   if(!steps.length) return;
   const wrap=document.createElement('div');
   wrap.className='ui-dlg-bg turn-wiz-bg open';
@@ -7433,6 +7781,7 @@ function charSummary(id){
       hp:num(d.hpCurrent), hpMax:num(d.hpMax),
       icon:giHTML(CLASS_ICON[d.classId]||CLASS_ICON.fighter),
       color:CLASS_COLOR[d.classId]||'#c9a227',
+      art:d.portrait||(cls?'class-art/'+d.classId+'-portrait.jpg':''),
     };
   }catch(e){ return {name:'Corrupted save',cls:'',lvl:'',race:'',hp:0,hpMax:0,icon:'⚠',color:'#c05046'}; }
 }
@@ -7445,7 +7794,8 @@ function renderCharSelect(){
     const c=charSummary(id), active=id===ROSTER.active;
     const hpPct=c.hpMax>0?Math.max(0,Math.min(100,Math.round(c.hp/c.hpMax*100))):0;
     const line=[c.cls?(c.lvl?`Level ${c.lvl} ${c.cls}`:c.cls):'',c.race].filter(Boolean).join(' · ');
-    return `<div class="cs-card ${active?'active':''}" data-csplay="${id}" style="--cs-accent:${c.color}">
+    return `<div class="cs-card ${active?'active':''} ${c.art?'has-art':''}" data-csplay="${id}" style="--cs-accent:${c.color}">
+      ${c.art?`<div class="cs-art" style="background-image:url('${c.art.replace(/'/g,'%27')}')"></div>`:''}
       ${active?'<span class="cs-badge">now playing</span>':''}
       <div class="cs-icon">${c.icon}</div>
       <div class="cs-name">${esc(c.name)}</div>
@@ -7906,7 +8256,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireQuickRefPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode(); wireLanguage(); wireBackups();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireFeatureSwitches(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireQuickRefPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode(); wireLanguage(); wireBackups();
 showTab(lastTab());
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 // The one exception is the reload that follows a language switch: that puts you back on the screen

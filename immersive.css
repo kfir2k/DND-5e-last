@@ -1,0 +1,495 @@
+/* ==========================================================================================
+   Immersive theme — experimental (branch experimental/immersive-ui)
+   Loaded after styles.css and only ever overrides it, so removing the <link> in index.html
+   puts the old look back untouched.
+
+   The idea: the sheet is no longer a form on a dark desk. Behind it is a deep shade lit by the
+   hero's class colour (the .scene layer — gradients only, no picture), the header is a banner with
+   the hero's portrait in a medallion, and every panel is a dark plate with bracketed corners. The
+   class colour (--class) is the one accent that moves through all of it; gold stays the colour of
+   the binder itself.
+
+   Written with CSS logical properties like the rest of the app, so it mirrors in Hebrew. The few
+   physical bits (gradient directions, left:50% centring) are flipped by hand under [dir="rtl"].
+   ========================================================================================== */
+:root{
+  --bg:#0c0907;
+  --plate-a:rgba(33,26,18,.9);
+  --plate-b:rgba(19,15,10,.92);
+  --edge:rgba(227,193,92,.2);
+  --edge-strong:rgba(227,193,92,.55);
+  --rule-dir:90deg;
+}
+[dir="rtl"]{--rule-dir:270deg}
+
+/* ---------- The backdrop: shade only, no picture ---------- */
+/* A fixed layer of light and dark: the class colour glowing down from above the header, a low
+   ember of binder gold in one bottom corner, and a vignette that pulls the edges to near black. */
+body{background-image:none}
+.scene{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none;background:var(--bg)}
+.scene-shade{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 45%,transparent 45%,rgba(4,3,2,.78) 100%),
+    radial-gradient(ellipse 85% 55% at 50% -8%,color-mix(in srgb,var(--class) 26%,transparent) 0%,transparent 72%),
+    radial-gradient(ellipse 60% 45% at 8% 104%,rgba(227,193,92,.11) 0%,transparent 70%),
+    radial-gradient(ellipse 70% 50% at 96% 100%,color-mix(in srgb,var(--class) 12%,transparent) 0%,transparent 70%),
+    linear-gradient(180deg,#17110c 0%,#0f0b08 45%,#090705 100%);
+  transition:background .6s ease;
+}
+
+/* ---------- Header: the hero's banner ---------- */
+header{
+  isolation:isolate;overflow:hidden;gap:18px;
+  padding:20px 26px 18px;
+  background:linear-gradient(180deg,rgba(18,13,9,.55),rgba(12,9,6,.94));
+  border-bottom:1px solid var(--edge);
+  box-shadow:inset 0 2px 0 var(--class);
+}
+header::after{
+  content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(10,8,5,.15) 0%,rgba(10,8,5,.86) 100%),
+    linear-gradient(var(--rule-dir),color-mix(in srgb,var(--class) 22%,transparent) 0%,transparent 55%);
+}
+.title-block{gap:16px}
+.hdr-sigil{
+  width:68px;height:68px;font-size:2rem;
+  background-color:#120d09;background-size:cover;background-position:center 22%;
+  border:2px solid var(--class);
+  box-shadow:0 0 0 3px rgba(8,6,4,.75),0 0 0 4px var(--edge-strong),0 0 28px var(--class-dim),inset 0 0 14px rgba(0,0,0,.55);
+}
+.hdr-sigil.has-portrait>*{display:none}
+#charNameHeader{
+  font-size:2.05rem;letter-spacing:1.6px;
+  text-shadow:0 2px 3px rgba(0,0,0,.95),0 0 32px var(--class-dim);
+}
+.subtitle input{color:#cdbb97;border-bottom-color:rgba(227,193,92,.28);text-shadow:0 1px 2px rgba(0,0,0,.9)}
+header .icon-btn,header .chud-wide-btn{
+  background:rgba(14,10,7,.62);border-color:var(--edge);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  transition:background .15s ease,border-color .15s ease,box-shadow .2s ease;
+}
+header .icon-btn:hover,header .chud-wide-btn:hover{
+  background:rgba(30,23,15,.8);border-color:var(--edge-strong);box-shadow:0 0 16px -4px var(--class);
+}
+#saveStatus{text-shadow:0 1px 2px rgba(0,0,0,.9)}
+@media (max-width:560px){
+  header{padding:14px 14px 12px}
+  .hdr-sigil{width:46px;height:46px;font-size:1.35rem}
+  #charNameHeader{font-size:1.45rem}
+}
+
+/* ---------- Tabs: a row of chapter marks ---------- */
+nav#tabs{
+  background:rgba(10,8,5,.84);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--edge);gap:0;padding:0 14px;
+}
+nav#tabs.stuck{background:rgba(9,7,5,.95);border-bottom-color:color-mix(in srgb,var(--class) 45%,var(--border))}
+/* Centred when the strip fits, still scrollable from its start when it doesn't. */
+.tab-btn:first-child{margin-inline-start:auto}
+.tab-btn:last-child{margin-inline-end:auto}
+.tab-btn{
+  position:relative;display:flex;align-items:center;gap:8px;
+  padding:14px 17px 13px;border-bottom:0;
+  font-size:.84rem;letter-spacing:1.7px;
+  transition:color .2s ease;
+}
+.tab-ic{flex:none;opacity:.6;transition:opacity .2s ease,color .2s ease,filter .2s ease}
+.tab-btn:hover .tab-ic{opacity:.9}
+.tab-btn::after{
+  content:'';position:absolute;inset-inline:12px;bottom:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--class),transparent);
+  transform:scaleX(0);transition:transform .28s ease;
+}
+.tab-btn.active{color:var(--gold-lt);border-bottom-color:transparent;text-shadow:0 0 20px var(--class-dim)}
+.tab-btn.active::after{transform:scaleX(1)}
+.tab-btn.active .tab-ic{opacity:1;color:var(--class);filter:drop-shadow(0 0 6px var(--class))}
+@media (prefers-reduced-motion:reduce){ .tab-btn::after{transition:none} }
+
+/* ---------- Panels: dark plates with bracketed corners ---------- */
+/* :where() keeps this at zero specificity, so a panel that styles.css positions itself (sticky, fixed) keeps that. */
+:where(.panel){position:relative}
+.panel{
+  background:linear-gradient(180deg,var(--plate-a),var(--plate-b));
+  border:1px solid rgba(92,76,50,.7);border-radius:5px;
+  padding:18px 20px;
+  box-shadow:0 22px 44px -22px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,236,190,.06);
+}
+.panel::after{
+  content:'';position:absolute;inset:5px;pointer-events:none;
+  --c:var(--edge-strong);--l:13px;
+  background:
+    linear-gradient(var(--c),var(--c)) top left/var(--l) 1px no-repeat,
+    linear-gradient(var(--c),var(--c)) top left/1px var(--l) no-repeat,
+    linear-gradient(var(--c),var(--c)) top right/var(--l) 1px no-repeat,
+    linear-gradient(var(--c),var(--c)) top right/1px var(--l) no-repeat,
+    linear-gradient(var(--c),var(--c)) bottom left/var(--l) 1px no-repeat,
+    linear-gradient(var(--c),var(--c)) bottom left/1px var(--l) no-repeat,
+    linear-gradient(var(--c),var(--c)) bottom right/var(--l) 1px no-repeat,
+    linear-gradient(var(--c),var(--c)) bottom right/1px var(--l) no-repeat;
+}
+/* Heading: engraved caps over a rule that starts at a class-coloured stud and fades out. */
+.panel h2{
+  position:relative;color:var(--gold-lt);font-size:.9rem;letter-spacing:3px;
+  border-bottom:0;padding-bottom:11px;margin-bottom:14px;
+  background:linear-gradient(var(--rule-dir),var(--edge-strong) 0%,var(--edge) 35%,transparent 90%) bottom/100% 1px no-repeat;
+  text-shadow:0 1px 2px rgba(0,0,0,.8);
+}
+.panel h2::before{
+  content:'';position:absolute;inset-inline-start:0;bottom:-3px;width:7px;height:7px;
+  background:var(--class);transform:rotate(45deg);box-shadow:0 0 9px var(--class);
+}
+/* Panels that paint their own class-tinted face keep it, on the same plate. */
+.ov-identity{
+  background:
+    linear-gradient(165deg,var(--accent-dim),transparent 70%),
+    linear-gradient(180deg,var(--plate-a),var(--plate-b));
+}
+.combat-hud{
+  position:relative;border-radius:5px;border:1px solid rgba(92,76,50,.7);border-top:2px solid var(--class);
+  background:linear-gradient(180deg,var(--plate-a),var(--plate-b));
+  box-shadow:0 22px 44px -22px rgba(0,0,0,.9),inset 0 44px 38px -38px var(--class-dim);
+}
+
+/* ---------- Vitals ---------- */
+/* The HP bar is a vial: a dark well, liquid with a highlight along its top, and a mark at every
+   tenth so "about a third left" reads without doing arithmetic. */
+.hp-bar{
+  height:14px;border-radius:3px;background:#090604;border:1px solid rgba(0,0,0,.85);
+  box-shadow:0 0 0 1px var(--edge),inset 0 2px 6px rgba(0,0,0,.85);
+}
+.hp-bar>div{
+  background-image:linear-gradient(180deg,rgba(255,255,255,.24),transparent 46%),linear-gradient(90deg,#6a1c18,#c5433a 62%,#ee7a62);
+  box-shadow:0 0 14px rgba(226,84,62,.5);
+}
+.hp-bar.low>div{background-image:linear-gradient(180deg,rgba(255,255,255,.22),transparent 46%),linear-gradient(90deg,#8a5a2a,#d9a23e)}
+.hp-bar.critical>div{background-image:linear-gradient(180deg,rgba(255,255,255,.2),transparent 46%),linear-gradient(90deg,#7d1f1f,#c0504a)}
+.hp-bar::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 1px),rgba(0,0,0,.5) calc(10% - 1px),rgba(0,0,0,.5) 10%);
+}
+.chud-in{text-shadow:0 0 18px rgba(227,193,92,.25)}
+
+/* ---------- Ability & save tiles: tighter corners, a lit inner frame ---------- */
+.ability,.save-tile,.skill-group{border-radius:6px}
+.ability{box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 2px color-mix(in srgb,var(--accent) 16%,transparent),0 10px 22px -14px rgba(0,0,0,.9)}
+.ability .mod{font-size:2.15rem;text-shadow:0 0 22px var(--accent-dim),0 2px 2px rgba(0,0,0,.7)}
+
+/* ---------- Cards inside panels ---------- */
+.feature-card,.ck-card{border-radius:6px;box-shadow:0 8px 18px -12px rgba(0,0,0,.9)}
+.feature-card{background:linear-gradient(180deg,rgba(44,35,26,.92),rgba(34,27,20,.92))}
+.feature-cap{text-shadow:0 0 16px color-mix(in srgb,var(--src,var(--gold)) 55%,transparent)}
+
+/* ---------- Modals ---------- */
+.modal-bg{background:rgba(5,4,3,.72);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px)}
+.modal{
+  background:linear-gradient(180deg,rgba(36,28,20,.98),rgba(20,16,11,.98));
+  border:1px solid rgba(120,98,60,.75);border-radius:6px;
+  box-shadow:0 30px 80px -20px #000,0 0 0 1px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,236,190,.07);
+}
+
+/* ---------- Character select: a hall of portraits ---------- */
+.char-select{background:var(--bg);background-image:none}
+.char-select::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%,rgba(227,193,92,.1) 0%,transparent 70%),
+    linear-gradient(180deg,#15100b,#090705);
+}
+.cs-inner{position:relative}
+.cs-title{font-size:2.3rem;letter-spacing:5px;text-shadow:0 2px 3px #000,0 0 40px rgba(227,193,92,.25)}
+.cs-grid{gap:18px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.cs-card{border-radius:6px;box-shadow:0 18px 36px -20px #000}
+.cs-card.has-art{
+  min-height:300px;justify-content:flex-end;overflow:hidden;
+  background:var(--ink);border:1px solid rgba(120,98,60,.7);border-top:2px solid var(--cs-accent);
+  padding:20px 14px 12px;
+}
+.cs-art{
+  position:absolute;inset:0;background-size:cover;background-position:center 16%;
+  transition:transform .6s ease,filter .3s ease;filter:saturate(.92);
+}
+.cs-card.has-art::before{
+  content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(10,8,5,.05) 0%,rgba(10,8,5,.35) 40%,rgba(10,8,5,.9) 68%,rgba(10,8,5,.98) 100%);
+}
+.cs-card.has-art>:not(.cs-art):not(.cs-badge){position:relative;z-index:2}
+.cs-card.has-art>.cs-badge{z-index:2;background:rgba(8,6,4,.7);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.cs-card.has-art:hover .cs-art{transform:scale(1.05);filter:saturate(1.1)}
+.cs-card.has-art .cs-icon{font-size:1.5rem;margin-bottom:4px}
+.cs-card.has-art .cs-name{font-size:1.2rem;letter-spacing:1px;text-shadow:0 2px 3px #000}
+.cs-card.has-art .cs-line{color:#cdbb97;text-shadow:0 1px 2px #000}
+.cs-card.active{box-shadow:0 0 0 1px var(--cs-accent),0 0 34px -4px color-mix(in srgb,var(--cs-accent) 55%,transparent),0 18px 36px -20px #000}
+.cs-card.cs-new{background:rgba(20,16,11,.6);min-height:150px;justify-content:center}
+@media (prefers-reduced-motion:reduce){ .cs-art{transition:none} .cs-card.has-art:hover .cs-art{transform:none} }
+
+/* ---------- Switchable features (mutagens, transformations, rites) ---------- */
+.feat-switch-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:8px 0 6px}
+.feat-switch{
+  display:inline-flex;align-items:center;gap:9px;min-height:34px;padding:3px 12px 3px 4px;
+  padding-inline:4px 12px;
+  background:rgba(10,8,5,.55);border:1px solid var(--border-lt);border-radius:999px;
+  color:var(--muted);cursor:pointer;font-size:.72rem;letter-spacing:1.2px;text-transform:uppercase;
+  transition:border-color .2s ease,color .2s ease,box-shadow .2s ease,background .2s ease;
+}
+.fs-track{
+  position:relative;flex:none;width:38px;height:22px;border-radius:999px;
+  background:#0a0705;border:1px solid var(--border-lt);box-shadow:inset 0 2px 4px rgba(0,0,0,.8);
+  transition:background .2s ease,border-color .2s ease;
+}
+.fs-knob{
+  position:absolute;top:2px;inset-inline-start:2px;width:16px;height:16px;border-radius:50%;
+  background:var(--faint);transition:inset-inline-start .2s ease,background .2s ease,box-shadow .2s ease;
+}
+.feat-switch.on{color:var(--ember-lt);border-color:var(--ember);background:rgba(255,138,61,.1);box-shadow:0 0 14px -4px var(--ember)}
+.on>.fs-track{background:rgba(255,138,61,.28);border-color:var(--ember)}
+.on>.fs-track .fs-knob{inset-inline-start:18px;background:var(--ember-lt);box-shadow:0 0 8px var(--ember)}
+/* The side-effect switch is the drawback: red while it bites, quiet green once it is being ignored. */
+.feat-switch.side.on{color:#f0a196;border-color:var(--red);background:rgba(224,117,102,.1);box-shadow:none}
+.feat-switch.side.on>.fs-track{background:rgba(224,117,102,.3);border-color:var(--red)}
+.feat-switch.side.on>.fs-track .fs-knob{background:#f0a196;box-shadow:0 0 8px var(--red)}
+.feat-switch.side:not(.on){color:var(--green);border-color:rgba(111,158,99,.6)}
+.feat-switch:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){ .fs-knob,.fs-track,.feat-switch{transition:none} }
+
+.feature-card.tg-on{border-color:color-mix(in srgb,var(--ember) 55%,var(--border));box-shadow:0 0 22px -8px var(--ember),0 8px 18px -12px rgba(0,0,0,.9)}
+.feature-card.tg-off .locked-desc{opacity:.72}
+/* While the feature itself is off its side-effect switch is only a setting for later: keep it quiet. */
+.tg-off .feat-switch.side{opacity:.5;box-shadow:none}
+.ck-card.tg-on{box-shadow:0 0 0 1px rgba(255,138,61,.55),0 0 18px -4px rgba(255,138,61,.6)}
+.ck-card .feat-switch-row{margin:2px 0 0}
+.fx-chip.side{border-color:rgba(224,117,102,.55);color:#f0b3aa}
+.fx-chip.off{opacity:.45}
+.fx-chip.ignored{opacity:.5;text-decoration:line-through}
+.combat-flag.tg-flag{font-size:.62rem;letter-spacing:.6px;width:auto;padding-inline:8px}
+
+/* A switched-on feature also rides in the "what's on me right now" strip; tap it to switch off. */
+button.ck-state.tg{
+  background:rgba(255,138,61,.12);border-color:var(--ember);color:var(--ember-lt);
+  cursor:pointer;font-family:inherit;line-height:inherit;
+}
+button.ck-state.tg:hover{background:rgba(255,138,61,.24)}
+button.ck-state.tg.noside{border-style:dashed}
+
+/* Disadvantage reminders read red wherever advantage ones read gold/ember. */
+.sk-fx.dis{border-color:var(--red);color:#f0a196}
+.sk-fx.dis b{background:var(--red);color:var(--ink)}
+.sk-fx.dis.active{background:rgba(224,117,102,.16);box-shadow:0 0 8px rgba(224,117,102,.4);border-color:var(--red);color:#f6beb5}
+.sk-fx.dis.active b{background:var(--red)}
+.ck-rem.dis{color:#f0a196}
+.ck-rem.dis.active{background:rgba(224,117,102,.12);color:#f6beb5}
+.ck-qr-badge.dis{background:var(--red);color:var(--ink)}
+
+/* ---------- Mutagencraft station ---------- */
+.mut-station:empty{display:none}
+.mut-panel{border-top:2px solid var(--class)}
+.mut-panel h2{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.mut-count{
+  font-family:'Crimson Pro',Georgia,serif;font-size:.9rem;letter-spacing:.3px;text-transform:none;
+  color:var(--text);background:rgba(10,8,5,.6);border:1px solid var(--border-lt);border-radius:999px;padding:2px 12px;
+}
+.mut-count.over{color:#f0a196;border-color:var(--red)}
+.mut-help{margin:0 0 12px}
+.mut-empty{margin:0 0 12px}
+.mut-vials{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-bottom:12px}
+.mut-vial{
+  display:flex;flex-direction:column;gap:6px;min-width:0;
+  background:linear-gradient(180deg,rgba(44,35,26,.92),rgba(30,24,18,.92));
+  border:1px solid var(--border);border-inline-start:3px solid var(--border-lt);border-radius:6px;padding:10px 12px;
+  transition:border-color .2s ease,box-shadow .2s ease;
+}
+.mut-vial.ready{border-color:rgba(227,193,92,.5);border-inline-start-color:var(--gold)}
+.mut-vial.active{border-color:var(--ember);border-inline-start-color:var(--ember);box-shadow:0 0 22px -8px var(--ember)}
+.mut-vial-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mut-flask{color:var(--faint);font-size:1.05rem;line-height:1}
+.mut-vial.ready .mut-flask{color:var(--gold-lt)}
+.mut-vial.active .mut-flask{color:var(--ember-lt);filter:drop-shadow(0 0 6px var(--ember))}
+.mut-name{font-family:'Cinzel',Georgia,serif;font-size:.9rem;letter-spacing:.6px;color:var(--gold-lt);flex:1;min-width:0}
+.mut-state{font-size:.68rem;letter-spacing:1.2px;text-transform:uppercase;border-radius:999px;padding:1px 9px;border:1px solid var(--gold-dim);color:var(--gold-lt)}
+.mut-vial.active .mut-state{border-color:var(--ember);color:var(--ember-lt);background:rgba(255,138,61,.12)}
+.mut-desc{color:var(--muted);font-size:.86rem;line-height:1.4}
+.mut-vial.active .mut-desc{color:var(--text)}
+.mut-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:auto;padding-top:4px}
+.mut-btn{
+  min-height:36px;padding:6px 16px;border-radius:6px;cursor:pointer;
+  font-size:.74rem;letter-spacing:1.4px;text-transform:uppercase;
+  background:rgba(10,8,5,.55);border:1px solid var(--gold-dim);color:var(--gold-lt);
+  transition:background .15s ease,border-color .15s ease,box-shadow .2s ease;
+}
+.mut-btn:hover{border-color:var(--gold);background:rgba(201,162,39,.14)}
+.mut-btn.go{background:linear-gradient(180deg,#e0b040,#b98a1e);border-color:#f0cf74;color:var(--ink);font-weight:700;box-shadow:0 0 16px -4px var(--gold)}
+.mut-btn.go:hover{background:linear-gradient(180deg,#ecc050,#c6962a)}
+.mut-btn.ghost{border-color:var(--border-lt);color:var(--muted)}
+.mut-btn.ghost:hover{color:var(--text);border-color:var(--muted);background:transparent}
+.mut-btn:focus-visible,.mut-formula:focus-visible,.mut-book-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.mut-book-btn{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;min-height:40px;
+  background:rgba(10,8,5,.45);border:1px dashed var(--border-lt);border-radius:6px;padding:8px 14px;
+  color:var(--gold);cursor:pointer;font-size:.78rem;letter-spacing:1.4px;text-transform:uppercase;text-align:start;
+}
+.mut-book-btn:hover{border-color:var(--gold-dim);color:var(--gold-lt)}
+.mut-book{margin-top:10px}
+.mut-formulas{display:flex;flex-wrap:wrap;gap:6px}
+.mut-formula{
+  display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:4px 12px;border-radius:999px;cursor:pointer;
+  background:var(--panel2);border:1px solid var(--border);color:var(--muted);
+  font-family:'Crimson Pro',Georgia,serif;font-size:.88rem;
+}
+.mut-formula:hover{border-color:var(--gold-dim);color:var(--text)}
+.mut-formula.on{background:rgba(201,162,39,.2);border-color:var(--gold);color:var(--gold-lt)}
+.mut-formula.locked{opacity:.45;cursor:not-allowed}
+.mut-req{font-size:.66rem;letter-spacing:.6px;color:var(--faint);border:1px solid var(--border-lt);border-radius:999px;padding:0 6px}
+@media (prefers-reduced-motion:reduce){ .mut-vial,.mut-btn{transition:none} }
+
+/* ==========================================================================================
+   Combat: Attacks gets the full width
+   The reference panels (Death Saves, Hit Dice, Spell Slots, Reminders, Rules) used to stand as
+   two 232px columns on either side of Attacks, which squeezed every weapon row. They now sit in
+   one row underneath, so a weapon's name, its to-hit and damage maths and its roll boxes all fit
+   on a single line. The two old side columns dissolve (display:contents) into one shared grid.
+   ========================================================================================== */
+.ck-grid{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.ck-grid>.ck-center{grid-column:1/-1;order:0}
+.ck-grid>.ck-left,.ck-grid>.ck-right{display:contents}
+.ck-grid>.ck-left>.panel,.ck-grid>.ck-right>.panel{order:1;margin:0;min-width:0;flex:none}
+.ck-grid #ckRemPanel{grid-column:span 1}
+
+/* A collapsed weapon: one line — who it is, how the to-hit and damage are worked out, the roll
+   boxes, the roll helper — and its note on a full-width line of its own underneath. */
+.atk-card.atk-collapsed{flex-wrap:wrap;row-gap:6px;padding:10px 12px}
+.atk-mini-head{gap:16px}
+.atk-mini-id{flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:3px}
+.atk-mini-name{flex:none;font-family:'Cinzel',serif;font-size:1rem;letter-spacing:.5px;color:var(--gold-lt);white-space:normal;overflow:visible}
+/* Tablet: the weapon line keeps the full width and the roll boxes take the line under it, the same
+   way on every row, instead of wrapping on some rows and not on others. */
+@media (max-width:960px){ .atk-collapsed .atk-mini-head{flex-basis:100%} .atk-collapsed .atk-roll{margin-inline-start:auto} }
+.atk-mini-tags{display:flex;flex-wrap:wrap;gap:4px}
+.wpn-tag.wpn-tag-mini{font-size:.66rem;padding:0 7px;line-height:1.5;cursor:default;opacity:.85}
+.atk-mini-hit,.atk-mini-dmg{min-width:86px}
+.atk-mini-head .atk-breakdown{margin-top:1px;font-size:.72rem;white-space:nowrap;color:var(--faint);font-style:italic}
+.atk-mini-note{
+  flex:1 0 100%;order:9;
+  border-top:1px dashed var(--edge);padding-top:6px;
+  color:var(--muted);font-size:.9rem;line-height:1.4;white-space:pre-line;
+}
+.atk-rollbtn{
+  flex:0 0 auto;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.05rem;line-height:1;
+  background:radial-gradient(circle at 35% 30%,rgba(227,193,92,.28),rgba(227,193,92,.06));
+  border:1px solid var(--edge-strong);color:var(--gold-lt);
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+.atk-rollbtn:hover{transform:rotate(-14deg) scale(1.08);box-shadow:0 0 16px -2px rgba(227,193,92,.6)}
+@media (prefers-reduced-motion:reduce){ .atk-rollbtn{transition:none} .atk-rollbtn:hover{transform:none} }
+@media (max-width:700px){
+  .atk-mini-head{flex-wrap:wrap;row-gap:6px}
+  .atk-mini-id{flex-basis:100%}
+  .atk-mini-head .atk-breakdown{white-space:normal}
+}
+
+/* ==========================================================================================
+   Features: cards packed in columns
+   A grid lines cards up in rows, so a short card beside a long one leaves a hole under it. Columns
+   pack each card straight under the one above. --cols (set per section in app.js) caps the count
+   at the number of cards, so two cards still share the full width instead of leaving empty columns.
+   ========================================================================================== */
+.fv-group-cards,.fv-tl-cards{display:block;columns:290px var(--cols,3);column-gap:10px}
+.fv-group-cards{padding:10px 10px 2px;border-radius:8px}
+.fv-group-cards .feature-card,.fv-tl-cards .feature-card{
+  break-inside:avoid;-webkit-column-break-inside:avoid;margin:0 0 8px;
+}
+.fv-group + .fv-group{margin-top:10px}
+.fv-group-head{padding:2px 0 2px}
+.fv-group-clip{margin-top:6px}
+.fv-group-name{letter-spacing:.2em}
+.feature-card{border-inline-start:2px solid var(--src,var(--gold-dim))}
+.feature-card:hover{box-shadow:0 0 0 1px color-mix(in srgb,var(--src,var(--gold)) 45%,transparent),0 10px 20px -12px #000}
+
+/* ==========================================================================================
+   Notes: a notebook — the index on one side, one note open on a full page
+   ========================================================================================== */
+.nb{
+  display:grid;grid-template-columns:minmax(240px,330px) minmax(0,1fr);gap:14px;
+  height:calc(100vh - 215px);height:calc(100dvh - 215px);min-height:460px;
+}
+.nb-rail,.nb-page{
+  min-height:0;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--plate-a),var(--plate-b));
+  border:1px solid var(--edge);border-radius:6px;
+}
+.nb-rail{padding:12px;gap:10px}
+.nb-rail-top{display:flex;gap:8px}
+.nb-search{flex:1 1 auto;min-width:0}
+.nb-new{flex:0 0 auto;margin:0;white-space:nowrap}
+.nb-count{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-family:'Cinzel',serif}
+.nb-count:empty{display:none}
+.nb-list{flex:1 1 0;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-inline-end:-6px;padding-inline-end:6px}
+.nb-item{
+  display:flex;flex-direction:column;gap:3px;text-align:start;cursor:pointer;width:100%;
+  background:rgba(12,9,6,.45);border:1px solid transparent;border-inline-start:2px solid var(--border-lt);
+  border-radius:4px;padding:9px 11px;color:var(--text);font:inherit;
+  transition:background .15s ease,border-color .15s ease;
+}
+.nb-item:hover{background:rgba(227,193,92,.07)}
+.nb-item.on{
+  background:linear-gradient(var(--rule-dir),color-mix(in srgb,var(--class) 22%,transparent),rgba(227,193,92,.05));
+  border-color:var(--edge);border-inline-start-color:var(--class);
+}
+.nb-item-session{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-dim)}
+.nb-item-title{font-weight:600;font-size:1rem;color:var(--gold-lt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb-item-title i{color:var(--faint);font-weight:400}
+.nb-item-snip{
+  font-size:.86rem;line-height:1.35;color:var(--muted);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.nb-item-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.nb-item-tags .tl-tag{font-size:.68rem;padding:0 7px}
+.nb mark{background:rgba(227,193,92,.32);color:#fff3cf;border-radius:2px;padding:0 1px}
+.nb-empty{margin:6px 2px}
+
+.nb-page{padding:16px 22px 18px;gap:10px;position:relative}
+.nb-page-head{display:flex;align-items:center;gap:10px}
+.nb-back{
+  display:none;background:none;border:1px solid var(--edge);border-radius:999px;color:var(--gold-lt);
+  font-family:'Cinzel',serif;font-size:.74rem;letter-spacing:.08em;padding:5px 12px;cursor:pointer;white-space:nowrap;
+}
+.nb-page input.nb-session{
+  flex:1 1 auto;min-width:0;background:none;border:none;border-bottom:1px solid transparent;border-radius:0;padding:2px 0;
+  font-family:'Cinzel',serif;font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dim);
+}
+.nb-page input.nb-session:focus,.nb-page input.nb-title:focus{box-shadow:none;outline:none;border-bottom-color:var(--edge-strong)}
+.nb-words{flex:0 0 auto;font-size:.78rem;font-style:italic;color:var(--faint);white-space:nowrap}
+.nb-page input.nb-title{
+  background:none;border:none;border-bottom:1px solid var(--edge);border-radius:0;padding:2px 0 8px;width:100%;
+  font-family:'Cinzel',serif;font-weight:700;font-size:1.55rem;letter-spacing:.5px;color:var(--gold-lt);
+}
+.nb-page .tl-tag-row{margin-top:0}
+.nb-page input.tl-tag-add{flex:0 0 auto;width:110px;background:none;border:none;border-bottom:1px dashed var(--border-lt);border-radius:0;padding:2px 0;box-shadow:none}
+.nb-page input.tl-tag-add:focus{width:150px;border-bottom-color:var(--edge-strong)}
+.nb-hits{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-height:92px;overflow-y:auto}
+.nb-hits:empty{display:none}
+.nb-hits-h,.nb-hits-more{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-family:'Cinzel',serif}
+.nb-hit{
+  background:rgba(12,9,6,.5);border:1px solid var(--edge);border-radius:999px;color:var(--muted);
+  font:inherit;font-size:.84rem;padding:2px 11px;cursor:pointer;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.nb-hit:hover{border-color:var(--edge-strong);color:var(--text)}
+textarea.nb-body{
+  flex:1 1 0;height:auto!important;min-height:200px;width:100%;resize:none;overflow-y:auto;
+  background:rgba(8,6,4,.38);border:1px solid rgba(120,98,60,.28);border-radius:4px;
+  padding:16px 20px;font-size:1.08rem;line-height:1.7;color:var(--text);
+}
+textarea.nb-body:focus{outline:none;border-color:var(--edge-strong)}
+.nb-blank{margin:auto;text-align:center;color:var(--faint);font-style:italic}
+.nb-blank-mark{display:block;font-size:2.4rem;color:var(--gold-dim);opacity:.7;margin-bottom:6px;font-style:normal}
+/* Phone and narrow tablet: the index and the page take turns. */
+@media (max-width:760px){
+  .nb{grid-template-columns:minmax(0,1fr);height:calc(100dvh - 190px)}
+  .nb .nb-page{display:none}
+  .nb.reading .nb-rail{display:none}
+  .nb.reading .nb-page{display:flex;padding:12px 14px 14px}
+  .nb-back{display:inline-block}
+  .nb-title{font-size:1.25rem}
+}

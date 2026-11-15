@@ -57,5 +57,5 @@ getting separate rows — matches how the existing entries are already written.
 
 - Ghostslayer — `blood-hunter:ghostslayer` — added this pass, see `subclasses/blood-hunter-ghostslayer.md`
 - Lycan — `blood-hunter:lycan` — added this pass, see `subclasses/blood-hunter-lycan.md`
-- Mutant — `blood-hunter:mutant` — already in FEATURE_LIB as "Order of the Mutant"
+- Mutant — `blood-hunter:mutant` — in FEATURE_LIB as "Order of the Mutant"; features and the full mutagen list cached in `subclasses/blood-hunter-mutant.md`
 - Profane Soul — `blood-hunter:profane-soul` — added this pass, see `subclasses/blood-hunter-profane-soul.md`

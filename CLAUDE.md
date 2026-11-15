@@ -43,8 +43,14 @@ before it:
 10. `app.js` — all application state, rendering, and event wiring (the bulk of the logic, ~7900 lines)
 11. `wizard.js` — guided step-by-step character creation; reuses `app.js` globals, keeps its own
     isolated draft (`WIZ`) and only touches real storage via `createChar()` at the end
-12. `map.js` — campaign map (upload image, pin party/waypoints/quests); own localStorage key,
-    independent of character state
+12. `media.js` — `MEDIA`, the picture store (IndexedDB key→data-URL, with a localStorage fallback), and
+    `mediaReadImage()` (read + downscale an image file). Used by the two files below.
+13. `map.js` — the atlas: several campaign maps, each an uploaded picture with pins (party, place, quest,
+    waypoint, danger). One finger pans, two fingers pinch-zoom, double tap zooms in. Device-wide, independent
+    of character state.
+14. `bestiary.js` — the Bestiary tab (`PAGES.bestiary` in `app.js`): creatures and people the party has met,
+    each with a picture, free-text notes and *estimated* stats that carry a "confirmed" flag. Device-wide like
+    the maps, with its own export/import file (`{format:'dnd5e-binder-bestiary',version,entries:[…+image]}`).
 
 All data files are plain `const` declarations in global scope (no modules, no exports) — grepping
 for a constant name across `data-*.js` is the fastest way to find where game data lives.
@@ -182,6 +188,37 @@ DSL — `{t:'stat',...}`, `{t:'skill',...}`, `{t:'save',...}`, `{t:'note',...}`,
 baked in as a static number. `FEATURE_LIB` in `data-libraries.js` is the canonical source of these
 effects for known 5e features; picking one from the library auto-attaches its `fx`.
 
+**Switchable features**: a feature with `toggle:true` (a mutagen, Hybrid Transformation, Crimson Rite, or any
+feature the player flags "On/Off" on the Features tab) only contributes its `fx` while `on` is true — `allFx()`
+skips it otherwise, so every stat reads the switch for free. An effect tagged `side:true` is the drawback;
+`f.sideOff` suppresses just those (the second switch). `toggleEnds` makes a rest switch it off
+(`restEndsToggles()`). The switch itself is `featSwitchHTML()`, handled by one delegated listener in
+`wireFeatureSwitches()`. Related effect extras: `stat:'ab-str'`…`'ab-cha'` adds to an ability score (via
+`fxAbility()` in `score()`), `lv:[[fromLevel,amount],…]` is a level-stepped amount (`fxVal()`), and
+`kind:'dis'` on a `note`/`savenote` is a disadvantage reminder. All of these are optional fields, so older
+saves need no migration.
+
+**Mutagencraft station**: `renderMutagenStation()` fills every `.mut-station` (Combat and Features) when the
+sheet is an Order of the Mutant Blood Hunter (`hasMutagencraft()`). The formula book adds/removes `Mutagen: …`
+features; a known formula carries `brewed` (a vial was crafted this rest) and `on` (drunk, active). Caps come
+from `MUT_BREW` (vials per rest) and Mutagencraft's `pickCap` (formulas known); going over is shown, not blocked.
+A rest clears `brewed`/`on`. All clicks go through `mutagenAction()`.
+
+**Immersive theme (experimental)**: `immersive.css` loads after `styles.css` and only overrides it — the backdrop
+(`.scene`: a fixed gradient shade tinted by `--class` — deliberately no picture), the header banner and portrait medallion, the
+tab glyphs (`TAB_ICON`), bracketed panels, and the styles for the feature switches. Remove its `<link>` to get
+the previous look back. It also holds three layout changes: on Combat the reference panels (Death Saves, Hit Dice, Spell
+Slots, Reminders, Rules) sit in one row *under* a full-width Attacks panel (the `.ck-left`/`.ck-right` columns
+become `display:contents`); Features cards are packed in CSS columns capped by `--cols` (set per section in
+`renderFeaturesBySource`/`ByLevel`); and the Notes tab is a notebook (`.nb`: an index of notes beside one open page).
+
+**Notes tab**: `renderNotes()` = `renderNoteRail()` (the index, with search snippets) + `renderNotePage()` (the one
+open note, `NOTE_SEL`, UI-only). Typing on the page updates `S.notes` and re-renders only the index; everything is
+delegated from `#noteList`/`#notePage` in `wireNotes()`. The saved shape of a note is unchanged.
+
+**Roll helper**: `openTurnWizard(only)` opens for one attack (the 🎲 button on each Attacks row), for the plan's attack
+steps, or — when the plan has none — for every named weapon, so the button is never hidden while attacks exist.
+
 **Combat cockpit**: the Combat tab's "cards" (`cockpitCards()`), turn plans (`S.turnPlans`), and
 zone filtering (`CK_ZONES`, `CK_FILTER`) are a separate rendering subsystem layered on top of
 attacks/spells/features — see the `// ========== Combat cockpit ==========` section.
@@ -199,7 +236,11 @@ migration rather than assuming existing saves already match.
 Everything is `localStorage`, no backend:
 - `dnd5e-binder-char-<id>` — one character's full state (JSON of `S`)
 - `dnd5e-binder-roster-v1` — the roster (`ROSTER`)
-- `dnd5e-binder-map-v2` — the campaign map
+- `dnd5e-binder-maps-v3` — the atlas: `{maps:[{id,name,w,h,pins}],active}` — text only; each map's picture is in
+  IndexedDB (`dnd5e-binder-media`, key `map:<id>`). The older single-map `dnd5e-binder-map-v2` (picture inline) is
+  moved across once by `mapMigrate()` and then removed.
+- `dnd5e-binder-bestiary-v1` — the bestiary entries (`{list:[…]}`, text only); pictures in IndexedDB under `beast:<id>`.
+  **Neither the maps nor the bestiary are part of `S`, a character export, or "Back up all".**
 - `dnd5e-binder-wide-v1` — UI-only wide-layout preference, independent of character/roster
 - `dnd5e-binder-tab-v1` — UI-only last-open tab (restored at boot by `lastTab()`), independent of character/roster
 - `dnd5e-binder-lang-v1` — UI-only language, `'en'` (default) or `'he'`; read by `i18n.js` before `app.js`

@@ -1231,3 +1231,140 @@ I18N_HE_RX.push(
   [/^(\d+) to choose$/,m=>`${m[1]} לבחירה`],
   [/^(.+) · pick one more$/,m=>`${m[1]} · בחר עוד אחד`],
 );
+
+// ----- Switchable features (mutagens, transformations) + scenic backdrop -----
+Object.assign(I18N_HE,{
+  'Active':'פעיל',
+  'Inactive':'כבוי',
+  'Side effect':'תופעת לוואי',
+  'Side effect ignored':'תופעת הלוואי מבוטלת',
+  'On/Off':'הפעלה/כיבוי',
+  'Switched on — its effects are counted. Tap to switch off.':'מופעל — ההשפעות שלו נספרות. הקש כדי לכבות.',
+  'Switched off — its effects are not counted. Tap to switch on.':'כבוי — ההשפעות שלו לא נספרות. הקש כדי להפעיל.',
+  'The side effect applies while this is active. Tap to ignore it.':'תופעת הלוואי חלה כל עוד זה פעיל. הקש כדי להתעלם ממנה.',
+  'The side effect is being ignored. Tap to apply it again.':'מתעלמים מתופעת הלוואי. הקש כדי להחיל אותה שוב.',
+  'Has an on/off switch — its effects only count while switched on. Tap to remove the switch.':'יש מתג הפעלה — ההשפעות נספרות רק כשהוא מופעל. הקש כדי להסיר את המתג.',
+  'Tap to give this feature an on/off switch, so its effects only count while it is active':'הקש כדי לתת ליכולת הזו מתג הפעלה, כך שההשפעות שלה ייספרו רק כשהיא פעילה',
+  'Active — tap to switch off':'פעיל — הקש כדי לכבות',
+  'Strength score':'ערך כוח','Dexterity score':'ערך זריזות','Constitution score':'ערך חוסן',
+  'Intelligence score':'ערך אינטליגנציה','Wisdom score':'ערך חוכמה','Charisma score':'ערך כריזמה',
+  'dis':'חיס׳',
+  'active':'פעיל',
+});
+I18N_HE_RX.push(
+  [/^(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) score ([+\u2212-]?\d+)$/,(m,tr)=>`${tr(m[1]+' score')} ${m[2]}`],
+  [/^★ (.+) save: disadvantage(?: \((.+)\))?$/,(m,tr,has)=>`★ הצלת ${tr(m[1])}: חיסרון${m[2]?` (${heCond(m[2],tr,has)})`:''}`],
+  [/^★ (.+): disadvantage(?: \((.+)\))?$/,(m,tr,has)=>`★ ${m[1].split(', ').map(s=>tr(s)).join(', ')}: חיסרון${m[2]?` (${heCond(m[2],tr,has)})`:''}`],
+  [/^◉ (.+)$/,(m,tr,has)=>has(m[1])?`◉ ${tr(m[1])}`:null],
+);
+
+// ----- Mutagencraft station -----
+Object.assign(I18N_HE,{
+  '⚗ Mutagencraft':'⚗ אמנות המוטגנים',
+  'Craft':'הכנה','Drink':'שתייה','End':'סיום','Undo':'ביטול',
+  'Ready to drink':'מוכן לשתייה',
+  'Craft a vial of this mutagen (done when you finish a rest)':'הכנת בקבוקון של המוטגן הזה (נעשה בסיום מנוחה)',
+  'Bonus action — its effects and side effect start now':'פעולת בונוס — ההשפעות ותופעת הלוואי מתחילות עכשיו',
+  'Crafted by mistake — take the vial back':'הוכן בטעות — החזרת הבקבוקון',
+  'End this mutagen — its effects and side effect stop':'סיום המוטגן — ההשפעות ותופעת הלוואי נפסקות',
+  'Craft your vials when you finish a rest, drink one as a bonus action. Active mutagens end, and unused vials go inert, at your next short or long rest.':'מכינים את הבקבוקונים בסיום מנוחה, ושותים אחד כפעולת בונוס. מוטגנים פעילים מסתיימים, ובקבוקונים שלא נוצלו מאבדים את כוחם, במנוחה הקצרה או הארוכה הבאה.',
+  'No formulas yet — open the formula book below and pick the ones you know.':'אין עדיין נוסחאות — פתח את ספר הנוסחאות למטה ובחר את אלה שידועות לך.',
+  'Tap a formula to learn it; tap a known one to forget it.':'הקש על נוסחה כדי ללמוד אותה; הקש על נוסחה ידועה כדי לשכוח אותה.',
+});
+I18N_HE_RX.push(
+  [/^Crafted (\d+) \/ (\d+) this rest$/,m=>`הוכנו ${m[1]} / ${m[2]} במנוחה הזו`],
+  [/^Crafted (\d+) this rest$/,m=>`הוכנו ${m[1]} במנוחה הזו`],
+  [/^Formula book — (\d+) \/ (\d+) known$/,m=>`ספר הנוסחאות — ${m[1]} / ${m[2]} ידועות`],
+  [/^Formula book — (\d+) known$/,m=>`ספר הנוסחאות — ${m[1]} ידועות`],
+);
+
+// ----- Roll helper on each attack, notebook-style Notes -----
+Object.assign(I18N_HE,{
+  'Roll helper':'עוזר הטלות',
+  'Roll helper — type what the d20 and the damage dice show, and it does the maths':'עוזר הטלות — הקלד מה יצא ב־d20 ובקוביות הנזק, והוא יחשב בשבילך',
+  'Untitled note':'הערה ללא כותרת',
+  '‹ All notes':'‹ כל ההערות',
+  'Delete this note':'מחק את ההערה',
+  'Found in this note':'נמצא בהערה הזו',
+  'Pick a note from the list to read it here.':'בחר הערה מהרשימה כדי לקרוא אותה כאן.',
+  'No notes yet — start your first one.':'אין עדיין הערות — התחל את הראשונה.',
+});
+I18N_HE_RX.push(
+  [/^(\d+) notes?$/,m=>heN(m[1],'הערה אחת',m[1]+' הערות')],
+  [/^(\d+) of (\d+) notes$/,m=>`${m[1]} מתוך ${m[2]} הערות`],
+  [/^(\d+) words?$/,m=>heN(m[1],'מילה אחת',m[1]+' מילים')],
+);
+
+// ----- Atlas (several maps) and the Bestiary tab -----
+Object.assign(I18N_HE,{
+  'Bestiary':'בסטיארי',
+  '+ Add map':'+ הוסף מפה',
+  'Map options':'אפשרויות מפה',
+  'Rename this map, change its picture or delete it':'שנה את שם המפה, החלף את התמונה או מחק אותה',
+  'Close the map':'סגור את המפה',
+  'Map name':'שם המפה',
+  '🖼 Change picture':'🖼 החלף תמונה',
+  'Swap in a new picture — the pins keep their places':'החלפת התמונה — הסיכות נשארות במקומן',
+  'Delete map':'מחק מפה',
+  'Add a picture of your game\'s map, then pin your party\'s position, places and quests on it. You can keep several maps — a world, a city, a dungeon.':'הוסף תמונה של מפת המשחק, ואז סמן עליה את מיקום החבורה, מקומות ומשימות. אפשר לשמור כמה מפות — עולם, עיר, מבוך.',
+  '🖼 Add a map picture':'🖼 הוסף תמונת מפה',
+  'Place':'מקום','Danger':'סכנה','Pins':'סיכות','Fit':'התאם',
+  'Mark where your party is':'סמן איפה החבורה נמצאת',
+  'Mark a town, a keep, a landmark':'סמן עיר, מבצר או ציון דרך',
+  'Mark a quest':'סמן משימה','Mark a waypoint':'סמן נקודת דרך','Mark a danger':'סמן סכנה',
+  'List this map\'s pins':'רשימת הסיכות במפה הזו',
+  'Zoom out':'הקטן','Zoom in':'הגדל',
+  'Fit the whole map on screen':'התאם את כל המפה למסך',
+  'Pins on this map':'סיכות במפה הזו',
+  'No pins yet — pick a pin below, then tap the map.':'אין עדיין סיכות — בחר סיכה למטה ואז הקש על המפה.',
+  'Cancel':'ביטול',
+  'Search creatures and people…':'חפש יצורים ואנשים…',
+  'All':'הכול','Monsters':'מפלצות','People':'אנשים',
+  '+ New entry':'+ רשומה חדשה',
+  'Shared by every character on this device.':'משותף לכל הדמויות במכשיר הזה.',
+  '⬇ Export':'⬇ ייצוא','⬆ Import':'⬆ ייבוא',
+  'Save the whole bestiary, pictures included, to a file':'שמור את כל הבסטיארי, כולל התמונות, לקובץ',
+  'Add the entries from a bestiary file':'הוסף רשומות מקובץ בסטיארי',
+  'Nothing here matches your search.':'שום דבר כאן לא תואם לחיפוש.',
+  'Nothing recorded yet. Add the first creature or person your party meets.':'עדיין לא נרשם דבר. הוסף את היצור או האדם הראשון שהחבורה פוגשת.',
+  'Unnamed':'ללא שם',
+  'Defeated':'הובס',
+  'Add a picture':'הוסף תמונה',
+  'Add or change the picture':'הוסף או החלף את התמונה',
+  'Remove picture':'הסר תמונה',
+  'Name — or what you call it for now':'שם — או איך שאתם קוראים לו בינתיים',
+  'Monster':'מפלצת','Person':'אדם',
+  'Hostile':'עוין','Neutral':'ניטרלי','Friendly':'ידידותי',
+  'Type':'סוג',
+  'e.g. undead, beast, noble, merchant':'למשל אל־מת, חיה, אציל, סוחר',
+  'Where we met':'איפה נפגשנו',
+  'Place, session…':'מקום, מפגש…',
+  'What we think we know':'מה שנראה לנו שאנחנו יודעים',
+  'Each number is a guess (≈) until you tap its mark to confirm it (✓)':'כל מספר הוא הערכה (≈) עד שמקישים על הסימן שלו כדי לאשר אותו (✓)',
+  'Guess or confirmed':'הערכה או מאושר',
+  'Hit Points':'נקודות חיים',
+  'Save DC':'DC הצלה',
+  'Resists or is immune to':'עמיד או חסין ל־',
+  'e.g. fire, non-magical weapons':'למשל אש, נשק לא קסום',
+  'Weak to':'חלש מול',
+  'e.g. radiant, low Wisdom saves':'למשל נזק זוהר, הצלות חוכמה חלשות',
+  'Attacks and abilities we have seen':'התקפות ויכולות שראינו',
+  'Bite, a breath weapon about 30 ft., turns invisible…':'נשיכה, נשיפה לטווח של כ־30 רגל, נעלם מהעין…',
+  'Notes and lore':'הערות וידע',
+  'What it wants, who it serves, what happened when we met…':'מה הוא רוצה, את מי הוא משרת, מה קרה כשנפגשנו…',
+  'Delete entry':'מחק רשומה',
+});
+I18N_HE_RX.push(
+  [/^(\d+) entr(?:y|ies)$/,m=>heN(m[1],'רשומה אחת',m[1]+' רשומות')],
+  [/^(\d+) of (\d+) entries$/,m=>`${m[1]} מתוך ${m[2]} רשומות`],
+  [/^(\S+) Tap the map where this pin goes$/,m=>`${m[1]} הקש על המפה במקום שבו הסיכה צריכה להיות`],
+);
+Object.assign(I18N_HE,{'Party':I18N_HE['Party']||'חבורה','Waypoint':I18N_HE['Waypoint']||'נקודת דרך','Quest':I18N_HE['Quest']||'משימה'});
+Object.assign(I18N_HE,{
+  'Everything in that file is already in your bestiary.':'כל מה שבקובץ הזה כבר נמצא בבסטיארי שלך.',
+  'The bestiary is empty — there is nothing to export yet.':'הבסטיארי ריק — אין עדיין מה לייצא.',
+  'That file is not a bestiary export.':'הקובץ הזה אינו ייצוא של בסטיארי.',
+  'That file could not be read as a bestiary.':'לא ניתן לקרוא את הקובץ כבסטיארי.',
+  'Could not load that image file.':I18N_HE['Could not load that image file.']||'לא ניתן לטעון את קובץ התמונה.',
+});
+I18N_HE_RX.push([/^Added (\d+) entr(?:y|ies) to the bestiary\.$/,m=>heN(m[1],'נוספה רשומה אחת לבסטיארי.','נוספו '+m[1]+' רשומות לבסטיארי.')]);

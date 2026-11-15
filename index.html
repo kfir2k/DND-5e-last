@@ -15,8 +15,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="immersive.css">
 </head>
 <body>
+
+<!-- The backdrop: a fixed shade behind the whole sheet, tinted by the class colour (immersive.css). -->
+<div class="scene" id="scene" aria-hidden="true">
+  <div class="scene-shade"></div>
+</div>
 
 <header>
   <div class="title-block">
@@ -83,40 +89,53 @@
   </div>
 </div>
 
+<!-- The atlas: several maps, each a picture with pins (map.js). Pan with one finger, pinch with two. -->
 <div class="modal-bg map-modal-bg" id="mapModal">
   <div class="map-shell">
-    <div class="map-toolbar">
-      <div class="map-toolbar-group">
-        <button class="icon-btn sm" id="mapUploadBtn">🖼 Upload Map</button>
-        <input type="file" id="mapImageFile" accept="image/*" style="display:none">
-        <button class="icon-btn sm danger" id="mapRemoveImageBtn" style="display:none">Remove Map</button>
-      </div>
-      <div class="map-toolbar-group" id="mapPinTools" style="display:none">
-        <button class="icon-btn sm map-pintool" id="mapAddPartyBtn" data-pintype="party" title="Click, then tap the map to mark where your party is">📍 Party</button>
-        <button class="icon-btn sm map-pintool" id="mapAddWaypointBtn" data-pintype="waypoint" title="Click, then tap the map to mark a waypoint">🚩 Waypoint</button>
-        <button class="icon-btn sm map-pintool" id="mapAddQuestBtn" data-pintype="quest" title="Click, then tap the map to mark a quest">⭐ Quest</button>
-      </div>
-      <div class="map-toolbar-group" id="mapViewTools" style="display:none">
-        <button class="icon-btn sm" id="mapZoomOut" title="Zoom out">−</button>
-        <button class="icon-btn sm" id="mapZoomReset" title="Fit to screen">Reset view</button>
-        <button class="icon-btn sm" id="mapZoomIn" title="Zoom in">+</button>
-      </div>
-      <button class="close-x" id="mapClose">✕</button>
+    <div class="map-top">
+      <div class="map-tabs" id="mapTabs"></div>
+      <input type="file" id="mapImageFile" accept="image/*" style="display:none">
+      <button class="icon-btn sm map-menu-btn" id="mapMenuBtn" title="Rename this map, change its picture or delete it" aria-label="Map options">⋯</button>
+      <button class="close-x" id="mapClose" aria-label="Close the map">✕</button>
+    </div>
+    <div class="map-menu" id="mapMenu" hidden>
+      <input type="text" id="mapNameInput" placeholder="Map name" maxlength="40" dir="auto">
+      <button class="icon-btn sm" id="mapReplaceBtn" title="Swap in a new picture — the pins keep their places">🖼 Change picture</button>
+      <button class="icon-btn sm danger" id="mapDeleteBtn">Delete map</button>
+      <button class="icon-btn sm" id="mapMenuDone">Done</button>
     </div>
     <div class="map-stage" id="mapStage">
       <div class="map-empty" id="mapEmpty">
-        <p>Upload a picture of your game's map to pin your party's position, waypoints and quests on it.</p>
-        <button class="icon-btn" id="mapUploadBtnBig">🖼 Upload a Map Image</button>
+        <span class="map-empty-mark" aria-hidden="true">🗺</span>
+        <p>Add a picture of your game's map, then pin your party's position, places and quests on it. You can keep several maps — a world, a city, a dungeon.</p>
+        <button class="icon-btn" id="mapUploadBtnBig">🖼 Add a map picture</button>
       </div>
       <div class="map-viewport" id="mapViewport">
-        <img id="mapImg" class="map-img" alt="Campaign map">
+        <img id="mapImg" class="map-img" alt="Campaign map" draggable="false">
         <div id="mapPinLayer" class="map-pin-layer"></div>
+      </div>
+      <div class="map-hint" id="mapHint" hidden></div>
+      <aside class="map-pinlist" id="mapPinList" hidden></aside>
+      <div class="map-dock" id="mapDock">
+        <div class="map-dock-group">
+          <button type="button" class="map-tool map-pintool" data-pintype="party" title="Mark where your party is">📍<span>Party</span></button>
+          <button type="button" class="map-tool map-pintool" data-pintype="place" title="Mark a town, a keep, a landmark">🏰<span>Place</span></button>
+          <button type="button" class="map-tool map-pintool" data-pintype="quest" title="Mark a quest">⭐<span>Quest</span></button>
+          <button type="button" class="map-tool map-pintool" data-pintype="waypoint" title="Mark a waypoint">🚩<span>Waypoint</span></button>
+          <button type="button" class="map-tool map-pintool" data-pintype="danger" title="Mark a danger">☠️<span>Danger</span></button>
+        </div>
+        <div class="map-dock-group">
+          <button type="button" class="map-tool" id="mapPinsBtn" title="List this map's pins">☰<span>Pins</span></button>
+          <button type="button" class="map-tool" id="mapZoomOut" title="Zoom out" aria-label="Zoom out">−</button>
+          <button type="button" class="map-tool" id="mapZoomReset" title="Fit the whole map on screen">⤢<span>Fit</span></button>
+          <button type="button" class="map-tool" id="mapZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
+        </div>
       </div>
     </div>
     <div class="map-selected-bar" id="mapSelectedBar">
-      <span class="map-pin-ico" id="mapSelIcon"></span>
-      <input type="text" id="mapSelLabel" placeholder="Label" maxlength="40">
-      <input type="text" id="mapSelNote" placeholder="Note (optional)" maxlength="120">
+      <div class="map-seltype" id="mapSelType"></div>
+      <input type="text" id="mapSelLabel" placeholder="Label" maxlength="40" dir="auto">
+      <input type="text" id="mapSelNote" placeholder="Note (optional)" maxlength="160" dir="auto">
       <button class="icon-btn sm danger" id="mapPinRemoveBtn">Remove</button>
       <button class="icon-btn sm" id="mapPinDoneBtn">Done</button>
     </div>
@@ -140,6 +159,8 @@
           <button type="button" class="lang-opt" data-lang="he" lang="he" aria-pressed="false">עברית</button>
         </span>
       </div>
+    </div>
+    <div class="settings-group">
     </div>
     <div class="settings-group">
       <button class="icon-btn settings-row" id="exportBtn"><span class="settings-ico">⇩</span><span class="settings-txt"><b>Back up this character</b><small>Save this sheet as a dated .json file</small></span></button>
@@ -169,7 +190,9 @@
 <script src="i18n.js"></script>
 <script src="app.js"></script>
 <script src="wizard.js"></script>
+<script src="media.js"></script>
 <script src="map.js"></script>
+<script src="bestiary.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
