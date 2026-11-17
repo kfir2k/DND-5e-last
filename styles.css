@@ -162,8 +162,9 @@ body.wide-mode main{max-width:min(1700px,96vw)}
 .bMiniPortraitWrap{position:absolute;top:0;bottom:0;inset-inline-end:6%;width:min(48%,250px);pointer-events:none}
 .bMportA,.bMportB{
   object-position:center 22%;
-  -webkit-mask-image:radial-gradient(ellipse 58% 70% at 50% 40%,#000 50%,transparent 92%);
-  mask-image:radial-gradient(ellipse 58% 70% at 50% 40%,#000 50%,transparent 92%);
+  /* fully transparent before the wrap's side edges (58% × 84% < 50%), so no seam shows on bright art */
+  -webkit-mask-image:radial-gradient(ellipse 58% 70% at 50% 40%,#000 46%,transparent 84%);
+  mask-image:radial-gradient(ellipse 58% 70% at 50% 40%,#000 46%,transparent 84%);
 }
 .bScrim{
   position:absolute;inset:0;pointer-events:none;
@@ -171,6 +172,18 @@ body.wide-mode main{max-width:min(1700px,96vw)}
     linear-gradient(to top,rgba(8,6,4,.94) 0%,rgba(8,6,4,.4) 42%,transparent 72%),
     linear-gradient(to right,rgba(8,6,4,.6) 0%,transparent 55%);
 }
+/* Art swatches (S.art) — top start corner, opposite the prev/next arrows. */
+.bLook{position:absolute;top:10px;inset-inline-start:10px;z-index:3;display:flex;gap:6px}
+.bLook[hidden]{display:none}
+.bLookBtn{
+  width:44px;height:28px;padding:0;border-radius:6px;cursor:pointer;
+  background-color:var(--ink);background-size:cover;background-position:center 30%;
+  border:1px solid rgba(255,255,255,.22);box-shadow:0 2px 8px rgba(0,0,0,.6);
+  opacity:.72;transition:opacity .15s,border-color .15s,transform .15s;
+}
+.bLookBtn.bLookRace{width:30px;height:30px;border-radius:50%;background-position:center 18%}
+.bLookBtn:hover{opacity:1}
+.bLookBtn.on{opacity:1;border:2px solid var(--gold-lt);box-shadow:0 0 0 2px rgba(8,6,4,.7),0 0 14px -2px var(--accent)}
 .bFlash{position:absolute;inset:0;z-index:1;pointer-events:none;background:var(--c,var(--gold));opacity:0}
 .bFlash.pulse{animation:bFlashPulse .55s ease}
 @keyframes bFlashPulse{0%{opacity:.28}100%{opacity:0}}

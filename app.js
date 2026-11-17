@@ -55,6 +55,9 @@ function defaultState(){
     cockpit:{hidden:[],pins:[],showAllSpells:false,showDeath:false,atkOpen:false,hiddenZones:[],planCollapsed:false,quickRef:{items:false,attacks:false,saves:false,skills:false}},
     // Page 2
     portrait:'',
+    // Chosen art (Build tab swatches): cls '' | 'a' | 'b' (class scene), race '' | 'male' | 'female'.
+    // '' = the original art. Picture only — nothing reads it for rules.
+    art:{cls:'',race:''},
     age:'',height:'',weight:'',eyes:'',skin:'',hair:'',
     personality:'', ideals:'', bonds:'', flaws:'',
     goals:'', secrets:'',
@@ -410,6 +413,7 @@ build:`
         <img class="bLayer bBgB" id="bBgB" alt="">
         <div class="bScrim"></div>
         <div class="bFlash" id="bFlash"></div>
+        <div class="bLook" id="bClassLook" data-look="cls"></div>
         <div class="bArrows">
           <button class="bArrow" id="classPrevBtn" type="button" aria-label="Previous class">‹</button>
           <button class="bArrow" id="classNextBtn" type="button" aria-label="Next class">›</button>
@@ -453,6 +457,7 @@ build:`
           <img class="bLayer bMportB" id="bMportB" alt="">
         </div>
         <div class="bScrim"></div>
+        <div class="bLook" id="bRaceLook" data-look="race"></div>
         <div class="bArrows">
           <button class="bArrow" id="racePrevBtn" type="button" aria-label="Previous heritage">‹</button>
           <button class="bArrow" id="raceNextBtn" type="button" aria-label="Next heritage">›</button>
@@ -5822,7 +5827,68 @@ const RACE_ORDER_BUILD=Object.keys(RACES);
 // Which A/B image layer is currently on top for each hero, and the id last painted onto it —
 // renderBuildTheme() only crossfades when the id actually changes (it's called on every recalc(),
 // including level/subclass edits that shouldn't retrigger the portrait swap).
-let bClassFront='A', bRaceFront='A', bLastClassId=null, bLastRaceId=null;
+let bClassFront='A', bRaceFront='A', bLastClassId=null, bLastRaceId=null, bLastClassSrc=null, bLastRaceSrc=null;
+
+// ---------- Chosen art (S.art) ----------
+// look omitted = this sheet's own choice. A choice that has no picture for the current class/heritage
+// (Blood Hunter, an exotic lineage) quietly falls back to the original art, and comes back if the
+// player switches back — so the choice is never lost by browsing.
+function classArtSrc(classId,look){
+  if(look===undefined) look=(S.art||{}).cls;
+  return (look&&CLASS_SCENES.includes(classId))?`class-art/${classId}-scene-${look}.jpg`:`class-art/${classId}-hero.jpg`;
+}
+function raceArtSrc(raceId,look){
+  const img=RACE_IMG[raceId]; if(!img) return '';
+  if(look===undefined) look=(S.art||{}).race;
+  return (look&&RACE_LOOKS.includes(img))?`race-art/${img}-${look}.jpg`:`race-art/${img}.jpg`;
+}
+const LOOK_OPTS={
+  cls:[['','Original art'],['a','Scene I'],['b','Scene II']],
+  race:[['','Original art'],['male','Male'],['female','Female']],
+};
+// The swatches on a Build banner: one small picture per option, the current one ringed.
+// Rebuilt only when what they'd show changes (renderBuildTheme runs on every recalc).
+function renderLookPicker(kind){
+  const box=$(kind==='cls'?'#bClassLook':'#bRaceLook'); if(!box) return;
+  const id=kind==='cls'?S.classId:S.raceId;
+  const has=kind==='cls'?CLASS_SCENES.includes(id):RACE_LOOKS.includes(RACE_IMG[id]);
+  const cur=(S.art||{})[kind]||'';
+  const key=has?id+'|'+cur:'';
+  if(box.dataset.key===key) return; box.dataset.key=key;
+  box.hidden=!has;
+  box.innerHTML=has?LOOK_OPTS[kind].map(([v,t])=>{
+    const src=kind==='cls'?classArtSrc(id,v):raceArtSrc(id,v);
+    return `<button type="button" class="bLookBtn ${kind==='race'?'bLookRace':''} ${v===cur?'on':''}" data-v="${v}"
+      title="${t}" aria-label="${t}" aria-pressed="${v===cur}" style="background-image:url('${src}')"></button>`;
+  }).join(''):'';
+  if(!box.onclick) box.onclick=e=>{
+    const b=e.target.closest('.bLookBtn'); if(!b) return;
+    S.art=Object.assign({cls:'',race:''},S.art,{[kind]:b.dataset.v});
+    save(); renderBuildTheme();
+  };
+}
+// The page backdrop (.scene) wears this hero's class art (picked scene or the original) under its
+// shading; the header banner shows the same picture. Two layers so a change crossfades, and the new
+// picture is only faded in once it has loaded (no flash of an empty layer).
+let lastHeaderArt=null, sceneFront='A', sceneArtSeq=0;
+function syncHeaderArt(){
+  const src=S.classId&&CLASSES[S.classId]?classArtSrc(S.classId):'';
+  if(src===lastHeaderArt) return; lastHeaderArt=src;
+  const h=document.querySelector('header');
+  if(h){ h.style.setProperty('--hdr-art',src?`url("${src}")`:'none'); h.classList.toggle('has-art',!!src); }
+  const scene=$('#scene'), seq=++sceneArtSeq;
+  if(!scene) return;
+  if(!src){ $$('.scene-art').forEach(el=>el.classList.remove('on')); scene.classList.remove('has-art'); return; }
+  const img=new Image();
+  img.onload=img.onerror=()=>{
+    if(seq!==sceneArtSeq) return; // a newer pick arrived while this one loaded
+    const to=sceneFront==='A'?'B':'A', show=$('#sceneArt'+to), hide=$('#sceneArt'+sceneFront);
+    show.style.backgroundImage=`url("${src}")`;
+    show.classList.add('on'); hide.classList.remove('on');
+    sceneFront=to; scene.classList.add('has-art');
+  };
+  img.src=src;
+}
 
 // Swaps which of an A/B <img> pair is on top. from/to are resolved once by the caller and
 // applied to every layer-pair together (bg + portrait), so paired layers can't drift out of
@@ -5931,19 +5997,27 @@ function renderBuildTheme(){
   panel.style.setProperty('--accent',accent);
   panel.style.setProperty('--accent-dim',accent+'30');
 
-  if(c&&S.classId!==bLastClassId){
-    const bgSrc='class-art/'+S.classId+'-hero.jpg';
-    if(bLastClassId===null){ $('#bBgA').src=bgSrc; } // first paint — A is already .visible
-    else{
-      const to=bClassFront==='A'?'B':'A';
-      crossfadeImg('bBg',bClassFront,to,bgSrc);
-      bClassFront=to;
-      const flash=$('#bFlash');
-      flash.style.setProperty('--c',accent);
-      flash.classList.remove('pulse'); void flash.offsetWidth; flash.classList.add('pulse');
+  // Crossfade on any picture change (a new class or a new art pick); flash only for a new class.
+  if(c){
+    const bgSrc=classArtSrc(S.classId);
+    if(bgSrc!==bLastClassSrc){
+      if(bLastClassSrc===null){ $('#bBgA').src=bgSrc; } // first paint — A is already .visible
+      else{
+        const to=bClassFront==='A'?'B':'A';
+        crossfadeImg('bBg',bClassFront,to,bgSrc);
+        bClassFront=to;
+        if(S.classId!==bLastClassId){
+          const flash=$('#bFlash');
+          flash.style.setProperty('--c',accent);
+          flash.classList.remove('pulse'); void flash.offsetWidth; flash.classList.add('pulse');
+        }
+      }
+      bLastClassSrc=bgSrc;
     }
     bLastClassId=S.classId;
   }
+  renderLookPicker('cls');
+  syncHeaderArt();
   $('#bEyebrow').textContent=c?`Level ${num(S.level)||1}`:'Choose your class';
   $('#bName').textContent=c?(c.name+(S.subclass?' — '+S.subclass:'')):'—';
 
@@ -5958,19 +6032,20 @@ function renderBuildTheme(){
   $('#bFlavor').textContent=c?(CLASS_FLAVOR[S.classId]||''):'Pick a class from the roster to see how they fight.';
 
   const ri=raceInfo();
-  if(ri&&S.raceId!==bLastRaceId){
-    const img=RACE_IMG[S.raceId];
-    if(img){
-      const src='race-art/'+img+'.jpg';
-      if(bLastRaceId===null){ $('#bMbgA').src=src; $('#bMportA').src=src; }
+  if(ri){
+    const src=raceArtSrc(S.raceId);
+    if(src&&src!==bLastRaceSrc){
+      if(bLastRaceSrc===null){ $('#bMbgA').src=src; $('#bMportA').src=src; }
       else{
         const to=bRaceFront==='A'?'B':'A';
         crossfadeImg('bMbg',bRaceFront,to,src); crossfadeImg('bMport',bRaceFront,to,src);
         bRaceFront=to;
       }
+      bLastRaceSrc=src;
     }
     bLastRaceId=S.raceId;
   }
+  renderLookPicker('race');
   $('#bRaceName').textContent=ri?((ri.sub&&ri.sub.name)||ri.r.name):'—';
   $('#bRaceChips').innerHTML=ri?liveRaceChips().map(t=>`<span class="bChip">${esc(t)}</span>`).join(''):'';
 
@@ -7781,7 +7856,10 @@ function charSummary(id){
       hp:num(d.hpCurrent), hpMax:num(d.hpMax),
       icon:giHTML(CLASS_ICON[d.classId]||CLASS_ICON.fighter),
       color:CLASS_COLOR[d.classId]||'#c9a227',
-      art:d.portrait||(cls?'class-art/'+d.classId+'-portrait.jpg':''),
+      // Own photo first, then a heritage figure the player picked, then the class portrait.
+      art:d.portrait
+        ||(d.art&&d.art.race&&RACE_LOOKS.includes(RACE_IMG[d.raceId])?raceArtSrc(d.raceId,d.art.race):'')
+        ||(cls?'class-art/'+d.classId+'-portrait.jpg':''),
     };
   }catch(e){ return {name:'Corrupted save',cls:'',lvl:'',race:'',hp:0,hpMax:0,icon:'⚠',color:'#c05046'}; }
 }

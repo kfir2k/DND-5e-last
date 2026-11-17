@@ -19,8 +19,11 @@
 </head>
 <body>
 
-<!-- The backdrop: a fixed shade behind the whole sheet, tinted by the class colour (immersive.css). -->
+<!-- The backdrop: the hero's class art (two layers, for a crossfade) under a fixed shade tinted by the
+     class colour (immersive.css; syncHeaderArt() in app.js picks the picture). -->
 <div class="scene" id="scene" aria-hidden="true">
+  <div class="scene-art" id="sceneArtA"></div>
+  <div class="scene-art" id="sceneArtB"></div>
   <div class="scene-shade"></div>
 </div>
 

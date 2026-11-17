@@ -250,6 +250,13 @@ const RACE_IMG={
   tabaxi:'harengon',
 };
 
+// Alternate art a player can pick per character (Build tab → the small swatches on each banner;
+// saved as S.art). Classes with two extra wide scenes: class-art/<id>-scene-a.jpg / -scene-b.jpg.
+// Heritage images (RACE_IMG values) with a male and a female figure: race-art/<img>-male.jpg /
+// -female.jpg — a borrowed lineage (duergar → dwarf) gets them too.
+const CLASS_SCENES=['barbarian','bard','cleric','druid','fighter','monk','paladin','ranger','rogue','sorcerer','warlock','wizard'];
+const RACE_LOOKS=['aasimar','dragonborn','dwarf','elf','gnome','halfelf','halfling','halforc','human','tiefling'];
+
 // ---------- ASI / Feat levels & feat names ----------
 // Every class gets an Ability Score Improvement (or feat) at 4, 8, 12, 16, 19.
 // Fighters get extras at 6 & 14; Rogues at 10.

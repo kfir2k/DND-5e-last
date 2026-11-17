@@ -205,7 +205,7 @@ from `MUT_BREW` (vials per rest) and Mutagencraft's `pickCap` (formulas known); 
 A rest clears `brewed`/`on`. All clicks go through `mutagenAction()`.
 
 **Immersive theme (experimental)**: `immersive.css` loads after `styles.css` and only overrides it — the backdrop
-(`.scene`: a fixed gradient shade tinted by `--class` — deliberately no picture), the header banner and portrait medallion, the
+(`.scene`: the hero's class art — `S.art` pick or the original hero image, set by `syncHeaderArt()` — dimmed and blurred under a fixed gradient shade tinted by `--class`; the header lets it show through), the header banner and portrait medallion, the
 tab glyphs (`TAB_ICON`), bracketed panels, and the styles for the feature switches. Remove its `<link>` to get
 the previous look back. It also holds three layout changes: on Combat the reference panels (Death Saves, Hit Dice, Spell
 Slots, Reminders, Rules) sit in one row *under* a full-width Attacks panel (the `.ck-left`/`.ck-right` columns
