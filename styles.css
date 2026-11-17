@@ -18,7 +18,9 @@
   --ember-lt:#ffd08a;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{height:100%}
+/* Always keep room for the scrollbar: otherwise switching between a tab long enough to scroll and a
+   short one (Bestiary, Notes) adds/removes it, and the whole page jumps sideways by its width. */
+html{height:100%;scrollbar-gutter:stable}
 /* min-height, not height: a body pinned to exactly one viewport tall is the containing block for
    the sticky tab strip, so the strip stopped sticking after the first screenful of a long tab. */
 body{min-height:100%}

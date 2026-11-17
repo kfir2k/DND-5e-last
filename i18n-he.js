@@ -765,6 +765,7 @@ Object.assign(I18N_HE,{
   'Nature & Faith':'טבע ואמונה',
   'Charm & Song':'קסם ושיר',
   'Blood & Vengeance':'דם ונקמה',
+  'Gears & Invention':'גלגלי שיניים והמצאה',
   'Bloodline':'שושלת',
   'Calling':'ייעוד',
   'Body & Mind':'גוף ונפש',

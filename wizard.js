@@ -15,6 +15,7 @@ const WIZ_CONCEPTS=[
   {id:'wild',label:'Nature & Faith',ico:'🍃',classes:['cleric','druid'],c:'#7dc26a'},
   {id:'face',label:'Charm & Song',ico:'🎵',classes:['bard','warlock'],c:'#d9599b'},
   {id:'grim',label:'Blood & Vengeance',ico:'🩸',classes:['bloodhunter','ranger'],c:'#9c2b3c'},
+  {id:'tinker',label:'Gears & Invention',ico:'\u2699\uFE0F',classes:['artificer','wizard'],c:'#c98b4a'},
 ];
 
 // What a level-1 subclass pick is actually *called* — only matters for classes that get one
@@ -36,6 +37,7 @@ const WIZ_PROFS={
   warlock:'Light armor; simple weapons.',
   wizard:'Daggers, darts, slings, quarterstaffs, light crossbows.',
   bloodhunter:"Light and medium armor, shields; simple and martial weapons; alchemist's supplies.",
+  artificer:"Light and medium armor, shields; simple weapons; thieves' tools, tinker's tools, and one type of artisan's tools of your choice.",
 };
 
 // PHB starting-equipment tables. Each class has a fixed grant (always given) plus zero or more
@@ -189,6 +191,17 @@ const WIZ_EQUIPMENT={
     ],
     fixed:{items:[["Alchemist's Supplies",1]],packs:["Explorer's Pack"]},
   },
+  // Artificer: any two simple weapons, a light crossbow and 20 bolts, studded leather or scale mail,
+  // thieves' tools and a dungeoneer's pack.
+  artificer:{
+    groups:[
+      [{label:'Two simple weapons (Handaxe & Dagger)',grant:{weapons:[['handaxe',1],['dagger',1]]}},
+       {label:'Two simple weapons (Light hammer & Spear)',grant:{weapons:[['lighthammer',1],['spear',1]]}}],
+      [{label:'Studded leather armor',grant:{armor:'studded'}},
+       {label:'Scale mail armor',grant:{armor:'scale'}}],
+    ],
+    fixed:{weapons:[['lightcrossbow',1]],items:[['Crossbow Bolts (20)',1],["Thieves' Tools",1]],packs:["Dungeoneer's Pack"]},
+  },
 };
 
 
@@ -209,7 +222,7 @@ const WIZ_AB_MIN=3, WIZ_AB_MAX=20;
 const WIZ_STANDARD_ARRAY=[15,14,13,12,10,8];
 const WIZ_CLASS_PRIO={
   barbarian:['str','con','dex'],fighter:['str','con','dex'],paladin:['str','cha','con'],
-  monk:['dex','wis','con'],rogue:['dex','int','con'],ranger:['dex','wis','con'],bloodhunter:['dex','int','con'],
+  monk:['dex','wis','con'],rogue:['dex','int','con'],ranger:['dex','wis','con'],bloodhunter:['dex','int','con'],artificer:['int','con','dex'],
   wizard:['int','con','dex'],sorcerer:['cha','con','dex'],warlock:['cha','con','dex'],bard:['cha','dex','con'],
   cleric:['wis','con','str'],druid:['wis','con','dex'],
 };
@@ -777,7 +790,7 @@ function wizFinalize(){
 
   if(cls.cast){
     data.spellClass=cls.name; data.spellAbility=cls.ab;
-    if(cls.cast==='full') data.spellLevels[1].total=2;
+    if(cls.cast==='full'||cls.halfUp) data.spellLevels[1].total=2; // Artificer: 2 slots at 1st
     else if(cls.cast==='pact') data.spellLevels[1].total=1;
   }
   data.subclass=WIZ.subclass||''; data.subclassClassId=data.subclass?WIZ.classId:'';

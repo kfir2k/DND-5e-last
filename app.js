@@ -5595,6 +5595,11 @@ function renderOverviewSkillChips(){
   });
 }
 // ---------- Overview wealth + attunement ----------
+// The 3-item limit, raised by the Artificer's Magic Item Adept/Savant/Master (4 at 10th, 5 at 14th, 6 at 18th).
+function attuneLimit(){
+  if(S.classId!=='artificer') return 3;
+  const l=num(S.level); return l>=18?6:l>=14?5:l>=10?4:3;
+}
 function renderOverviewWealth(){
   const box=$('#ovWealth'); if(!box) return;
   const gold=S.money.gp+S.money.pp*10+Math.floor((S.money.sp+S.money.ep*5)/10+S.money.cp/100);
@@ -5602,7 +5607,7 @@ function renderOverviewWealth(){
   box.innerHTML=`
     <div class="ov-wealth-total">${gold.toLocaleString()}<span> gp equiv.</span></div>
     <div class="ov-wealth-coins">${['cp','sp','ep','gp','pp'].map(c=>`<span>${num(S.money[c])} ${c.toUpperCase()}</span>`).join('')}</div>
-    <div class="ov-attune-head">✦ Attunement <b class="${attuned.length>3?'ov-attune-over':''}">${attuned.length}/3</b></div>
+    <div class="ov-attune-head">✦ Attunement <b class="${attuned.length>attuneLimit()?'ov-attune-over':''}">${attuned.length}/${attuneLimit()}</b></div>
     ${attuned.length
       ? `<ul class="ov-attune-list">${attuned.map(e=>`<li>${esc(e.name)}</li>`).join('')}</ul>`
       : '<p class="prep-note" style="margin:0">Nothing attuned — flag a Magic item with ✦ on the Inventory tab.</p>'}`;
@@ -6659,7 +6664,7 @@ function raceDarkValue(){
 function rulesSlots(){
   const c=CLASSES[S.classId]; if(!c||!c.cast) return Array(9).fill(0);
   const s = c.cast==='pact' ? pactSlots(S.level)
-          : c.cast==='half' ? (S.level<2?[]:FULL_SLOTS[Math.ceil(S.level/2)])
+          : c.cast==='half' ? (S.level<2&&!c.halfUp?[]:FULL_SLOTS[Math.ceil(S.level/2)]) // halfUp: Artificer has slots at 1st
           : FULL_SLOTS[S.level];
   return Array.from({length:9},(_,i)=>s[i]||0);
 }

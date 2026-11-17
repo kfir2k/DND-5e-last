@@ -28,7 +28,9 @@
    Under it, the hero's class art (.scene-art, set by syncHeaderArt() in app.js) — dimmed and softly
    blurred so it reads as a place behind the binder, never as detail competing with the text. */
 body{background-image:none}
-.scene{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none;background:var(--bg)}
+/* Pinned to the LARGE viewport height (lvh), not inset:0 — on phones/tablets the address bar sliding
+   away mid-scroll resizes an inset:0 layer, and the cover-sized art re-zoomed with it (a visible jiggle). */
+.scene{position:fixed;top:0;inset-inline:0;height:100vh;height:100lvh;z-index:-2;overflow:hidden;pointer-events:none;background:var(--bg)}
 .scene-art{
   position:absolute;inset:-16px; /* overscan, so the blur doesn't leave pale edges */
   background-size:cover;background-position:center 35%;background-repeat:no-repeat;

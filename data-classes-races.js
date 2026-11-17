@@ -23,8 +23,10 @@ const STORE_KEY = 'dnd5e-binder-v1';
 
 // ---------- 5e (2014 PHB) class data ----------
 // hd = hit die size, saves = saving throw proficiencies,
-// cast = 'full' | 'half' | 'pact', ab = spellcasting ability
+// cast = 'full' | 'half' | 'pact', ab = spellcasting ability; halfUp = a half caster whose slots start at
+// level 1 (Artificer: the full-caster table at ceil(level/2), level 1 included)
 const CLASSES = {
+  artificer:{name:'Artificer',hd:8, saves:['con','int'],cast:'half',halfUp:true,ab:'int'},
   barbarian:{name:'Barbarian',hd:12,saves:['str','con']},
   bloodhunter:{name:'Blood Hunter',hd:10,saves:['dex','int']},
   bard:     {name:'Bard',     hd:8, saves:['dex','cha'],cast:'full',ab:'cha'},
@@ -57,20 +59,22 @@ const CLASS_SKILL_CHOICES={
   warlock:{count:2,options:['arcana','deception','history','intimidation','investigation','nature','religion']},
   wizard:{count:2,options:['arcana','history','insight','investigation','medicine','religion']},
   bloodhunter:{count:3,options:['acrobatics','arcana','athletics','history','insight','investigation','religion','survival']},
+  artificer:{count:2,options:['arcana','history','investigation','medicine','nature','perception','sleight']},
 };
 // Flavor-color per class (the same elemental-accent language used everywhere else on the sheet)
 // so the Build screen feels like it's forging a character instead of filling out a form.
 // Filenames under icons/glyphs/ (monochrome game-icons.net silhouettes, CSS-masked via giHTML()
 // in app.js) rather than emoji — see the credit line in the Settings tab for licensing.
-const CLASS_ICON={barbarian:'class-barbarian.svg',bloodhunter:'class-bloodhunter.svg',bard:'class-bard.svg',
+const CLASS_ICON={artificer:'class-artificer.svg',barbarian:'class-barbarian.svg',bloodhunter:'class-bloodhunter.svg',bard:'class-bard.svg',
   cleric:'class-cleric.svg',druid:'class-druid.svg',fighter:'class-fighter.svg',monk:'class-monk.svg',
   paladin:'class-paladin.svg',ranger:'class-ranger.svg',rogue:'class-rogue.svg',sorcerer:'class-sorcerer.svg',
   warlock:'class-warlock.svg',wizard:'class-wizard.svg'};
-const CLASS_COLOR={barbarian:'#c0524a',bloodhunter:'#9c2b3c',bard:'#d9599b',cleric:'#e3c15c',druid:'#7dc26a',
+const CLASS_COLOR={artificer:'#c98b4a',barbarian:'#c0524a',bloodhunter:'#9c2b3c',bard:'#d9599b',cleric:'#e3c15c',druid:'#7dc26a',
   fighter:'#8b98ab',monk:'#5fbfa0',paladin:'#c9a227',ranger:'#4f9e5c',rogue:'#6b6f8a',
   sorcerer:'#e0705a',warlock:'#8b5cc9',wizard:'#5aa9e0'};
 // One-line character-select flavor text per class, shown beside the big portrait on the Build screen.
 const CLASS_FLAVOR={
+  artificer:'An inventor who treats magic as a craft — infusing everyday gear with power and building wonders out of tools, gears and spells.',
   barbarian:'Fury given form — she abandons defense for raw, unstoppable rage, striking hardest the closer death creeps.',
   bloodhunter:'A grim vigilante who trades their own blood for forbidden hemocraft magic, becoming something of a monster to hunt the monstrous.',
   bard:'A storyteller and spellsinger who turns wit, music and charm into magic that lifts allies and unravels foes.',
@@ -117,7 +121,8 @@ const SUBCLASS_TYPE_LABEL={
   barbarian:'Primal Path', bard:'Bardic College', cleric:'Divine Domain', druid:'Druid Circle',
   fighter:'Martial Archetype', monk:'Monastic Tradition', paladin:'Sacred Oath',
   ranger:'Ranger Archetype', rogue:'Roguish Archetype', sorcerer:'Sorcerous Origin',
-  warlock:'Otherworldly Patron', wizard:'Arcane Tradition', bloodhunter:'Blood Hunter Order'
+  warlock:'Otherworldly Patron', wizard:'Arcane Tradition', bloodhunter:'Blood Hunter Order',
+  artificer:'Artificer Specialist'
 };
 // Full-caster spell slots by character level (index = level, values = slots for spell levels 1-9)
 const FULL_SLOTS=[[],
@@ -254,7 +259,7 @@ const RACE_IMG={
 // saved as S.art). Classes with two extra wide scenes: class-art/<id>-scene-a.jpg / -scene-b.jpg.
 // Heritage images (RACE_IMG values) with a male and a female figure: race-art/<img>-male.jpg /
 // -female.jpg — a borrowed lineage (duergar → dwarf) gets them too.
-const CLASS_SCENES=['barbarian','bard','cleric','druid','fighter','monk','paladin','ranger','rogue','sorcerer','warlock','wizard'];
+const CLASS_SCENES=['artificer','barbarian','bard','cleric','druid','fighter','monk','paladin','ranger','rogue','sorcerer','warlock','wizard'];
 const RACE_LOOKS=['aasimar','dragonborn','dwarf','elf','gnome','halfelf','halfling','halforc','human','tiefling'];
 
 // ---------- ASI / Feat levels & feat names ----------
