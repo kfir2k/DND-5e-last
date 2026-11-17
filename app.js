@@ -58,6 +58,8 @@ function defaultState(){
     // Chosen art (Build tab swatches): cls '' | 'a' | 'b' (class scene), race '' | 'male' | 'female'.
     // '' = the original art. Picture only — nothing reads it for rules.
     art:{cls:'',race:''},
+    // Temporary effects on checks/saves (Skills tab) — see the Temporary effects block. [] = none.
+    tempMods:[],
     age:'',height:'',weight:'',eyes:'',skin:'',hair:'',
     personality:'', ideals:'', bonds:'', flaws:'',
     goals:'', secrets:'',
@@ -626,17 +628,31 @@ combat:`
   </div>`,
 
 skills:`
+  <div class="panel tm-panel" id="tmPanel">
+    <h2>Temporary Effects <span class="tm-count" id="tmCount" hidden></span><button type="button" class="tm-add-btn" id="tmAddBtn" aria-expanded="false" aria-controls="tmCompose"><span class="tm-add-ic">+</span> <span>Add effect</span></button></h2>
+    <div class="tm-active" id="tmActive"></div>
+    <div class="tm-compose" id="tmCompose" hidden></div>
+  </div>
   <div class="panel"><h2>Saving Throws</h2>
+    <div class="tm-line" id="saveTmLine"></div>
     <div id="saveList"></div>
     <div class="sense-row">
       <span class="sense-chips-line">
-        <span class="sense-chip">👁 Passive Perception <b data-calc="passive">10</b></span>
-        <span class="sense-chip">📖 Proficiency <b data-calc="prof">+2</b></span>
+        <span class="sense-chip" title="10 + your Perception bonus (±5 for advantage/disadvantage)">👁 <span>Passive Perception</span> <b data-calc="passive">10</b></span>
+        <span class="sense-chip" title="10 + your Investigation bonus (±5 for advantage/disadvantage)">🔍 <span>Passive Investigation</span> <b data-calc="passiveInv">10</b></span>
+        <span class="sense-chip" title="10 + your Insight bonus (±5 for advantage/disadvantage)">💭 <span>Passive Insight</span> <b data-calc="passiveIns">10</b></span>
+        <span class="sense-chip">📖 <span>Proficiency</span> <b data-calc="prof">+2</b></span>
       </span>
-      <span class="prep-note sense-note">Tap a save tile or skill circle: proficiency → expertise → none · <span style="color:var(--green)">green</span> = granted by a feature (already counted) · <span style="color:var(--gold)">★</span> = situational reminder, apply it yourself.</span>
     </div>
   </div>
   <div class="panel"><h2>Skills<button class="cls-train-trigger" id="classTrainBtn" type="button" style="display:none"></button></h2>
+    <div class="sk-legend">
+      <span class="sk-lg"><i class="lg-dot on"></i><span>Tap a circle: proficient → expertise → none</span></span>
+      <span class="sk-lg"><i class="lg-dot grant"></i><span>Granted by a feature</span></span>
+      <span class="sk-lg"><b class="lg-star">★</b><span>Situational — apply it yourself</span></span>
+      <span class="sk-lg"><b class="lg-tm">±</b><span>Temporary effect — already in the number</span></span>
+    </div>
+    <div class="tm-line" id="skillTmLine"></div>
     <div id="skillList"></div>
   </div>
   <div class="modal-bg" id="clsModalBg">
@@ -1318,6 +1334,7 @@ function showTab(id){
   // and Expand button never turned on for an already-long backstory until this re-check runs.
   if(id==='character') updateBackstoryMeta();
   if(id==='overview') renderOverview();
+  if(id==='skills'){ renderTempMods(); renderTmCompose(); renderSkills(); renderSaves(); recalc(); }
   // Title/description edits on the Features tab don't live-refresh this panel (typing shouldn't
   // yank focus mid-keystroke), so re-render it fresh whenever the Combat tab is opened — otherwise
   // a feature edited after its "Show in Combat" flag was set could show a stale row with no chevron.
@@ -1462,16 +1479,21 @@ function renderSaves(){
     const cls=S.saveProf[k]?'on':granted?'grant':'';
     const tag=S.saveProf[k]?'proficient':granted?`✦ ${esc(srcs.join(', '))}`:'&nbsp;';
     const badges=saveBadgesHTML(k);
+    const tmL=tmFor('save',k), tmOwn=tmL.filter(m=>m.to==='save:'+k), tmF=tmFlat(tmL);
+    const tmTone2=tmF<0?' tm-down':tmF>0?' tm-up':'';
     return `
-    <button class="save-tile ${cls}" data-save="${k}" style="--ab-color:${AB_COLOR[k]};--ab-glow:${AB_COLOR[k]}40"
+    <button class="save-tile ${cls}${tmTone2}" data-save="${k}" style="--ab-color:${AB_COLOR[k]};--ab-glow:${AB_COLOR[k]}40"
       title="${granted?'Proficiency granted by: '+esc(srcs.join(', '))+' — already counted':'Tap to toggle save proficiency'}">
       <span class="save-icon">${giHTML(AB_ICON[k])}</span>
       <span class="save-name">${label}</span>
       <span class="save-bonus" data-savebonus="${k}">+0</span>
       <span class="save-tag">${tag}</span>
       ${badges?`<span class="save-fx-row">${badges}</span>`:''}
+      ${tmOwn.length?`<span class="save-tm-row">${tmOwn.map(tmBadgeHTML).join('')}</span>`:''}
     </button>`;}).join('');
   $$('#saveList, #ovSaves').forEach(el=>el.innerHTML=html);
+  const saveAll=tmAll().filter(m=>m.to==='saves'||m.to==='all');
+  const sl=$('#saveTmLine'); if(sl) sl.innerHTML=saveAll.length?`<span class="tm-line-lbl">Every save</span>${saveAll.map(tmBadgeHTML).join('')}`:'';
   $$('[data-save]').forEach(b=>b.addEventListener('click',e=>{
     // A ★ advantage badge lives inside the tile (the whole tile is otherwise the tap target for
     // proficiency) — tapping the badge should open its tooltip, not also toggle proficiency.
@@ -1671,6 +1693,9 @@ function renderSkills(){
       // terse feature badges, on their own second line under the row. Hovering rises a small
       // animated tooltip with just the "when" condition (e.g. "in favored terrain") — kept short.
       const badges=skillBadgesHTML(k,abKey);
+      const tmL=tmFor('skill',abKey,k), tmF=tmFlat(tmL);
+      const tmOwn=tmL.filter(m=>m.to==='skill:'+k).map(tmBadgeHTML).join('');
+      const tmTone2=tmF<0?' tm-down':tmF>0?' tm-up':'';
       const classTag=(S.classSkillPicks||[]).includes(k)
         ? `<span class="sk-classtag" style="--c:${CLASS_COLOR[S.classId]||'#c9a227'}" title="${esc(CLASSES[S.classId]?CLASSES[S.classId].name:'Class')} pick">${giHTML(CLASS_ICON[S.classId])}</span>`
         : '';
@@ -1680,15 +1705,18 @@ function renderSkills(){
       <div class="skill-item">
         <div class="skill-row">
           <button class="dot ${dotCls}" data-skill="${k}" title="${dotTitle}"></button>
-          <span class="bonus" data-skillbonus="${k}">+0</span>
+          <span class="bonus${tmTone2}" data-skillbonus="${k}">+0</span>
           <span class="sk-name">${label}</span>
           ${classTag}${raceTag}
         </div>
-        ${badges?`<div class="skill-fx-row">${badges}</div>`:''}
+        ${badges||tmOwn?`<div class="skill-fx-row">${badges}${tmOwn}</div>`:''}
       </div>`;
     }).join('');
-    return `<div class="skill-group ab-${abKey}"><div class="skill-group-head"><span class="sgh-icon">${giHTML(AB_ICON[abKey])}</span>${abLabel}</div>${rows}</div>`;
+    const grp=tmAll().filter(m=>m.to==='chk:'+abKey).map(tmBadgeHTML).join('');
+    return `<div class="skill-group ab-${abKey}"><div class="skill-group-head"><span class="sgh-icon">${giHTML(AB_ICON[abKey])}</span><span class="sgh-name">${abLabel}</span>${grp?`<span class="sgh-tm">${grp}</span>`:''}</div>${rows}</div>`;
   }).join('');
+  const chkAll=tmAll().filter(m=>m.to==='checks'||m.to==='all');
+  const kl=$('#skillTmLine'); if(kl) kl.innerHTML=chkAll.length?`<span class="tm-line-lbl">Every ability check</span>${chkAll.map(tmBadgeHTML).join('')}`:'';
   $$('[data-skill]').forEach(b=>b.addEventListener('click',()=>{
     const k=b.dataset.skill;
     S.skills[k]=(S.skills[k]+1)%3;
@@ -3033,6 +3061,238 @@ function activeSpeedNotes(){
   });
   return out;
 }
+// ---------- Temporary effects on checks & saves (Skills tab) ----------
+// S.tempMods: [{id,name,to,kind,n,dice,ends,on,when}] — optional field, older saves simply have none.
+//   to:   'all' | 'checks' | 'saves' | 'chk:<ab>' | 'save:<ab>' | 'skill:<skill key>'
+//   kind: 'num'  flat ± n, counted in every displayed total (skills, saves, passives)
+//         'dice' a die to roll yourself (dice:'-1d4') — shown, never added (it isn't a number yet)
+//         'adv' | 'dis'  advantage / disadvantage — shown; passives take ±5 (5e rule)
+//         'fail' automatic failure — shown
+//   ends: '' until removed · 'short' cleared by any rest · 'long' cleared by a long rest
+//   on:   false = parked (kept in the list, switched off)
+//   when: free text — makes the entry a reminder ("only for one check") that never changes a number
+// Combat's Conditions (S.states) add their own read-only entries through STATE_CHECK_FX, so a condition
+// is switched in one place and both tabs agree. The table mirrors RULES_DB's Conditions text.
+const STATE_CHECK_FX={
+  poisoned:[{to:'checks',kind:'dis'}],
+  frightened:[{to:'checks',kind:'dis',when:'while the source is in sight'}],
+  exhaustion:[{to:'checks',kind:'dis'},{to:'saves',kind:'dis',when:'at exhaustion level 3 or higher'}],
+  restrained:[{to:'save:dex',kind:'dis'}],
+  paralyzed:[{to:'save:str',kind:'fail'},{to:'save:dex',kind:'fail'}],
+  stunned:[{to:'save:str',kind:'fail'},{to:'save:dex',kind:'fail'}],
+  unconscious:[{to:'save:str',kind:'fail'},{to:'save:dex',kind:'fail'}],
+  blinded:[{to:'checks',kind:'fail',when:'checks that rely on sight'}],
+  deafened:[{to:'checks',kind:'fail',when:'checks that rely on hearing'}],
+};
+// Quick-add spells — numbers from this app's own spell data (Bane/Bless: ∓1d4 to saves, and attacks;
+// Guidance/Resistance: +1d4 to one check/save; Mind Sliver: −1d4 to the next save).
+const TM_PRESETS=[
+  {name:'Bless',to:'saves',kind:'dice',dice:'+1d4'},
+  {name:'Bane',to:'saves',kind:'dice',dice:'-1d4'},
+  {name:'Guidance',to:'checks',kind:'dice',dice:'+1d4',when:'one check of your choice'},
+  {name:'Resistance',to:'saves',kind:'dice',dice:'+1d4',when:'one save of your choice'},
+  {name:'Mind Sliver',to:'saves',kind:'dice',dice:'-1d4',when:'your next saving throw'},
+];
+function tmList(){ if(!Array.isArray(S.tempMods)) S.tempMods=[]; return S.tempMods; }
+function skillAbOf(k){ const s=SKILLS.find(x=>x[0]===k); return s?s[2]:'str'; }
+// Every live entry: the player's own (switched on) plus the ones implied by active conditions.
+function tmAll(){
+  const own=tmList().filter(m=>m.on!==false).map(m=>Object.assign({src:m.name||'',own:true},m));
+  const fromStates=[];
+  (S.states||[]).forEach(s=>(STATE_CHECK_FX[s.key]||[]).forEach(e=>fromStates.push(Object.assign({src:s.name||s.key,state:s.key},e))));
+  return own.concat(fromStates);
+}
+function tmMatch(m,type,ab,k){
+  const t=m.to||'';
+  if(t==='all') return true;
+  if(type==='save') return t==='saves'||t==='save:'+ab;
+  return t==='checks'||t==='chk:'+ab||(type==='skill'&&t==='skill:'+k);
+}
+function tmFor(type,ab,k){ return tmAll().filter(m=>tmMatch(m,type,ab,k)); }
+function tmFlat(list){ return list.filter(m=>m.kind==='num'&&!m.when).reduce((s,m)=>s+num(m.n),0); }
+// Net advantage from the unconditional entries: both at once cancel out (5e rule).
+function tmEdge(list){
+  const a=list.some(m=>m.kind==='adv'&&!m.when), d=list.some(m=>m.kind==='dis'&&!m.when);
+  return a&&d?'cancel':a?'adv':d?'dis':'';
+}
+// The one place a skill / save total is computed — Skills, Overview chips, Combat's Quick View and the
+// passive scores all read these, so a temporary effect shows the same number everywhere.
+function skillTotal(k){ const ab=skillAbOf(k); return amod(ab)+effSkill(k)*num(S.profBonus)+tmFlat(tmFor('skill',ab,k)); }
+function saveTotal(ab){ return amod(ab)+((S.saveProf[ab]||fxSaveProf(ab))?num(S.profBonus):0)+tmFlat(tmFor('save',ab)); }
+function passiveOf(k,extra){
+  const e=tmEdge(tmFor('skill',skillAbOf(k),k));
+  return 10+skillTotal(k)+num(extra)+(e==='adv'?5:e==='dis'?-5:0);
+}
+// Short, language-neutral value text for one entry: "−2", "+1d4", "DIS", "ADV", "FAIL".
+function tmValText(m){
+  if(m.kind==='num') return fmt(num(m.n)).replace('-','−');
+  if(m.kind==='dice'){ const d=String(m.dice||'').trim(); return d[0]==='-'?'−'+d.slice(1):d[0]==='+'?d:'+'+d; }
+  return {adv:'ADV',dis:'DIS',fail:'FAIL'}[m.kind]||'';
+}
+function tmTone(m){
+  if(m.kind==='adv') return 'up';
+  if(m.kind==='dis'||m.kind==='fail') return 'down';
+  if(m.kind==='num') return num(m.n)<0?'down':'up';
+  if(m.kind==='dice') return /^-/.test(m.dice||'')?'down':'up';
+  return '';
+}
+// What an entry applies to, as one translatable label (each has an I18N_HE entry).
+function tmTargetLabel(to){
+  if(to==='all') return 'All checks & saves';
+  if(to==='checks') return 'All ability checks';
+  if(to==='saves') return 'All saving throws';
+  const [kind,key]=(to||'').split(':');
+  if(kind==='skill'){ const s=SKILLS.find(x=>x[0]===key); return s?s[1]:key; }
+  const ab=ABILITIES.find(([k])=>k===key); const name=ab?ab[1]:key;
+  return kind==='save'?name+' saves':name+' checks';
+}
+// Compact badge for a row / tile / group header (title carries the full source + "when").
+function tmBadgeHTML(m){
+  const tip=[m.src||'',m.when||''].filter(Boolean).join(' — ');
+  return `<span class="sk-tm ${tmTone(m)}${m.when?' when':''}" title="${esc(tip)}"><b>${esc(tmValText(m))}</b> <span class="sk-tm-src">${esc(m.src||'')}</span></span>`;
+}
+// Rest clean-up: 'short' entries end on any rest, 'long' ones on a long rest.
+function tmRest(kind){
+  const before=tmList().length;
+  S.tempMods=tmList().filter(m=>!(m.ends==='short'||(kind==='long'&&m.ends==='long')));
+  return before-S.tempMods.length;
+}
+
+// ----- Temporary Effects panel (top of the Skills tab) -----
+// The active list (own effects, condition-driven ones, temporary ability scores) and a composer that
+// opens under it. Everything is delegated from #tmPanel (wireTempMods), so re-rendering is free.
+let TM_KIND='pen'; // composer: which effect button is selected (UI only, never saved)
+function tmRefresh(){
+  renderTempMods(); renderTmCompose(); renderSkills(); renderSaves(); recalc(); renderCockpitExtras();
+  if($('#page-overview')&&$('#page-overview').classList.contains('active')) renderOverview();
+  save();
+}
+function renderTempMods(){
+  const box=$('#tmActive'); if(!box) return;
+  const chips=[];
+  tmList().forEach(m=>{
+    const on=m.on!==false;
+    chips.push(`<div class="tm-chip ${tmTone(m)}${on?'':' off'}">
+      <button type="button" class="tm-sw" data-tmtoggle="${esc(m.id)}" aria-pressed="${on}" title="${on?'Active — tap to switch off':'Off — tap to switch on'}"></button>
+      <span class="tm-val">${esc(tmValText(m))}</span>
+      <span class="tm-body"><span class="tm-to">${esc(tmTargetLabel(m.to))}</span>${m.name?`<span class="tm-name">${esc(m.name)}</span>`:''}${m.when?`<span class="tm-when">${esc(m.when)}</span>`:''}${m.ends?`<span class="tm-ends">${m.ends==='short'?'Ends on any rest':'Ends on a long rest'}</span>`:''}</span>
+      <button type="button" class="tm-x" data-tmdel="${esc(m.id)}" title="Remove" aria-label="Remove">✕</button>
+    </div>`);
+  });
+  (S.states||[]).filter(s=>STATE_CHECK_FX[s.key]).forEach(s=>{
+    const fx=STATE_CHECK_FX[s.key];
+    chips.push(`<div class="tm-chip cond down">
+      <span class="tm-val">${esc(tmValText(fx[0]))}</span>
+      <span class="tm-body">${fx.map(e=>`<span class="tm-to">${fx.length>1?`<b>${esc(tmValText(e))}</b> `:''}${esc(tmTargetLabel(e.to))}</span>${e.when?`<span class="tm-when">${esc(e.when)}</span>`:''}`).join('')}<span class="tm-name">${esc(s.name||s.key)}</span><span class="tm-ends">Condition</span></span>
+      <button type="button" class="tm-x" data-tmcond="${esc(s.key)}" title="End this condition (also on Combat)" aria-label="End this condition">✕</button>
+    </div>`);
+  });
+  ABILITIES.filter(([k])=>tempAbilityDelta(k)).forEach(([k,label])=>{
+    const d=tempAbilityDelta(k);
+    chips.push(`<div class="tm-chip ${d<0?'down':'up'}" style="--ab-color:${AB_COLOR[k]}">
+      <span class="tm-val">${esc(fmt(d).replace('-','−'))}</span>
+      <span class="tm-body"><span class="tm-to">${esc(label)}</span><span class="tm-name">Ability score</span></span>
+      <button type="button" class="tm-x" data-tmabclear="${k}" title="Clear" aria-label="Clear">✕</button>
+    </div>`);
+  });
+  box.innerHTML=chips.length?chips.join(''):'<p class="tm-empty">Nothing temporary right now — every roll is clean.</p>';
+  const n=chips.length, cnt=$('#tmCount');
+  if(cnt){ cnt.textContent=n?String(n):''; cnt.hidden=!n; }
+}
+function tmTargetOptions(){
+  const opt=(v,l)=>`<option value="${v}">${esc(l)}</option>`, sep=l=>`<option disabled>— ${esc(l)} —</option>`;
+  return opt('checks','All ability checks')+opt('saves','All saving throws')+opt('all','All checks & saves')
+    +sep('Ability checks')+ABILITIES.map(([k,l])=>opt('chk:'+k,l+' checks')).join('')
+    +sep('Saving throws')+ABILITIES.map(([k,l])=>opt('save:'+k,l+' saves')).join('')
+    +sep('Skills')+SKILLS.map(([k,l])=>opt('skill:'+k,l)).join('');
+}
+const TM_KINDS=[['pen','Penalty'],['bon','Bonus'],['adv','Advantage'],['dis','Disadvantage'],['fail','Auto-fail']];
+function renderTmCompose(){
+  const box=$('#tmCompose'); if(!box||box.hidden) return;
+  // Keep what the player already typed/picked if the composer is redrawn while open.
+  const keep={name:($('#tmName')||{}).value||'',to:($('#tmTo')||{}).value||'checks',amt:($('#tmAmt')||{}).value||'2',ends:($('#tmEnds')||{}).value||''};
+  const active=new Set((S.states||[]).map(s=>s.key));
+  box.innerHTML=`
+    <div class="tm-sec">
+      <div class="tm-sec-h">Quick add</div>
+      <div class="tm-picks">${TM_PRESETS.map((p,i)=>`<button type="button" class="tm-pick ${tmTone(p)}" data-tmpreset="${i}" title="${esc(tmTargetLabel(p.to))}"><b>${esc(tmValText(p))}</b> <span>${esc(p.name)}</span></button>`).join('')}</div>
+    </div>
+    <div class="tm-sec">
+      <div class="tm-sec-h">Conditions <span class="tm-sec-note">the same switches as on Combat</span></div>
+      <div class="tm-picks">${Object.keys(STATE_CHECK_FX).map(key=>{
+        const p=statePresetFor(key), on=active.has(key);
+        return `<button type="button" class="tm-pick cond${on?' on':''}" data-tmstate="${key}" aria-pressed="${on}" title="${esc(p?p.blurb:'')}"><span>${esc(p?p.name:key)}</span></button>`;
+      }).join('')}</div>
+    </div>
+    <div class="tm-sec">
+      <div class="tm-sec-h">Custom effect</div>
+      <div class="tm-form">
+        <label class="tm-fld tm-fld-name"><span>Name</span><input type="text" id="tmName" placeholder="e.g. Cursed amulet" value="${esc(keep.name)}" autocomplete="off"></label>
+        <label class="tm-fld"><span>Applies to</span><select id="tmTo">${tmTargetOptions()}</select></label>
+        <div class="tm-fld tm-fld-kind"><span>Effect</span><div class="tm-seg">${TM_KINDS.map(([v,l])=>`<button type="button" class="tm-seg-btn ${v}${TM_KIND===v?' on':''}" data-tmkind="${v}" aria-pressed="${TM_KIND===v}">${l}</button>`).join('')}</div></div>
+        <label class="tm-fld tm-fld-amt"${TM_KIND==='pen'||TM_KIND==='bon'?'':' hidden'}><span>Amount</span><input type="text" id="tmAmt" inputmode="text" value="${esc(keep.amt)}" placeholder="2 or 1d4" autocomplete="off"></label>
+        <label class="tm-fld"><span>Ends</span><select id="tmEnds">
+          <option value="">When I remove it</option><option value="short">On any rest</option><option value="long">On a long rest</option>
+        </select></label>
+        <button type="button" class="tm-create" id="tmCreate">Add effect</button>
+      </div>
+      <p class="tm-err" id="tmErr" hidden>Type a number (2) or a die (1d4).</p>
+    </div>
+    <div class="tm-sec">
+      <div class="tm-sec-h">Ability scores <span class="tm-sec-note">drain, curses, a potion — the same values as on Overview</span></div>
+      <div class="tm-abs">${ABILITIES.map(([k,l])=>`<div class="tm-ab" style="--ab-color:${AB_COLOR[k]}">
+        <span class="tm-ab-l">${giHTML(AB_ICON[k])}<span>${esc(l)}</span></span>
+        <span class="tm-ab-step"><button type="button" data-tmab="${k}" data-d="-1" aria-label="−1">−</button><b data-abtempval="${k}">${tempAbilityDelta(k)?esc(fmt(tempAbilityDelta(k))):'±0'}</b><button type="button" data-tmab="${k}" data-d="1" aria-label="+1">+</button></span>
+      </div>`).join('')}</div>
+    </div>`;
+  $('#tmTo').value=keep.to; $('#tmEnds').value=keep.ends;
+}
+function tmCreateFromForm(){
+  const to=$('#tmTo').value, ends=$('#tmEnds').value, name=$('#tmName').value.trim();
+  const m={id:genId('tm'),name,to,ends,on:true};
+  if(TM_KIND==='pen'||TM_KIND==='bon'){
+    const raw=$('#tmAmt').value.trim().replace(/^[+−-]/,''), sign=TM_KIND==='pen'?'-':'+';
+    if(/^\d*d\d+$/i.test(raw)){ m.kind='dice'; m.dice=sign+raw.toLowerCase(); }
+    else if(/^\d+$/.test(raw)&&+raw>0){ m.kind='num'; m.n=(TM_KIND==='pen'?-1:1)*(+raw); }
+    else { $('#tmErr').hidden=false; $('#tmAmt').focus(); return; }
+  } else m.kind=TM_KIND;
+  tmList().push(m);
+  $('#tmName').value='';
+  tmRefresh();
+}
+function wireTempMods(){
+  const panel=$('#tmPanel'); if(!panel) return;
+  $('#tmAddBtn').addEventListener('click',()=>{
+    const box=$('#tmCompose'), open=box.hidden;
+    box.hidden=!open; $('#tmAddBtn').setAttribute('aria-expanded',String(open));
+    $('#tmAddBtn').classList.toggle('open',open);
+    if(open) renderTmCompose();
+  });
+  panel.addEventListener('click',e=>{
+    const t=e.target.closest('button'); if(!t) return;
+    const d=t.dataset;
+    if(d.tmtoggle){ const m=tmList().find(x=>x.id===d.tmtoggle); if(m){ m.on=m.on===false; tmRefresh(); } return; }
+    if(d.tmdel){ S.tempMods=tmList().filter(x=>x.id!==d.tmdel); tmRefresh(); return; }
+    if(d.tmcond||d.tmstate){
+      const key=d.tmcond||d.tmstate, idx=(S.states=S.states||[]).findIndex(s=>s.key===key);
+      if(idx>=0) S.states.splice(idx,1);
+      else if(d.tmstate){ const p=statePresetFor(key); S.states.push({id:genId('st'),name:p?p.name:key,key,dur:null}); }
+      tmRefresh(); return;
+    }
+    if(d.tmabclear){ S.tempAbility[d.tmabclear]=0; tmRefresh(); return; }
+    if(d.tmab){
+      S.tempAbility=S.tempAbility||{};
+      S.tempAbility[d.tmab]=Math.max(-10,Math.min(10,tempAbilityDelta(d.tmab)+(+d.d)));
+      tmRefresh(); return;
+    }
+    if(d.tmpreset!=null){ const p=TM_PRESETS[+d.tmpreset]; if(p){ tmList().push(Object.assign({id:genId('tm'),ends:'',on:true},p)); tmRefresh(); } return; }
+    if(d.tmkind){ TM_KIND=d.tmkind; renderTmCompose(); return; }
+    if(t.id==='tmCreate'){ tmCreateFromForm(); return; }
+  });
+  panel.addEventListener('input',e=>{ if(e.target.id==='tmAmt') $('#tmErr').hidden=true; });
+  panel.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.target.id==='tmAmt'||e.target.id==='tmName')){ e.preventDefault(); tmCreateFromForm(); } });
+}
+
 // New tag list for a card, or the single-value legacy field wrapped in an array if it was
 // never migrated — every card format has always stored one of these two shapes.
 function ckTypesOf(obj,legacyVal,fallback){
@@ -3653,7 +3913,7 @@ function wireCustomStatsPanel(){
 // tabs have, so this panel isn't a flatter, greyer copy of them.
 function ckQuickSavesHTML(){
   return `<div class="ck-qr-grid">${ABILITIES.map(([k,label])=>{
-    const b=amod(k)+((S.saveProf[k]||fxSaveProf(k))?num(S.profBonus):0);
+    const b=saveTotal(k);
     const notes=fxSaveNotes(k), hot=notes.filter(fxLive);
     const advWord=n=>n.kind==='dis'?'disadvantage':'advantage';
     const tip=(hot.length?hot:notes).map(n=>`${n.src}: ${advWord(n)}${n.cond?` (${n.cond})`:''}`).join('; ');
@@ -3673,7 +3933,7 @@ function ckQuickSkillsHTML(){
   return ABILITIES.filter(([abKey])=>SKILLS.some(([,,ab])=>ab===abKey)).map(([abKey,abLabel])=>{
     const cells=SKILLS.filter(([,,ab])=>ab===abKey).map(([k,label])=>{
       const man=S.skills[k]||0, g=fxSkillGrant(k), eff=Math.max(man,g);
-      const b=amod(abKey)+eff*num(S.profBonus);
+      const b=skillTotal(k);
       const notes=fxNotes(k), hot=notes.filter(fxLive);
       const tip=hot.length?hot.map(n=>`${n.src}: ${noteBadge(k,abKey,n)}${n.cond?` (${n.cond})`:''}`).join('; '):'';
       const granted=g>man;
@@ -5328,12 +5588,12 @@ function recalc(){
   });
   // saving throws (manual proficiency OR granted by a feature effect)
   ABILITIES.forEach(([k])=>{
-    const b=amod(k)+((S.saveProf[k]||fxSaveProf(k))?P:0);
+    const b=saveTotal(k);
     $$(`[data-savebonus="${k}"]`).forEach(el=>el.textContent=fmt(b));
   });
   // skills (manual proficiency OR granted by a feature effect)
   SKILLS.forEach(([k,,ab])=>{
-    const b=amod(ab)+effSkill(k)*P;
+    const b=skillTotal(k);
     $$(`[data-skillbonus="${k}"]`).forEach(el=>el.textContent=fmt(b));
     // keep situational badges fresh (each visible badge = one note whose effect still changes the number, in order)
     const visNotes=fxNotes(k).filter(n=>noteBadge(k,ab,n)!=null);
@@ -5345,7 +5605,9 @@ function recalc(){
   });
   // derived stats (with flat feature bonuses)
   const dex=amod('dex');
-  const perception=10+amod('wis')+effSkill('perception')*P+fxStat('passive');
+  const perception=passiveOf('perception',fxStat('passive'));
+  setCalc('passiveInv',passiveOf('investigation'));
+  setCalc('passiveIns',passiveOf('insight'));
   setCalc('initiative',fmt(dex+num(S.initiativeMisc)+fxStat('init')));
   setCalc('passive',perception);
   setCalc('prof',fmt(P));
@@ -5411,7 +5673,10 @@ function recalc(){
     init: [`Dex ${fmt(dex)}`].concat(num(S.initiativeMisc)?[`misc ${fmt(num(S.initiativeMisc))}`]:[]).concat(alwaysText('init')).join(', '),
     speed: alwaysText('speed').join(', '),
     prof: `Level ${num(S.level)||1}`,
-    passive: [`10`,`Wis ${fmt(amod('wis'))}`].concat(effSkill('perception')?[`${effSkill('perception')===2?'expertise':'trained'} ${fmt(effSkill('perception')*P)}`]:[]).concat(alwaysText('passive')).join(', '),
+    passive: [`10`,`Wis ${fmt(amod('wis'))}`].concat(effSkill('perception')?[`${effSkill('perception')===2?'expertise':'trained'} ${fmt(effSkill('perception')*P)}`]:[])
+      .concat((()=>{ const l=tmFor('skill','wis','perception'), f=tmFlat(l), e=tmEdge(l);
+        return (f?[`temp ${fmt(f)}`]:[]).concat(e==='adv'?['advantage +5']:e==='dis'?['disadvantage -5']:[]); })())
+      .concat(alwaysText('passive')).join(', '),
     vision: alwaysText('vision').join(', '),
     hpmax: alwaysText('hpmax').join(', ')
   };
@@ -5531,7 +5796,7 @@ function renderOverviewSkillChips(){
   S.favSkills=S.favSkills||[];
   S.ovHidden=S.ovHidden||[];
   const P=num(S.profBonus);
-  const withBonus=([k,label,ab])=>({k,label,ab,eff:effSkill(k),b:amod(ab)+effSkill(k)*P});
+  const withBonus=([k,label,ab])=>({k,label,ab,eff:effSkill(k),b:skillTotal(k)});
   const trained=SKILLS.map(withBonus).filter(r=>r.eff>0&&!S.ovHidden.includes(r.k));
   const hiddenTrained=SKILLS.map(withBonus).filter(r=>r.eff>0&&S.ovHidden.includes(r.k));
   // A favorite that later becomes proficient just shows through the "trained" row above instead
@@ -7192,6 +7457,7 @@ function wireRest(){
     if(CLASSES[S.classId]&&CLASSES[S.classId].cast==='pact') S.spellLevels.forEach(lv=>lv.used=0);
     S.features.forEach(f=>{ if(f.combat && num(f.usesMax)>0 && f.usesPer!=='long') f.usesUsed=0; });
     restEndsToggles();
+    tmRest('short'); renderTempMods(); renderSkills(); renderSaves();
     renderSpellLevels(); renderFeatures(); renderCombatFeatures(); recalc(); save();
     restCeremony('short');
   });
@@ -7205,6 +7471,7 @@ function wireRest(){
     S.deathS=[false,false,false]; S.deathF=[false,false,false];
     S.features.forEach(f=>{ if(f.combat && num(f.usesMax)>0) f.usesUsed=0; }); // long rest recharges everything
     restEndsToggles(); renderFeatures();
+    tmRest('long'); renderTempMods(); renderSkills(); renderSaves();
     // Homebrew stress eases by one step per long rest (never below 0).
     const stressBefore=Math.max(0,Math.min(STRESS_MAX,num(S.stress)));
     S.stress=Math.max(0,stressBefore-1);
@@ -8230,7 +8497,7 @@ function renderAll(){
   renderAttacks(); renderEquipment(); renderFeatures(); renderNotes();
   renderSpellLevels(); renderOverview(); renderCombatFeatures(); renderLanguages(); renderProficiencies();
   renderBuildSelectors(); renderAsi(); renderHudControls(); renderCharacterPortrait(); renderBackstoryEditor();
-  renderBackgroundInfo(); renderSafetyBar();
+  renderBackgroundInfo(); renderSafetyBar(); renderTempMods();
   bindAll(); syncBound(); recalc();
 }
 // Tablet-first: skill-badge "when" tooltips open on TAP, not hover. One delegated listener on
@@ -8339,7 +8606,7 @@ initRoster();
 load();
 buildShell();
 renderAll();
-wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireFeatureSwitches(); wireHud(); wireRest(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireQuickRefPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode(); wireLanguage(); wireBackups();
+wireAddButtons(); wireHpButtons(); wireStress(); wireSettings(); wireCharSelect(); wireSelectSheets(); wireSuggest(); wireBuild(); wireLevelUp(); wireBuildCustom(); wireLibrary(); wireLibScope(); wireRaceLibrary(); wireBackgroundLibrary(); wireBackgroundSelect(); wireBackgroundGrantBtn(); wireLanguages(); wireProficiencies(); wireFeaturesLock(); wireFeaturesView(); wireFeatureSwitches(); wireHud(); wireRest(); wireTempMods(); wireSkillFx(); wireAttackTips(); wireCombatFeatures(); wireConditionsModal(); wireCustomStatsPanel(); wireQuickRefPanel(); wireCombatSlots(); wireSpellDetails(); wireSpellModal(); wireSpellLibrary(); wireSpellsLock(); wireSpellJump(); wireWeaponModal(); wireItemIndexModal(); wirePackSearch(); wirePackModal(); wireEquipmentDrawer(); wireEqSelect(); wireProficiencyModal(); wireCharacterPortrait(); wireBackstoryEditor(); wireBackstoryExpand(); wireNotes(); wireWideMode(); wireLanguage(); wireBackups();
 showTab(lastTab());
 // With a real choice to make (2+ heroes), boot lands on the roster; with one, straight to play.
 // The one exception is the reload that follows a language switch: that puts you back on the screen

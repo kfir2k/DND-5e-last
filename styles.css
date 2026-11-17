@@ -817,6 +817,153 @@ label.fld span{
 }
 .sense-chip b{color:var(--gold-lt);font-family:'Cinzel',serif;font-size:1.05rem;font-weight:700}
 .sense-note{margin:10px 0 0;font-size:.74rem;line-height:1.5}
+/* ===== Skills tab: Temporary Effects + layout ===== */
+/* Save tiles: an even grid (6 across, 3×2 on tablets/phones) instead of a wrapping flex row that left
+   Charisma alone on a second line. */
+#saveList{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;justify-content:stretch}
+#saveList .save-tile{flex:none;min-width:0}
+@media (max-width:900px){ #saveList{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.sense-row{flex-direction:row;justify-content:center;flex-wrap:wrap}
+.sense-chip b{font-variant-numeric:tabular-nums}
+
+/* Numbers changed by a temporary effect: red when lowered, green when raised. */
+.skill-row .bonus.tm-down,.save-tile.tm-down .save-bonus{color:var(--red);text-shadow:0 0 12px rgba(224,117,102,.35)}
+.skill-row .bonus.tm-up,.save-tile.tm-up .save-bonus{color:#8fd07c;text-shadow:0 0 12px rgba(143,208,124,.35)}
+.save-tile.tm-down{border-color:rgba(224,117,102,.55)}
+.save-tile.tm-up{border-color:rgba(143,208,124,.55)}
+
+/* Effect values (−2, +1d4, DIS) use the body font with lining figures: Cinzel draws "1" like a capital I. */
+.sk-tm b,.tm-val,.tm-to b,.tm-pick b{font-family:'Crimson Pro',serif;font-variant-numeric:lining-nums tabular-nums;letter-spacing:.02em;direction:ltr;unicode-bidi:isolate}
+/* One temporary-effect badge: the value in a solid pill, then where it comes from. */
+.sk-tm{
+  display:inline-flex;align-items:center;gap:5px;max-width:100%;
+  font-size:.7rem;line-height:1.2;border-radius:999px;padding-block:2px;padding-inline:2px 9px;
+  border:1px solid var(--tm-c,var(--gold-dim));color:var(--tm-c,var(--gold-lt));
+  background:color-mix(in srgb,var(--tm-c,var(--gold)) 12%,transparent);white-space:nowrap;
+}
+.sk-tm b{background:var(--tm-c,var(--gold));color:var(--ink);border-radius:999px;padding:1px 7px;font-size:.74rem}
+.sk-tm .sk-tm-src{overflow:hidden;text-overflow:ellipsis}
+.sk-tm.down{--tm-c:var(--red)}
+.sk-tm.up{--tm-c:#8fd07c}
+.sk-tm.when{border-style:dashed;opacity:.85}
+.save-tm-row{display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin-top:6px}
+.save-tm-row .sk-tm .sk-tm-src{display:none} /* tile is narrow: value only, source in the tooltip */
+.skill-fx-row .sk-tm{margin-inline-start:0}
+.sgh-name{flex:0 1 auto}
+.sgh-tm{margin-inline-start:auto;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;text-transform:none;letter-spacing:0;font-family:'Crimson Pro',serif}
+.tm-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px}
+.tm-line:empty{display:none}
+.tm-line-lbl{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-inline-end:2px}
+
+/* Legend: four short items instead of one long italic sentence. */
+.sk-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:-2px 0 14px;font-size:.76rem;color:var(--muted)}
+.sk-lg{display:inline-flex;align-items:center;gap:6px}
+.lg-dot{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--gold-dim);display:inline-block}
+.lg-dot.on{background:var(--gold);border-color:var(--gold)}
+.lg-dot.grant{background:var(--green);border-color:var(--green)}
+.lg-star{color:var(--gold);font-weight:700}
+.lg-tm{color:var(--red);font-family:'Cinzel',serif;font-weight:700}
+
+/* --- The Temporary Effects panel --- */
+.tm-panel h2{display:flex;align-items:center;gap:10px}
+.tm-count{
+  font-family:'Cinzel',serif;font-size:.72rem;min-width:22px;height:22px;padding:0 6px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;background:var(--red);color:var(--ink);letter-spacing:0;
+}
+.tm-count[hidden]{display:none}
+.tm-add-btn{
+  margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  background:var(--panel2);border:1px solid var(--gold-dim);color:var(--gold-lt);border-radius:999px;
+  padding:5px 14px;font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;
+  transition:background .12s ease,border-color .12s ease;
+}
+.tm-add-btn:hover{background:color-mix(in srgb,var(--gold) 14%,var(--panel2));border-color:var(--gold)}
+.tm-add-ic{font-size:1rem;line-height:1;transition:transform .2s ease}
+.tm-add-btn.open .tm-add-ic{transform:rotate(45deg)}
+.tm-active{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.tm-empty{grid-column:1/-1;margin:0;color:var(--faint);font-style:italic;font-size:.88rem}
+.tm-chip{
+  --tm-c:var(--gold);display:flex;align-items:center;gap:10px;min-width:0;
+  background:linear-gradient(var(--rule-dir,90deg),color-mix(in srgb,var(--tm-c) 14%,var(--panel2)),var(--panel2) 70%);
+  border:1px solid color-mix(in srgb,var(--tm-c) 45%,var(--border-lt));border-inline-start:3px solid var(--tm-c);
+  border-radius:10px;padding:8px 10px;
+}
+.tm-chip.down{--tm-c:var(--red)}
+.tm-chip.up{--tm-c:#8fd07c}
+.tm-chip.cond{--tm-c:#d99a4a}
+.tm-chip.off{opacity:.5;filter:saturate(.3)}
+.tm-val{
+  flex:0 0 auto;min-width:46px;text-align:center;font-weight:700;font-size:1.08rem;
+  color:var(--tm-c);direction:ltr;unicode-bidi:isolate;
+}
+.tm-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.tm-to{color:var(--text);font-size:.9rem}
+.tm-to b{color:var(--tm-c);font-size:.84rem}
+.tm-name{color:var(--muted);font-size:.78rem}
+.tm-when{color:var(--faint);font-size:.74rem;font-style:italic}
+.tm-ends{align-self:flex-start;margin-top:3px;font-size:.64rem;color:var(--faint);border:1px solid var(--border-lt);border-radius:999px;padding:1px 8px;white-space:nowrap}
+.tm-x{flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:1px solid transparent;background:none;color:var(--faint);cursor:pointer;font-size:.9rem}
+.tm-x:hover{color:var(--red);border-color:var(--red)}
+/* on/off switch for the player's own entries */
+.tm-sw{
+  flex:0 0 auto;width:30px;height:18px;border-radius:999px;cursor:pointer;position:relative;
+  background:var(--panel3);border:1px solid var(--border-lt);padding:0;
+}
+.tm-sw::after{
+  content:'';position:absolute;top:2px;inset-inline-start:2px;width:12px;height:12px;border-radius:50%;
+  background:var(--faint);transition:inset-inline-start .15s ease,background .15s ease;
+}
+.tm-sw[aria-pressed="true"]{background:color-mix(in srgb,var(--tm-c) 30%,var(--panel3));border-color:var(--tm-c)}
+.tm-sw[aria-pressed="true"]::after{inset-inline-start:14px;background:var(--tm-c)}
+
+/* composer */
+.tm-compose{margin-top:12px;border-top:1px solid var(--border);padding-top:12px;display:grid;gap:14px}
+.tm-compose[hidden]{display:none}
+.tm-sec-h{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:7px}
+.tm-sec-note{font-family:'Crimson Pro',serif;text-transform:none;letter-spacing:0;font-size:.78rem;color:var(--faint);font-style:italic;margin-inline-start:6px}
+.tm-picks{display:flex;flex-wrap:wrap;gap:6px}
+.tm-pick{
+  --tm-c:var(--gold);display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  background:var(--panel2);border:1px solid var(--border-lt);color:var(--text);border-radius:999px;
+  padding:5px 12px;font-size:.85rem;transition:border-color .12s ease,background .12s ease;
+}
+.tm-pick b{color:var(--tm-c);font-size:.88rem;direction:ltr;unicode-bidi:isolate}
+.tm-pick.down{--tm-c:var(--red)} .tm-pick.up{--tm-c:#8fd07c}
+.tm-pick:hover{border-color:var(--tm-c)}
+.tm-pick.cond{--tm-c:#d99a4a}
+.tm-pick.cond.on{background:color-mix(in srgb,var(--tm-c) 22%,var(--panel2));border-color:var(--tm-c);color:#f3d2a6;box-shadow:0 0 10px -2px var(--tm-c)}
+.tm-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+.tm-fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.tm-fld>span{font-size:.72rem;color:var(--muted);letter-spacing:.04em}
+.tm-fld[hidden]{display:none}
+.tm-fld input,.tm-fld select{width:100%;min-width:0}
+.tm-fld-kind{grid-column:1/-1}
+.tm-seg{display:flex;flex-wrap:wrap;gap:4px}
+.tm-seg-btn{
+  --tm-c:var(--gold);cursor:pointer;flex:1 1 auto;background:var(--panel2);border:1px solid var(--border-lt);
+  color:var(--muted);border-radius:8px;padding:6px 10px;font-size:.84rem;
+}
+.tm-seg-btn.pen,.tm-seg-btn.dis,.tm-seg-btn.fail{--tm-c:var(--red)}
+.tm-seg-btn.bon,.tm-seg-btn.adv{--tm-c:#8fd07c}
+.tm-seg-btn.on{border-color:var(--tm-c);color:var(--text);background:color-mix(in srgb,var(--tm-c) 18%,var(--panel2))}
+.tm-create{
+  cursor:pointer;background:var(--gold);color:var(--ink);border:none;border-radius:8px;
+  padding:9px 16px;font-family:'Cinzel',serif;font-weight:700;letter-spacing:.06em;
+}
+.tm-create:hover{filter:brightness(1.08)}
+.tm-err{margin:6px 0 0;color:var(--red);font-size:.8rem}
+.tm-err[hidden]{display:none}
+.tm-abs{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:6px}
+.tm-ab{display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--border-lt);border-inline-start:3px solid var(--ab-color);border-radius:8px;padding:5px 8px}
+.tm-ab-l{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:.84rem;min-width:0}
+.tm-ab-l .gi{color:var(--ab-color)}
+.tm-ab-step{display:inline-flex;align-items:center;gap:4px}
+.tm-ab-step button{width:26px;height:26px;border-radius:50%;border:1px solid var(--border-lt);background:var(--panel3);color:var(--gold-lt);cursor:pointer}
+.tm-ab-step b{min-width:28px;text-align:center;font-family:'Cinzel',serif;color:var(--gold-lt);direction:ltr;unicode-bidi:isolate}
+@media (max-width:600px){
+  .tm-active{grid-template-columns:1fr}
+}
+
 /* ===== Combat cockpit ===== */
 /* A single low torchlight glow behind the whole screen — the one atmospheric touch that marks
    this tab as "the war table" rather than another form page. Subtle: it only shows through the
