@@ -180,6 +180,7 @@ const RACES = {
   githyanki:{name:'Githyanki',group:'Exotic',speed:30,motm:true},
   githzerai:{name:'Githzerai',group:'Exotic',speed:30,motm:true},
   goliath:{name:'Goliath',group:'Exotic',speed:30,motm:true},
+  hadozee:{name:'Hadozee',group:'Exotic',speed:30,motm:true,move:'climb = walking speed'},
   harengon:{name:'Harengon',group:'Exotic',speed:30,motm:true},
   kenku:{name:'Kenku',group:'Exotic',speed:30,motm:true},
   locathah:{name:'Locathah',group:'Exotic',speed:30,bonus:{str:2,dex:1},move:'swim 30 ft.'},
@@ -206,7 +207,7 @@ const RACES = {
 };
 
 // Short data-driven trait chips for the Build screen's heritage picker — built straight from
-// RACES so all 46 lineages get an accurate line without hand-writing 46 blurbs.
+// RACES so all 47 lineages get an accurate line without hand-writing 47 blurbs.
 function raceFlavorChips(raceId,subraceId){
   const r=RACES[raceId]; if(!r) return [];
   const sub=r.subs?r.subs[subraceId]:null;
@@ -230,7 +231,7 @@ const RACE_IMG={
   dwarf:'dwarf',elf:'elf',halfling:'halfling',human:'human',dragonborn:'dragonborn',
   gnome:'gnome',halfelf:'halfelf',halforc:'halforc',tiefling:'tiefling',
   eladrin:'eladrin',shadarkai:'shadarkai',deepgnome:'gnome',orc:'orc',aasimar:'aasimar',
-  githyanki:'githyanki',githzerai:'githzerai',harengon:'harengon',lizardfolk:'lizardfolk',owlin:'owlin',
+  githyanki:'githyanki',githzerai:'githzerai',harengon:'harengon',hadozee:'hadozee',lizardfolk:'lizardfolk',owlin:'owlin',
   // borrowed — bird-folk
   aarakocra:'owlin',kenku:'owlin',
   // borrowed — small/mischievous

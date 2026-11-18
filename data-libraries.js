@@ -1268,6 +1268,10 @@ const RACE_LIB=[
  {n:'Little Giant',g:'Goliath',d:'Proficiency in Athletics; count as one size larger for carrying capacity.',fx:[{t:'skill',skills:['athletics'],grant:'prof'}]},
  {n:'Stone\'s Endurance',g:'Goliath',d:'Reduce damage from one incoming hit by 1d12 + CON mod. Uses = proficiency bonus, all regained on a long rest.',combat:true,usesPer:'long',usesScale:'prof'},
  {n:'Mountain Born',g:'Goliath',d:'Acclimated to high altitude; resistance to cold damage.'},
+ // Hadozee
+ {n:'Dexterous Feet',g:'Hadozee',d:'Bonus action: use your feet to manipulate an object, open or close a door or container, or pick up or set down a Tiny object.',combat:true,actionType:'bonus'},
+ {n:'Glide',g:'Hadozee',d:'Reaction when you fall at least 10 ft.: extend your skin membranes and glide horizontally up to your walking speed in a direction you choose; you take 0 damage from the fall.',combat:true,actionType:'reaction'},
+ {n:'Hadozee Dodge',g:'Hadozee',d:'Reaction when you take damage: roll a d6, add your proficiency bonus, and reduce the damage by that total (minimum 0). Uses = proficiency bonus, all regained on a long rest.',combat:true,actionType:'reaction',usesPer:'long',usesScale:'prof'},
  // Harengon
  {n:'Hare-Trigger',g:'Harengon',d:'Add your proficiency bonus to initiative rolls.'},
  {n:'Leporine Senses',g:'Harengon',d:'Proficiency in Perception.',fx:[{t:'skill',skills:['perception'],grant:'prof'}]},

@@ -111,7 +111,7 @@ function racialBonusRules(k){
 // What actually applies. RACES carries one canonical spread per lineage — Tiefling is +2 CHA
 // +1 INT, which is really the Asmodeus bloodline — but the variant bloodlines just move that
 // third point somewhere else (Dispater +1 DEX, Zariel +1 STR, and so on for a dozen more).
-// Fanning all 46 lineages out into every published variant would be a lot of near-identical
+// Fanning all 47 lineages out into every published variant would be a lot of near-identical
 // data for something a player can state in one line, so the whole spread is instead one
 // overridable field: take it over in Build ▸ Customize and type what your bloodline, uncommon
 // lineage or DM actually gave you. Same override rule as every other build-derived value.
